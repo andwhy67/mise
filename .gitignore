@@ -1,0 +1,35 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+TestResults/
+*.trx
+coverage*/
+
+# Node / web
+node_modules/
+web/dist/
+web/dev-dist/
+web/coverage/
+*.tsbuildinfo
+npm-debug.log*
+
+# IDE / OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+
+# Secrets & local env
+.env
+.env.*
+!.env.example
+*.pfx
+*.pem
+appsettings.*.local.json
+
+# Claude Code local settings
+.claude/settings.local.json

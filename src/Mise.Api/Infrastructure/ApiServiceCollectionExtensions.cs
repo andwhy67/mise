@@ -1,0 +1,80 @@
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.EntityFrameworkCore;
+using Mise.Api.Endpoints;
+using Mise.Infrastructure.Persistence;
+using Serilog;
+using StackExchange.Redis;
+
+namespace Mise.Api.Infrastructure;
+
+internal static class ApiServiceCollectionExtensions
+{
+    public const string CorsPolicy = "web";
+
+    public static IServiceCollection AddApiServices(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddProblemDetails(options => options.CustomizeProblemDetails = ctx =>
+        {
+            ctx.ProblemDetails.Instance ??= ctx.HttpContext.Request.Path;
+            ctx.ProblemDetails.Extensions["traceId"] = ctx.HttpContext.TraceIdentifier;
+        });
+        services.AddExceptionHandler<GlobalExceptionHandler>();
+
+        services.AddEndpointsApiExplorer();
+        services.AddSwaggerGen(options => options.SwaggerDoc("v1", new() { Title = "Mise API", Version = "v1" }));
+
+        var origins = (configuration["Cors:AllowedOrigins"] ?? string.Empty)
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        services.AddCors(options => options.AddPolicy(CorsPolicy, policy => policy
+            .WithOrigins(origins)
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials()));
+
+        services.AddHealthChecks()
+            .AddDbContextCheck<MiseDbContext>("postgres", tags: ["ready"])
+            .AddRedis(sp => sp.GetRequiredService<IConnectionMultiplexer>(), "redis", tags: ["ready"]);
+
+        return services;
+    }
+
+    public static WebApplication UseApiPipeline(this WebApplication app)
+    {
+        app.UseMiddleware<CorrelationIdMiddleware>();
+        app.UseSerilogRequestLogging();
+        app.UseExceptionHandler();
+        app.UseStatusCodePages();
+
+        if (app.Configuration.GetValue("Swagger:Enabled", app.Environment.IsDevelopment()))
+        {
+            app.UseSwagger();
+            app.UseSwaggerUI(options => options.SwaggerEndpoint("/swagger/v1/swagger.json", "Mise API v1"));
+        }
+
+        app.UseCors(CorsPolicy);
+        return app;
+    }
+
+    public static WebApplication MapApiEndpoints(this WebApplication app)
+    {
+        app.MapHealthChecks("/health", new HealthCheckOptions
+        {
+            ResponseWriter = HealthResponseWriter.WriteAsync,
+        });
+
+        var v1 = app.MapGroup("/api/v1");
+        v1.MapSystemEndpoints();
+        return app;
+    }
+
+    public static async Task ApplyMigrationsAsync(this WebApplication app)
+    {
+        if (!app.Configuration.GetValue("Database:MigrateOnStartup", false))
+            return;
+
+        await using var scope = app.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<MiseDbContext>();
+        await db.Database.MigrateAsync();
+        Log.Information("Database migrations applied");
+    }
+}
