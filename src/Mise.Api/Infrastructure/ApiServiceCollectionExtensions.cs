@@ -1,7 +1,10 @@
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Mise.Api.Endpoints;
+using Mise.Application.Stock;
 using Mise.Infrastructure.Persistence;
+using Mise.Infrastructure.Seed;
 using Serilog;
 using StackExchange.Redis;
 
@@ -19,6 +22,20 @@ internal static class ApiServiceCollectionExtensions
             ctx.ProblemDetails.Extensions["traceId"] = ctx.HttpContext.TraceIdentifier;
         });
         services.AddExceptionHandler<GlobalExceptionHandler>();
+        // Ошибки привязки (битый JSON, неизвестное значение enum) — тоже через GlobalExceptionHandler, с пояснением.
+        services.Configure<RouteHandlerOptions>(options => options.ThrowOnBadRequest = true);
+
+        // Перечисления в JSON — строками ("Gram", "Warning"), в том числе во входящих запросах.
+        services.ConfigureHttpJsonOptions(options => options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+
+        services.AddOptions<StockOptions>()
+            .Bind(configuration.GetSection(StockOptions.SectionName))
+            .Validate(o =>
+            {
+                try { o.ShelfLife.ToThresholds(); return true; }
+                catch (ArgumentException) { return false; }
+            }, "Stock:ShelfLife: некорректные пороги статусов срока.")
+            .ValidateOnStart();
 
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(options => options.SwaggerDoc("v1", new() { Title = "Mise API", Version = "v1" }));
@@ -64,9 +81,13 @@ internal static class ApiServiceCollectionExtensions
 
         var v1 = app.MapGroup("/api/v1");
         v1.MapSystemEndpoints();
+        v1.MapCatalogEndpoints();
+        v1.MapSupplyEndpoints();
+        v1.MapStockEndpoints();
         return app;
     }
 
+    /// <summary>Миграции и (по флагу Seed:Enabled) стартовый словарь.</summary>
     public static async Task ApplyMigrationsAsync(this WebApplication app)
     {
         if (!app.Configuration.GetValue("Database:MigrateOnStartup", false))
@@ -76,5 +97,8 @@ internal static class ApiServiceCollectionExtensions
         var db = scope.ServiceProvider.GetRequiredService<MiseDbContext>();
         await db.Database.MigrateAsync();
         Log.Information("Database migrations applied");
+
+        if (app.Configuration.GetValue("Seed:Enabled", false))
+            await scope.ServiceProvider.GetRequiredService<DatabaseSeeder>().SeedAsync();
     }
 }

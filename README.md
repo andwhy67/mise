@@ -57,6 +57,32 @@ dotnet tool restore
 dotnet ef migrations add <Name> -p src/Mise.Infrastructure -s src/Mise.Api -o Persistence/Migrations
 ```
 
+## API (`/api/v1`, подробно — в Swagger)
+
+| Метод | Путь | Назначение |
+|---|---|---|
+| `GET/POST` | `/products` | Словарь продуктов (единица, срок по умолчанию, мин. остаток, кратность) |
+| `GET/PUT/DELETE` | `/products/{id}` | Продукт; удаление/смена единицы используемого продукта → 409 |
+| `GET/POST` | `/dishes` | Блюда с составом |
+| `GET/PUT/DELETE` | `/dishes/{id}`, `PUT /dishes/{id}/ingredients` | Блюдо, замена состава |
+| `POST` | `/supplies` | Приём поставки (`Idempotency-Key`); каждая позиция → партия со своим `expiresAt` |
+| `GET` | `/supplies`, `/supplies/{id}` | Список (пагинация) и детали поставки с партиями |
+| `GET` | `/stock` | Остатки по продуктам: доступно (без просроченного), всего, ближайший срок, статус |
+| `GET` | `/stock/{productId}/batches` | Партии продукта в порядке FEFO |
+| `GET` | `/batches?status=&expiringWithinHours=&productId=` | Лента партий по сроку |
+
+Срок годности партии: явная дата в позиции → `createdAt` поставки + `shelfLifeHours` позиции → срок по умолчанию из словаря → иначе 400. Ошибки — RFC 7807 (`400` валидация с `errors`, `404`, `409` с `code`, `422`).
+
+Пример:
+
+```bash
+curl -X POST http://localhost:5080/api/v1/supplies \
+  -H "Content-Type: application/json" -H "Idempotency-Key: $(uuidgen)" \
+  -d '{"number":"SUP-2026-000123","supplier":"ООО Свежесть","items":[
+        {"productId":"10000000-0000-0000-0000-000000000001","quantity":5,"unit":"Liter","shelfLifeHours":168},
+        {"productId":"10000000-0000-0000-0000-000000000009","quantity":3000,"expiresAt":"2026-10-15T08:30:00Z"}]}'
+```
+
 ## Стек
 
 - **Backend:** C# / ASP.NET Core (.NET 9), EF Core + Npgsql, Serilog, Swagger, ProblemDetails (RFC 7807)

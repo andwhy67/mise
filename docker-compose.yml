@@ -43,6 +43,7 @@ services:
       ConnectionStrings__Redis: redis:6379
       Cors__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:8081}
       Database__MigrateOnStartup: "true"
+      Seed__Enabled: ${SEED_ENABLED:-true}
       Swagger__Enabled: ${SWAGGER_ENABLED:-true}
     ports:
       - "${API_PORT:-5080}:8080"

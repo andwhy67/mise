@@ -61,6 +61,20 @@ public sealed class SystemEndpointsTests(MiseApiFactory factory)
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
     }
 
+    [Theory]
+    [InlineData("{\"number\":", "request.malformed")]
+    [InlineData("{\"number\":\"X\",\"items\":[{\"productId\":\"10000000-0000-0000-0000-000000000001\",\"quantity\":1,\"unit\":\"Bucket\"}]}", "$.items[0].unit")]
+    public async Task Malformed_body_returns_problem_details_with_hint(string body, string expectedFragment)
+    {
+        var client = factory.CreateClient();
+
+        var response = await client.PostAsync("/api/v1/supplies", new StringContent(body, System.Text.Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        Assert.Contains(expectedFragment, await response.Content.ReadAsStringAsync());
+    }
+
     [Fact]
     public async Task Correlation_id_is_echoed_back()
     {

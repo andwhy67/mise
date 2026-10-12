@@ -1,13 +1,23 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Mise.Domain.Abstractions;
+using Mise.Infrastructure.Time;
 using Testcontainers.PostgreSql;
 using Testcontainers.Redis;
 
 namespace Mise.Api.IntegrationTests;
 
-/// <summary>Поднимает API поверх настоящих Postgres и Redis в контейнерах (один набор на коллекцию тестов).</summary>
+/// <summary>
+/// Поднимает API поверх настоящих Postgres и Redis в контейнерах (один набор на коллекцию тестов).
+/// Время управляемое (<see cref="Clock"/>), словарь засеян стартовыми продуктами и блюдами.
+/// </summary>
 public sealed class MiseApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    public static readonly DateTimeOffset StartTime = new(2026, 10, 12, 8, 0, 0, TimeSpan.Zero);
+
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:16-alpine")
         .WithDatabase("mise")
         .WithUsername("mise")
@@ -16,6 +26,8 @@ public sealed class MiseApiFactory : WebApplicationFactory<Program>, IAsyncLifet
 
     private readonly RedisContainer _redis = new RedisBuilder("redis:7-alpine")
         .Build();
+
+    public FakeClock Clock { get; } = new(StartTime);
 
     public async Task InitializeAsync()
     {
@@ -28,7 +40,9 @@ public sealed class MiseApiFactory : WebApplicationFactory<Program>, IAsyncLifet
         builder.UseSetting("ConnectionStrings:Postgres", _postgres.GetConnectionString());
         builder.UseSetting("ConnectionStrings:Redis", _redis.GetConnectionString());
         builder.UseSetting("Database:MigrateOnStartup", "true");
+        builder.UseSetting("Seed:Enabled", "true");
         builder.UseSetting("Cors:AllowedOrigins", "http://localhost:5173");
+        builder.ConfigureTestServices(services => services.Replace(ServiceDescriptor.Singleton<IClock>(Clock)));
     }
 
     async Task IAsyncLifetime.DisposeAsync()

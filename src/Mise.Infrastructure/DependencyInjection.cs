@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Mise.Application.Abstractions;
 using Mise.Domain.Abstractions;
 using Mise.Infrastructure.Persistence;
+using Mise.Infrastructure.Seed;
 using Mise.Infrastructure.Time;
 using StackExchange.Redis;
 
@@ -22,6 +24,8 @@ public static class DependencyInjection
         services.AddDbContext<MiseDbContext>(options => options
             .UseNpgsql(postgres, npgsql => npgsql.MigrationsHistoryTable("__ef_migrations_history"))
             .UseSnakeCaseNamingConvention());
+        services.AddScoped<IMiseDbContext>(sp => sp.GetRequiredService<MiseDbContext>());
+        services.AddScoped<DatabaseSeeder>();
 
         services.AddSingleton<IConnectionMultiplexer>(_ =>
         {

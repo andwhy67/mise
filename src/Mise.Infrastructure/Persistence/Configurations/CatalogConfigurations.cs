@@ -1,0 +1,53 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Mise.Domain.Catalog;
+
+namespace Mise.Infrastructure.Persistence.Configurations;
+
+internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
+{
+    public void Configure(EntityTypeBuilder<Product> builder)
+    {
+        builder.ToTable("products");
+        builder.HasKey(p => p.Id);
+        builder.Property(p => p.Id).ValueGeneratedNever();
+        builder.Property(p => p.Name).HasMaxLength(200).IsRequired();
+        builder.Property(p => p.Unit).HasConversion<string>().HasMaxLength(16);
+        builder.Property(p => p.Category).HasMaxLength(100);
+        builder.Property(p => p.StorageType).HasMaxLength(100);
+        builder.HasIndex(p => p.Name).IsUnique();
+        builder.ToTable(t =>
+        {
+            t.HasCheckConstraint("ck_products_default_shelf_life_positive", "default_shelf_life_hours IS NULL OR default_shelf_life_hours > 0");
+            t.HasCheckConstraint("ck_products_min_stock_non_negative", "min_stock_qty >= 0");
+            t.HasCheckConstraint("ck_products_pack_size_positive", "pack_size > 0");
+        });
+    }
+}
+
+internal sealed class DishConfiguration : IEntityTypeConfiguration<Dish>
+{
+    public void Configure(EntityTypeBuilder<Dish> builder)
+    {
+        builder.ToTable("dishes");
+        builder.HasKey(d => d.Id);
+        builder.Property(d => d.Id).ValueGeneratedNever();
+        builder.Property(d => d.Name).HasMaxLength(200).IsRequired();
+        builder.Property(d => d.Category).HasMaxLength(100);
+        builder.Property(d => d.Price).HasPrecision(12, 2);
+        builder.HasIndex(d => d.Name).IsUnique();
+        builder.HasMany(d => d.Ingredients).WithOne().HasForeignKey(i => i.DishId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(d => d.Ingredients).UsePropertyAccessMode(PropertyAccessMode.Field);
+    }
+}
+
+internal sealed class DishIngredientConfiguration : IEntityTypeConfiguration<DishIngredient>
+{
+    public void Configure(EntityTypeBuilder<DishIngredient> builder)
+    {
+        builder.ToTable("dish_ingredients", t => t.HasCheckConstraint("ck_dish_ingredients_quantity_positive", "quantity > 0"));
+        builder.HasKey(i => new { i.DishId, i.ProductId });
+        builder.HasOne<Product>().WithMany().HasForeignKey(i => i.ProductId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(i => i.ProductId);
+    }
+}
