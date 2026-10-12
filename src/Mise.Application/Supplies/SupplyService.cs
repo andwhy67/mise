@@ -1,10 +1,9 @@
-using System.Security.Cryptography;
-using System.Text.Json;
 using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.EntityFrameworkCore;
 using Mise.Application.Abstractions;
 using Mise.Application.Common;
+using Mise.Application.Menu;
 using Mise.Domain.Abstractions;
 using Mise.Domain.Catalog;
 using Mise.Domain.Common;
@@ -14,7 +13,7 @@ using Mise.Domain.Supplies;
 
 namespace Mise.Application.Supplies;
 
-public sealed class SupplyService(IMiseDbContext db, IClock clock, IValidator<CreateSupplyRequest> validator)
+public sealed class SupplyService(IMiseDbContext db, IClock clock, StopListService stopList, IValidator<CreateSupplyRequest> validator)
 {
     /// <summary>Допустимое «опережение» даты поставки относительно часов сервера (assumptions A3).</summary>
     public static readonly TimeSpan MaxClockSkew = TimeSpan.FromMinutes(5);
@@ -33,8 +32,8 @@ public sealed class SupplyService(IMiseDbContext db, IClock clock, IValidator<Cr
     public async Task<CreateSupplyResult> CreateAsync(CreateSupplyRequest request, string? idempotencyKey, CancellationToken ct)
     {
         await validator.EnsureValidAsync(request, ct);
-        var key = string.IsNullOrWhiteSpace(idempotencyKey) ? null : idempotencyKey.Trim();
-        var hash = ComputeHash(request);
+        var key = RequestHash.NormalizeKey(idempotencyKey);
+        var hash = RequestHash.Compute(request);
 
         if (await FindReplayAsync(request, key, hash, ct) is { } replay)
             return new CreateSupplyResult(replay, Created: false);
@@ -98,6 +97,7 @@ public sealed class SupplyService(IMiseDbContext db, IClock clock, IValidator<Cr
             throw new ConflictException(Errors.DuplicateNumber, $"Поставка с номером «{supply.Number}» уже зарегистрирована.");
         }
 
+        await stopList.TryRefreshAsync(ct);
         return new CreateSupplyResult(ToDto(supply, batches, products), Created: true);
     }
 
@@ -137,25 +137,25 @@ public sealed class SupplyService(IMiseDbContext db, IClock clock, IValidator<Cr
     /// </summary>
     private async Task<SupplyDto?> FindReplayAsync(CreateSupplyRequest request, string? key, string hash, CancellationToken ct)
     {
-        if (key is not null)
+        // Один запрос по всем трём признакам: иначе параллельный повтор, закоммиченный между проверками
+        // «по ключу» и «по номеру», выглядел бы как конфликт номера, а не как повтор.
+        var number = request.Number.Trim();
+        var requestId = request.Id;
+        var matches = await db.Supplies.AsNoTracking()
+            .Where(s => (key != null && s.IdempotencyKey == key) || s.Number == number || (requestId != null && s.Id == requestId))
+            .Select(s => new { s.Id, s.Number, s.IdempotencyKey, s.RequestHash })
+            .ToListAsync(ct);
+
+        if (key is not null && matches.FirstOrDefault(s => s.IdempotencyKey == key) is { } byKey)
         {
-            var byKey = await db.Supplies.AsNoTracking()
-                .Where(s => s.IdempotencyKey == key)
-                .Select(s => new { s.Id, s.RequestHash })
-                .FirstOrDefaultAsync(ct);
-            if (byKey is not null)
-            {
-                if (byKey.RequestHash != hash)
-                    throw new ConflictException(Errors.IdempotencyKeyReused,
-                        "Idempotency-Key уже использован для другой поставки.");
-                return await LoadDtoAsync(byKey.Id, ct);
-            }
+            if (byKey.RequestHash != hash)
+                throw new ConflictException(Errors.IdempotencyKeyReused, "Idempotency-Key уже использован для другой поставки.");
+            return await LoadDtoAsync(byKey.Id, ct);
         }
 
-        var number = request.Number.Trim();
-        if (await db.Supplies.AnyAsync(s => s.Number == number, ct))
+        if (matches.Any(s => s.Number == number))
             throw new ConflictException(Errors.DuplicateNumber, $"Поставка с номером «{number}» уже зарегистрирована.");
-        if (request.Id is { } id && await db.Supplies.AnyAsync(s => s.Id == id, ct))
+        if (requestId is { } id && matches.Any(s => s.Id == id))
             throw new ConflictException(Errors.DuplicateId, $"Поставка с идентификатором «{id}» уже зарегистрирована.");
         return null;
     }
@@ -192,11 +192,5 @@ public sealed class SupplyService(IMiseDbContext db, IClock clock, IValidator<Cr
                         i.ShelfLifeHours, i.ExpiresAt, batch.Id, batch.ExpiresAt, batch.ExpirySource, batch.Status);
                 })
                 .ToList());
-    }
-
-    private static string ComputeHash(CreateSupplyRequest request)
-    {
-        var bytes = JsonSerializer.SerializeToUtf8Bytes(request);
-        return Convert.ToHexString(SHA256.HashData(bytes));
     }
 }

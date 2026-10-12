@@ -1,0 +1,83 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Mise.Application.Abstractions;
+using Mise.Domain.Abstractions;
+using Mise.Domain.Menu;
+
+namespace Mise.Application.Menu;
+
+/// <summary>
+/// Фиксирует переходы блюд в стоп-лист и обратно в <c>stoplist_history</c>.
+/// Вызывается после любых изменений остатков и меню; безопасен при параллельных вызовах (advisory lock).
+/// </summary>
+public sealed class StopListService(IMiseDbContext db, IStockLocks locks, IClock clock, ILogger<StopListService> logger)
+{
+    private const string LockName = "stoplist-refresh";
+
+    public async Task<StopListChanges> RefreshAsync(CancellationToken ct)
+    {
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        await locks.AcquireTransactionLockAsync(LockName, ct);
+
+        var now = clock.UtcNow;
+        var snapshot = await MenuSnapshot.LoadAsync(db, now, ct);
+        var current = snapshot.Dishes
+            .Select(d => MenuAvailability.Calculate(d, snapshot.Usable))
+            .Where(a => a.InStopList)
+            .ToDictionary(a => a.DishId, a => (
+                Reason: a.Status == DishAvailabilityStatus.StopManual ? StopReason.Manual : StopReason.Shortage,
+                a.LimitingProductId));
+
+        var open = await db.StopListEntries.Where(e => e.EndedAt == null).ToListAsync(ct);
+        var added = new List<Guid>();
+        var removed = new List<Guid>();
+
+        foreach (var entry in open)
+        {
+            if (current.TryGetValue(entry.DishId, out var state) && state.Reason == entry.Reason)
+                continue;
+            entry.Close(now);
+            if (!current.ContainsKey(entry.DishId))
+                removed.Add(entry.DishId);
+        }
+
+        // Сначала закрытия, потом открытия: уникальный индекс «одна открытая запись на блюдо»
+        // не должен зависеть от порядка команд внутри одного SaveChanges.
+        await db.SaveChangesAsync(ct);
+
+        var stillOpen = open.Where(e => e.IsOpen).Select(e => e.DishId).ToHashSet();
+        var wasOpen = open.Select(e => e.DishId).ToHashSet();
+        foreach (var (dishId, state) in current.Where(c => !stillOpen.Contains(c.Key)))
+        {
+            db.StopListEntries.Add(new StopListEntry(Guid.CreateVersion7(now), dishId, state.Reason,
+                state.Reason == StopReason.Shortage ? state.LimitingProductId : null, now));
+            if (!wasOpen.Contains(dishId))
+                added.Add(dishId);
+        }
+
+        await db.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
+
+        if (added.Count + removed.Count > 0)
+            logger.LogInformation("Stop list changed: +{Added} −{Removed}", added.Count, removed.Count);
+        return new StopListChanges(added, removed);
+    }
+
+    /// <summary>
+    /// Пересчёт после уже закоммиченной операции: ошибка здесь не должна превращать успешный заказ/поставку в 500.
+    /// Состояние стоп-листа всё равно считается вживую; история догонит при следующем пересчёте.
+    /// </summary>
+    public async Task<StopListChanges> TryRefreshAsync(CancellationToken ct)
+    {
+        try
+        {
+            return await RefreshAsync(ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogError(ex, "Stop list refresh failed");
+            db.ChangeTracker.Clear();
+            return StopListChanges.None;
+        }
+    }
+}

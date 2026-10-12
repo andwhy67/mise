@@ -25,6 +25,7 @@ public static class DependencyInjection
             .UseNpgsql(postgres, npgsql => npgsql.MigrationsHistoryTable("__ef_migrations_history"))
             .UseSnakeCaseNamingConvention());
         services.AddScoped<IMiseDbContext>(sp => sp.GetRequiredService<MiseDbContext>());
+        services.AddScoped<IStockLocks, PostgresStockLocks>();
         services.AddScoped<DatabaseSeeder>();
 
         services.AddSingleton<IConnectionMultiplexer>(_ =>

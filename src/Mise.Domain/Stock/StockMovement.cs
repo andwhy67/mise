@@ -22,6 +22,7 @@ public sealed class StockMovement
     /// <summary>Изменение остатка партии (+ приход, − расход).</summary>
     public decimal QtyDelta { get; private set; }
     public Guid? SupplyId { get; private set; }
+    public Guid? OrderId { get; private set; }
     public string? Reason { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
 
@@ -33,6 +34,29 @@ public sealed class StockMovement
         Type = MovementType.Receipt,
         QtyDelta = batch.InitialQty,
         SupplyId = supplyId,
+        CreatedAt = now,
+    };
+
+    public static StockMovement OrderConsumption(Guid id, Batch batch, decimal quantity, Guid orderId, DateTimeOffset now) => new()
+    {
+        Id = id,
+        BatchId = batch.Id,
+        ProductId = batch.ProductId,
+        Type = MovementType.OrderConsumption,
+        QtyDelta = -quantity,
+        OrderId = orderId,
+        CreatedAt = now,
+    };
+
+    public static StockMovement OrderCancelReturn(Guid id, Batch batch, decimal quantity, Guid orderId, DateTimeOffset now) => new()
+    {
+        Id = id,
+        BatchId = batch.Id,
+        ProductId = batch.ProductId,
+        Type = MovementType.OrderCancelReturn,
+        QtyDelta = quantity,
+        OrderId = orderId,
+        Reason = "Отмена заказа",
         CreatedAt = now,
     };
 }

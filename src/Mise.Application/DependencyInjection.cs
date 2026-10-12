@@ -2,6 +2,8 @@ using System.Globalization;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Mise.Application.Catalog;
+using Mise.Application.Menu;
+using Mise.Application.Orders;
 using Mise.Application.Stock;
 using Mise.Application.Supplies;
 
@@ -22,6 +24,9 @@ public static class DependencyInjection
         services.AddScoped<DishService>();
         services.AddScoped<SupplyService>();
         services.AddScoped<StockQueryService>();
+        services.AddScoped<OrderService>();
+        services.AddScoped<MenuQueryService>();
+        services.AddScoped<StopListService>();
         services.AddOptions<StockOptions>();
         return services;
     }

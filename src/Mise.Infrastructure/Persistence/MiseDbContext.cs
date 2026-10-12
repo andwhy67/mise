@@ -2,8 +2,11 @@ using Microsoft.EntityFrameworkCore;
 using Mise.Application.Abstractions;
 using Mise.Application.Common;
 using Mise.Domain.Catalog;
+using Mise.Domain.Menu;
+using Mise.Domain.Orders;
 using Mise.Domain.Stock;
 using Mise.Domain.Supplies;
+using Mise.Infrastructure.Persistence.Configurations;
 using Npgsql;
 
 namespace Mise.Infrastructure.Persistence;
@@ -17,6 +20,9 @@ public sealed class MiseDbContext(DbContextOptions<MiseDbContext> options) : DbC
     public DbSet<SupplyItem> SupplyItems => Set<SupplyItem>();
     public DbSet<Batch> Batches => Set<Batch>();
     public DbSet<StockMovement> StockMovements => Set<StockMovement>();
+    public DbSet<Order> Orders => Set<Order>();
+    public DbSet<OrderItem> OrderItems => Set<OrderItem>();
+    public DbSet<StopListEntry> StopListEntries => Set<StopListEntry>();
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -32,6 +38,7 @@ public sealed class MiseDbContext(DbContextOptions<MiseDbContext> options) : DbC
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.HasSequence<long>(OrderConfiguration.NumberSequence).StartsAt(1).IncrementsBy(1);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(MiseDbContext).Assembly);
     }
 

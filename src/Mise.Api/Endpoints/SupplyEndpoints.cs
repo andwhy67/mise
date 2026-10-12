@@ -8,7 +8,7 @@ namespace Mise.Api.Endpoints;
 internal static class SupplyEndpoints
 {
     public const string IdempotencyHeader = "Idempotency-Key";
-    private const int IdempotencyKeyMaxLength = 200;
+    public const int IdempotencyKeyMaxLength = 200;
 
     public static RouteGroupBuilder MapSupplyEndpoints(this RouteGroupBuilder api)
     {

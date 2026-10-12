@@ -26,6 +26,8 @@ internal sealed class GlobalExceptionHandler(
             ConflictException conflict => Problem(StatusCodes.Status409Conflict, "Конфликт", conflict.Message, conflict.Code),
             UniqueConstraintViolationException => Problem(StatusCodes.Status409Conflict, "Конфликт",
                 "Запись с такими данными уже существует.", "unique_violation"),
+            BusinessRuleException rule => WithDetails(
+                Problem(StatusCodes.Status422UnprocessableEntity, "Операция невозможна", rule.Message, rule.Code), rule.Details),
             DomainException domain => Problem(StatusCodes.Status422UnprocessableEntity, "Операция невозможна", domain.Message, domain.Code),
             _ => null,
         };
@@ -62,6 +64,13 @@ internal sealed class GlobalExceptionHandler(
         Detail = detail,
         Extensions = { ["code"] = code },
     };
+
+    private static ProblemDetails WithDetails(ProblemDetails problem, IReadOnlyDictionary<string, object?> details)
+    {
+        foreach (var (key, value) in details)
+            problem.Extensions[key] = value;
+        return problem;
+    }
 
     private static ValidationProblemDetails ToValidationProblem(ValidationException exception)
     {

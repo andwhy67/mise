@@ -19,3 +19,14 @@ public sealed class UniqueConstraintViolationException(string? constraintName, E
 {
     public string? ConstraintName { get; } = constraintName;
 }
+
+/// <summary>
+/// Бизнес-отказ в выполнении корректного запроса (например, нехватка ингредиентов) → 422.
+/// <see cref="Details"/> попадают в ProblemDetails как расширения (например, <c>missing</c>).
+/// </summary>
+public sealed class BusinessRuleException(string code, string message, IReadOnlyDictionary<string, object?>? details = null)
+    : Exception(message)
+{
+    public string Code { get; } = code;
+    public IReadOnlyDictionary<string, object?> Details { get; } = details ?? new Dictionary<string, object?>();
+}

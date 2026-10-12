@@ -40,6 +40,55 @@ internal static class TestApi
         return await response.Content.ReadFromJsonAsync<JsonElement>();
     }
 
+    public static async Task<Guid> CreateDishAsync(this HttpClient client, params (Guid ProductId, decimal Quantity)[] ingredients)
+    {
+        var response = await client.PostAsJsonAsync("/api/v1/dishes", new
+        {
+            name = Unique("Блюдо"),
+            category = "Тест",
+            price = 500m,
+            isActive = true,
+            ingredients = ingredients.Select(i => new { productId = i.ProductId, quantity = i.Quantity }),
+        });
+        await response.EnsureStatusAsync(HttpStatusCode.Created);
+        return (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+    }
+
+    /// <summary>Поставка одной позиции; возвращает id партии.</summary>
+    public static async Task<Guid> ReceiveAsync(this HttpClient client, Guid productId, decimal quantity, int shelfLifeHours = 72,
+        DateTimeOffset? createdAt = null)
+    {
+        var supply = await client.CreateSupplyAsync(new
+        {
+            number = Unique("SUP"),
+            createdAt,
+            items = new[] { new { productId, quantity, shelfLifeHours } },
+        });
+        return supply.GetProperty("items")[0].GetProperty("batchId").GetGuid();
+    }
+
+    public static async Task<HttpResponseMessage> PostOrderAsync(this HttpClient client, string? idempotencyKey,
+        params (Guid DishId, int Quantity)[] items)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/orders")
+        {
+            Content = JsonContent.Create(new { items = items.Select(i => new { dishId = i.DishId, quantity = i.Quantity }) }),
+        };
+        if (idempotencyKey is not null)
+            request.Headers.Add("Idempotency-Key", idempotencyKey);
+        return await client.SendAsync(request);
+    }
+
+    public static async Task<JsonElement> CreateOrderAsync(this HttpClient client, params (Guid DishId, int Quantity)[] items)
+    {
+        var response = await client.PostOrderAsync(null, items);
+        await response.EnsureStatusAsync(HttpStatusCode.Created);
+        return await response.Content.ReadFromJsonAsync<JsonElement>();
+    }
+
+    public static async Task<decimal> UsableAsync(this HttpClient client, Guid productId) =>
+        (await client.GetStockItemAsync(productId)).GetProperty("usableQty").GetDecimal();
+
     public static async Task<JsonElement> GetStockItemAsync(this HttpClient client, Guid productId)
     {
         var stock = await client.GetFromJsonAsync<JsonElement>("/api/v1/stock");
