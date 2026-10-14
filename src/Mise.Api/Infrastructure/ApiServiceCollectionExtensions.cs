@@ -5,6 +5,7 @@ using Mise.Api.Endpoints;
 using Mise.Api.Realtime;
 using Mise.Application.Realtime;
 using Mise.Application.Expiry;
+using Mise.Application.Forecasting;
 using Mise.Application.HotOffers;
 using Mise.Domain.HotOffers;
 using Mise.Application.Stock;
@@ -54,6 +55,12 @@ internal static class ApiServiceCollectionExtensions
                 "HotOffers: неизвестный Scorer или некорректные параметры (см. docs/hot-offers.md).")
             .ValidateOnStart();
         services.AddHostedService<HotOffersTicker>();
+
+        services.AddOptions<ForecastOptions>()
+            .Bind(configuration.GetSection(ForecastOptions.SectionName))
+            .Validate(o => o.IsValid(), "Forecast: некорректные параметры прогноза (см. docs/assumptions.md, G*).")
+            .ValidateOnStart();
+        services.AddHostedService<ConsumptionAggregationWorker>();
 
         services.AddRealtime(configuration);
 
@@ -132,6 +139,8 @@ internal static class ApiServiceCollectionExtensions
         v1.MapMenuEndpoints();
         v1.MapAlertEndpoints();
         v1.MapHotOfferEndpoints();
+        v1.MapForecastEndpoints();
+        v1.MapAnalyticsEndpoints();
         v1.MapSimulatorEndpoints();
         if (app.Configuration.GetValue("Demo:Enabled", false))
             v1.MapDemoEndpoints();

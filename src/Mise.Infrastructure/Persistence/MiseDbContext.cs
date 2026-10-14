@@ -25,6 +25,7 @@ public sealed class MiseDbContext(DbContextOptions<MiseDbContext> options) : DbC
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<StopListEntry> StopListEntries => Set<StopListEntry>();
     public DbSet<Alert> Alerts => Set<Alert>();
+    public DbSet<ConsumptionHour> ConsumptionHours => Set<ConsumptionHour>();
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {

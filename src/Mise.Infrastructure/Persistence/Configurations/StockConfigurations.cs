@@ -68,6 +68,17 @@ internal sealed class BatchConfiguration : IEntityTypeConfiguration<Batch>
     }
 }
 
+internal sealed class ConsumptionHourConfiguration : IEntityTypeConfiguration<ConsumptionHour>
+{
+    public void Configure(EntityTypeBuilder<ConsumptionHour> builder)
+    {
+        builder.ToTable("consumption_hourly");
+        builder.HasKey(c => new { c.ProductId, c.HourBucket });
+        builder.HasIndex(c => c.HourBucket);
+        builder.HasOne<Product>().WithMany().HasForeignKey(c => c.ProductId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 internal sealed class StockMovementConfiguration : IEntityTypeConfiguration<StockMovement>
 {
     public void Configure(EntityTypeBuilder<StockMovement> builder)

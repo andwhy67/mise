@@ -14,9 +14,6 @@ public sealed class HotOfferOptions
     /// <summary>Пересчёт по таймеру, секунды: время идёт — срочность растёт даже без событий.</summary>
     public int RefreshSeconds { get; set; } = 60;
 
-    /// <summary>Окно истории расхода для baseline и скорости продаж, дни.</summary>
-    public int HistoryDays { get; set; } = 7;
-
     public decimal MaxHorizonHours { get; set; } = HotOfferParameters.Default.MaxHorizonHours;
     public decimal HorizonShelfFraction { get; set; } = HotOfferParameters.Default.HorizonShelfFraction;
     public decimal VolumeBaseWeight { get; set; } = HotOfferParameters.Default.VolumeBaseWeight;
@@ -52,7 +49,7 @@ public sealed class HotOfferOptions
         {
             return false;
         }
-        return knownScorers.Contains(Scorer) && RefreshSeconds is >= 5 and <= 3600 && HistoryDays is >= 1 and <= 90;
+        return knownScorers.Contains(Scorer) && RefreshSeconds is >= 5 and <= 3600;
     }
 }
 

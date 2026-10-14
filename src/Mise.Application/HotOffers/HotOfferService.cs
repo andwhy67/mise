@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Mise.Application.Abstractions;
 using Mise.Application.Common;
+using Mise.Application.Forecasting;
 using Mise.Domain.Abstractions;
 using Mise.Domain.HotOffers;
 using Mise.Domain.Menu;
@@ -45,6 +46,7 @@ public sealed class HotOfferService(
     IClock clock,
     IEnumerable<IHotOfferScorer> scorers,
     HotOfferState state,
+    ConsumptionRates rates,
     IOptions<HotOfferOptions> options)
 {
     public const int MaxLimit = 20;
@@ -58,7 +60,7 @@ public sealed class HotOfferService(
             throw new[] { new ValidationFailure("limit", $"limit должен быть от 1 до {MaxLimit}.") }.ToValidationException();
 
         var now = clock.UtcNow;
-        var (input, dishes) = await LoadInputAsync(now, settings.HistoryDays, ct);
+        var (input, dishes) = await LoadInputAsync(now, ct);
         var scored = scorer.Score(input, parameters);
 
         var previous = state.Shown(scorer.Version);
@@ -84,21 +86,22 @@ public sealed class HotOfferService(
             .ToValidationException();
 
     private async Task<(HotOfferInput Input, Dictionary<Guid, Domain.Catalog.Dish> Dishes)> LoadInputAsync(
-        DateTimeOffset now, int historyDays, CancellationToken ct)
+        DateTimeOffset now, CancellationToken ct)
     {
         var batches = await db.Batches.AsNoTracking()
             .Where(b => b.Status == BatchStatus.Active && b.RemainingQty > 0 && b.ExpiresAt > now)
             .Select(b => new HotOfferBatch(b.Id, b.ProductId, b.ReceivedAt, b.ExpiresAt, b.RemainingQty))
             .ToListAsync(ct);
         var usable = batches.GroupBy(b => b.ProductId).ToDictionary(g => g.Key, g => g.Sum(b => b.RemainingQty));
-        var consumption = await ConsumptionHistory.DailyAsync(db, now, historyDays, ct);
+        // Скорость продаж — та же EWMA, что и у прогнозов (consumption_hourly обновляет фоновый агрегатор).
+        var consumption = await rates.LoadAsync(now, ct);
 
         var products = await db.Products.AsNoTracking().ToListAsync(ct);
         var dishes = await db.Dishes.AsNoTracking().Include(d => d.Ingredients).ToListAsync(ct);
 
         var input = new HotOfferInput(
             products.Select(p => new HotOfferProduct(p.Id, p.Name, p.Unit, p.DefaultShelfLifeHours, p.MinStockQty,
-                consumption.GetValueOrDefault(p.Id))).ToList(),
+                consumption.GetValueOrDefault(p.Id)?.FlatPerHour * 24m ?? 0m)).ToList(),
             batches,
             dishes.Select(d =>
             {
@@ -119,30 +122,5 @@ public sealed class HotOfferService(
             offer.Reasons.Select((r, i) => new HotOfferReasonDto(
                 r.ProductId, r.ProductName, r.Unit, r.AtRiskQty, r.UnsoldQty, r.HoursLeft, r.ExpiresAt, r.QtyPerPortion,
                 r.PortionsBurned, r.Pressure, r.Share, r.Contribution, text.Reasons[i])).ToList());
-    }
-}
-
-/// <summary>Расход по истории движений: чистое списание под заказы (минус возвраты при отмене).</summary>
-public static class ConsumptionHistory
-{
-    /// <summary>
-    /// Среднесуточный расход по продуктам за последние <paramref name="days"/> дней. Делитель — длительность истории
-    /// (от первого движения в окне), но не меньше суток: несколько минут работы не экстраполируются в огромную скорость.
-    /// </summary>
-    public static async Task<Dictionary<Guid, decimal>> DailyAsync(IMiseDbContext db, DateTimeOffset now, int days, CancellationToken ct)
-    {
-        var since = now.AddDays(-days);
-        var rows = await db.StockMovements.AsNoTracking()
-            .Where(m => m.CreatedAt >= since && m.CreatedAt <= now
-                && (m.Type == MovementType.OrderConsumption || m.Type == MovementType.OrderCancelReturn))
-            .GroupBy(m => m.ProductId)
-            .Select(g => new { ProductId = g.Key, Net = -g.Sum(m => m.QtyDelta), First = g.Min(m => m.CreatedAt) })
-            .ToListAsync(ct);
-        if (rows.Count == 0)
-            return [];
-
-        var span = now - rows.Min(r => r.First);
-        var spanDays = (decimal)Math.Clamp(span.TotalDays, 1d, days);
-        return rows.Where(r => r.Net > 0).ToDictionary(r => r.ProductId, r => decimal.Round(r.Net / spanDays, 3));
     }
 }

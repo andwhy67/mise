@@ -26,6 +26,7 @@ public interface IMiseDbContext
     DbSet<OrderItem> OrderItems { get; }
     DbSet<StopListEntry> StopListEntries { get; }
     DbSet<Alert> Alerts { get; }
+    DbSet<ConsumptionHour> ConsumptionHours { get; }
 
     ChangeTracker ChangeTracker { get; }
 

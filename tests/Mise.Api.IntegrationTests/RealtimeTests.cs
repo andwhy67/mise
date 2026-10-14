@@ -16,11 +16,14 @@ public sealed class RealtimeTests(MiseApiFactory factory)
         var meat = await _client.CreateProductAsync();
         var salt = await _client.CreateProductAsync();
         var dish = await _client.CreateDishAsync((meat, 100m), (salt, 10m));
-        var meatBatch = await _client.ReceiveAsync(meat, 100m);
+        var number = TestApi.Unique("SUP");
+        var received = await _client.CreateSupplyAsync(new { number, items = new[] { new { productId = meat, quantity = 100m, shelfLifeHours = 72 } } });
+        var meatBatch = received.GetProperty("items")[0].GetProperty("batchId").GetGuid();
         await _client.ReceiveAsync(salt, 1000m);
 
-        var supply = await hub.WaitForAsync("SupplyReceived", e => e.GetProperty("supply").GetProperty("itemCount").GetInt32() == 1);
-        Assert.StartsWith("SUP", supply.GetProperty("supply").GetProperty("number").GetString());
+        // Хаб общий для всех тестов коллекции: ждём именно свою поставку (события прошлых тестов могут ещё догонять).
+        var supply = await hub.WaitForAsync("SupplyReceived", e => e.GetProperty("supply").GetProperty("number").GetString() == number);
+        Assert.Equal(1, supply.GetProperty("supply").GetProperty("itemCount").GetInt32());
         await hub.WaitForAsync("StockChanged", e => e.Items("items").Any(i => i.Has("productId", meat) && i.GetProperty("usableQty").GetDecimal() == 100m));
         await hub.WaitForAsync("AvailabilityChanged", e => e.Items("dishes").Any(d => d.Has("dishId", dish) && d.GetProperty("maxPortions").GetInt32() == 1));
 

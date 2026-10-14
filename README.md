@@ -6,7 +6,7 @@
 
 Поставки по партиям → остатки по партиям → заказы со списанием по **FEFO** → авто-стоп-лист → сигнализация сроков и автосписание → **горячие предложения** с объяснением → аналитика, прогноз, предложения поставок → real-time UI.
 
-> Статус: **Фаза 5 — горячие предложения.** Стек поднимается одной командой; бизнес-функции появляются по фазам из `PLAN.md` §12.
+> Статус: **Фаза 6 — прогноз стоп-листа, предложения поставок, аналитика, Grafana.** Стек поднимается одной командой; бизнес-функции появляются по фазам из `PLAN.md` §12.
 
 ## Быстрый старт (Docker)
 
@@ -23,6 +23,7 @@ docker compose up -d --build
 | API | http://localhost:5080/api/v1 |
 | Health | http://localhost:5080/health |
 | Swagger | http://localhost:5080/swagger |
+| Grafana | http://localhost:3001 (просмотр без входа; админ — `GRAFANA_ADMIN_*` из `.env`) |
 
 Postgres и Redis публикуются только на `127.0.0.1` (порты `5432` и `6380`; Redis на `6380`, чтобы не конфликтовать с локальным Redis). Порты меняются в `.env`.
 
@@ -77,6 +78,9 @@ dotnet ef migrations add <Name> -p src/Mise.Infrastructure -s src/Mise.Api -o Pe
 | `PATCH` | `/orders/{id}/status` | `Created → Cooking → Done` |
 | `GET` | `/menu/availability` | Все блюда: `maxPortions`, ограничивающий продукт, статус |
 | `GET` | `/stoplist`, `/stoplist/history` | Стоп-лист (нехватка / вручную) и история интервалов |
+| `GET` | `/stoplist/forecast?horizonHours=24` | Какие блюда и когда уйдут в стоп: ETA, ограничивающий продукт, причина, уверенность ([алгоритм](docs/forecast.md)) |
+| `GET` | `/supply-suggestions?horizonHours=72` | Что и сколько заказать: партия кратно упаковке, срочность, причины |
+| `GET` | `/analytics/writeoffs`, `/deficit`, `/consumption`, `/kpi` | Списания, дефицитные ингредиенты, расход, KPI и плитки дашборда (`from`/`to`, по умолчанию 7 дней) |
 | `GET` | `/alerts?type=&severity=&acknowledged=&active=&productId=&batchId=&dishId=` | Лента алертов: скоро истечёт, истёк, мало остатка, стоп-лист вкл/выкл |
 | `GET` | `/alerts/summary` | Сколько алертов требуют внимания (по важности) |
 | `POST` | `/alerts/{id}/ack` | Подтвердить алерт |
@@ -131,7 +135,8 @@ src/
   Mise.Simulator/       симулятор ресторана: заказы и поставки через REST, управление через Redis
 tests/                  Domain / Application / Simulator / Api.IntegrationTests (Testcontainers)
 web/                    React-клиент
-docs/                   допущения, идеи, (позже) алгоритмы и демо-сценарий
+deploy/grafana/         provisioning Grafana: источник PostgreSQL и дашборды
+docs/                   допущения, идеи, алгоритмы (hot offers, прогноз)
 ```
 
 ## Документы
@@ -139,4 +144,5 @@ docs/                   допущения, идеи, (позже) алгори�
 - `PLAN.md` — полный план, алгоритмы, API, дорожная карта
 - `docs/assumptions.md` — принятые допущения
 - `docs/hot-offers.md` — алгоритм горячих предложений: формула, параметры, разобранный пример
+- `docs/forecast.md` — расход (EWMA), прогноз стоп-листа, предложения поставок
 - `docs/ideas.md` — идеи сверх ТЗ

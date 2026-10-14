@@ -28,6 +28,7 @@ public static class DependencyInjection
             .UseSnakeCaseNamingConvention());
         services.AddScoped<IMiseDbContext>(sp => sp.GetRequiredService<MiseDbContext>());
         services.AddScoped<IStockLocks, PostgresStockLocks>();
+        services.AddScoped<IConsumptionAggregator, PostgresConsumptionAggregator>();
         services.AddScoped<DatabaseSeeder>();
         services.AddScoped<DemoStockSeeder>();
         services.AddSingleton<ISimulatorControlStore, RedisSimulatorControlStore>();

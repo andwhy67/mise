@@ -1,0 +1,377 @@
+{
+  "uid": "mise-consumption",
+  "title": "Mise — расход и дефицит",
+  "description": "Расход по consumption_hourly, заказы, дефицитные ингредиенты.",
+  "tags": [
+    "mise"
+  ],
+  "timezone": "Europe/Moscow",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": false,
+  "refresh": "30s",
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Заказов за период",
+      "type": "stat",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "mise-postgres"
+      },
+      "description": "",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "mise-postgres"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "SELECT count(*) AS \"Заказов\" FROM orders WHERE status <> 'Cancelled' AND $__timeFilter(created_at)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 2,
+      "title": "Выручка за период, ₽",
+      "type": "stat",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "mise-postgres"
+      },
+      "description": "",
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "mise-postgres"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "SELECT coalesce(sum(i.price_snapshot * i.quantity), 0) AS \"Выручка\"\n        FROM orders o JOIN order_items i ON i.order_id = o.id\n        WHERE o.status <> 'Cancelled' AND $__timeFilter(o.created_at)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 3,
+      "title": "Отменено заказов",
+      "type": "stat",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "mise-postgres"
+      },
+      "description": "",
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "mise-postgres"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "SELECT count(*) AS \"Отмен\" FROM orders WHERE status = 'Cancelled' AND $__timeFilter(created_at)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 4,
+      "title": "Продуктов ниже минимума",
+      "type": "stat",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "mise-postgres"
+      },
+      "description": "",
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "mise-postgres"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "SELECT count(*) AS \"Продуктов\" FROM alerts WHERE type = 'LowStock' AND resolved_at IS NULL"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 5,
+      "title": "Расход по часам (топ-8 продуктов)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "mise-postgres"
+      },
+      "description": "Чистое списание под заказы (минус возвраты при отмене), в базовых единицах.",
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 16,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "mise-postgres"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "time_series",
+          "rawSql": "WITH top AS (\n            SELECT product_id FROM consumption_hourly WHERE $__timeFilter(hour_bucket)\n            GROUP BY product_id ORDER BY sum(qty_consumed) DESC LIMIT 8)\n        SELECT c.hour_bucket AS time, p.name AS metric, c.qty_consumed AS value\n        FROM consumption_hourly c JOIN top USING (product_id) JOIN products p ON p.id = c.product_id\n        WHERE $__timeFilter(c.hour_bucket)\n        ORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "sum"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Заказы по часам",
+      "type": "timeseries",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "mise-postgres"
+      },
+      "description": "",
+      "gridPos": {
+        "x": 16,
+        "y": 4,
+        "w": 8,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "mise-postgres"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "time_series",
+          "rawSql": "SELECT date_trunc('hour', created_at) AS time, count(*) AS \"Заказов\"\n        FROM orders WHERE status <> 'Cancelled' AND $__timeFilter(created_at)\n        GROUP BY 1 ORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "sum"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "Дефицитные ингредиенты",
+      "type": "table",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "mise-postgres"
+      },
+      "description": "",
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 12,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "mise-postgres"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "SELECT p.name AS \"Продукт\",\n               count(*) FILTER (WHERE e.started_at >= $__timeFrom()) AS \"Уходов в стоп\",\n               count(DISTINCT e.dish_id) AS \"Блюд\",\n               round(sum(extract(epoch FROM least(coalesce(e.ended_at, now()), $__timeTo()) - greatest(e.started_at, $__timeFrom()))) / 60) AS \"Минут блюд в стопе\"\n        FROM stoplist_history e JOIN products p ON p.id = e.limiting_product_id\n        WHERE e.started_at < $__timeTo() AND (e.ended_at IS NULL OR e.ended_at > $__timeFrom())\n        GROUP BY p.name ORDER BY \"Минут блюд в стопе\" DESC LIMIT 20"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 8,
+      "title": "Доля списаний от поступившего",
+      "type": "table",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "mise-postgres"
+      },
+      "description": "",
+      "gridPos": {
+        "x": 12,
+        "y": 14,
+        "w": 12,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "mise-postgres"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "SELECT p.name AS \"Продукт\", p.unit AS \"Ед.\",\n               sum(m.qty_delta) FILTER (WHERE m.type = 'Receipt') AS \"Поступило\",\n               -coalesce(sum(m.qty_delta) FILTER (WHERE m.type IN ('ExpiryWriteOff', 'ManualWriteOff')), 0) AS \"Списано\",\n               round(100 * -coalesce(sum(m.qty_delta) FILTER (WHERE m.type IN ('ExpiryWriteOff', 'ManualWriteOff')), 0)\n                     / nullif(sum(m.qty_delta) FILTER (WHERE m.type = 'Receipt'), 0), 1) AS \"Списано, %\"\n        FROM stock_movements m JOIN products p ON p.id = m.product_id\n        WHERE $__timeFilter(m.created_at)\n        GROUP BY p.name, p.unit\n        HAVING sum(m.qty_delta) FILTER (WHERE m.type = 'Receipt') > 0\n        ORDER BY \"Списано, %\" DESC NULLS LAST LIMIT 20"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
+    }
+  ],
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  }
+}

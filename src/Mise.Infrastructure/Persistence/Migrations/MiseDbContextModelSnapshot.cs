@@ -446,6 +446,30 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Mise.Domain.Stock.ConsumptionHour", b =>
+                {
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("product_id");
+
+                    b.Property<DateTimeOffset>("HourBucket")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("hour_bucket");
+
+                    b.Property<decimal>("QtyConsumed")
+                        .HasPrecision(14, 3)
+                        .HasColumnType("numeric(14,3)")
+                        .HasColumnName("qty_consumed");
+
+                    b.HasKey("ProductId", "HourBucket")
+                        .HasName("pk_consumption_hourly");
+
+                    b.HasIndex("HourBucket")
+                        .HasDatabaseName("ix_consumption_hourly_hour_bucket");
+
+                    b.ToTable("consumption_hourly", (string)null);
+                });
+
             modelBuilder.Entity("Mise.Domain.Stock.StockMovement", b =>
                 {
                     b.Property<Guid>("Id")
@@ -706,6 +730,16 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_batches_supply_items_supply_item_id");
+                });
+
+            modelBuilder.Entity("Mise.Domain.Stock.ConsumptionHour", b =>
+                {
+                    b.HasOne("Mise.Domain.Catalog.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_consumption_hourly_products_product_id");
                 });
 
             modelBuilder.Entity("Mise.Domain.Stock.StockMovement", b =>
