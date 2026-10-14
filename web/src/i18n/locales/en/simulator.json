@@ -1,0 +1,78 @@
+{
+  "title": "Simulator",
+  "subtitle": "Creates orders and deliveries like a real restaurant — to show the system at work. Everything goes through the regular API.",
+  "start": "Start",
+  "stop": "Stop",
+  "seed": "Fill the stock",
+  "started": "Simulator started",
+  "stopped": "Simulator stopped",
+  "seeded": "Stock filled with demo deliveries",
+  "status": {
+    "offline": "The simulator service is offline",
+    "applying": "Applying settings…",
+    "running": "Running: {{scenario}}, ×{{speed}}",
+    "stopped": "Stopped",
+    "modelTime": "Model time: {{when}}",
+    "noModelTime": "Not started yet",
+    "heartbeat": "seen at {{time}}"
+  },
+  "speed": {
+    "label": "Speed",
+    "hint": "How many times faster model time runs than real time."
+  },
+  "counters": {
+    "ordersCreated": "Orders taken",
+    "ordersRejected": "Refused: not enough",
+    "ordersCompleted": "Orders ready",
+    "ordersCancelled": "Cancelled",
+    "supplies": "Deliveries",
+    "supplyItems": "Products delivered",
+    "retries": "Send retries",
+    "errors": "Errors"
+  },
+  "scenario": {
+    "title": "Scenario",
+    "subtitle": "What is happening in the “restaurant”. Switches on the fly."
+  },
+  "scenarios": {
+    "Normal": {
+      "title": "Normal day",
+      "text": "A steady flow of orders, deliveries on schedule."
+    },
+    "RushHour": {
+      "title": "Rush hour",
+      "text": "Several times more orders — products run out fast, dishes go into the stop list."
+    },
+    "SupplyDelay": {
+      "title": "Delivery delay",
+      "text": "Suppliers are late — watch the stop list and the shortage forecast grow."
+    },
+    "Spoilage": {
+      "title": "Spoilage",
+      "text": "Products arrive with a short shelf life — write-offs and “What to sell” grow."
+    },
+    "FreshDelivery": {
+      "title": "Fresh delivery",
+      "text": "A large delivery — stock fills up, dishes come back on the menu."
+    },
+    "Chaos": {
+      "title": "Chaos",
+      "text": "Everything at once: peaks, delays, cancellations and repeated requests — a resilience test."
+    }
+  },
+  "activity": {
+    "title": "What is happening",
+    "subtitle": "The simulator's latest actions.",
+    "empty": "Quiet so far",
+    "emptyHint": "Start the simulator — orders and deliveries will appear here.",
+    "kinds": {
+      "order": "Order",
+      "supply": "Delivery",
+      "cancel": "Cancel",
+      "rejected": "Refused",
+      "replay": "Replay",
+      "scenario": "Scenario",
+      "error": "Error"
+    }
+  }
+}

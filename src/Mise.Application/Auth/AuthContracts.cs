@@ -68,6 +68,25 @@ public interface ITokenIssuer
 
 public sealed record LoginRequest(string Login, string Password);
 
+/// <summary>Демо-вход по роли (только при Demo:Enabled): пароль не хранится во фронтенде.</summary>
+public sealed record DemoLoginRequest(UserRole Role);
+
+/// <summary>Что показывать на экране входа.</summary>
+public sealed record AuthConfigDto(bool DemoEnabled, IReadOnlyList<UserRole> DemoRoles);
+
+/// <summary>Стартовые демо-учётки (пароль — Auth:DemoUsersPassword).</summary>
+public static class DemoUsers
+{
+    public static readonly IReadOnlyList<(string Login, string DisplayName, UserRole Role)> All =
+    [
+        ("manager", "Менеджер", UserRole.Manager),
+        ("chef", "Шеф-повар", UserRole.Chef),
+        ("warehouse", "Кладовщик", UserRole.Warehouse),
+    ];
+
+    public static string? LoginFor(UserRole role) => All.FirstOrDefault(u => u.Role == role).Login;
+}
+
 public sealed record UserDto(Guid Id, string Login, string DisplayName, UserRole Role, bool IsActive, DateTimeOffset CreatedAt, DateTimeOffset? LastLoginAt)
 {
     public static UserDto From(User u) => new(u.Id, u.Login, u.DisplayName, u.Role, u.IsActive, u.CreatedAt, u.LastLoginAt);

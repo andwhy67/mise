@@ -1,0 +1,86 @@
+{
+  "title": "Deliveries",
+  "subtitle": "Receiving products from suppliers. Every product in a delivery has its own expiry date.",
+  "receive": "Receive a delivery",
+  "list": {
+    "title": "Received deliveries",
+    "subtitle": "Newest first. Open a delivery to see the expiry of each product.",
+    "noSupplier": "No supplier given",
+    "items_one": "{{count}} product",
+    "items_other": "{{count}} products",
+    "empty": "No deliveries yet",
+    "emptyHint": "Press “Receive a delivery” to book products in.",
+    "more": "Show more"
+  },
+  "details": {
+    "until": "Good until: {{when}}",
+    "expired": "Already spoiled",
+    "source": {
+      "ExplicitDate": "date from the supplier",
+      "SupplyItemShelfLife": "shelf life from the delivery",
+      "ProductDefault": "product standard shelf life"
+    }
+  },
+  "suggestions": {
+    "title": "What to order",
+    "subtitle": "Enough for the next {{hours}} hours with a margin.",
+    "add": "Add",
+    "addLabel": "Add “{{product}}” to a delivery",
+    "addUrgent_one": "Receive {{count}} urgent",
+    "addUrgent_other": "Receive {{count}} urgent"
+  },
+  "form": {
+    "title": "Receive a delivery",
+    "subtitle": "Every product becomes a separate batch with its own expiry date.",
+    "number": "Delivery number",
+    "supplier": "Supplier",
+    "createdAt": "Delivered at",
+    "createdAtHint": "Moscow time. Shelf life counts from it.",
+    "items": "Products in the delivery",
+    "product": "Product",
+    "productPlaceholder": "Choose a product",
+    "noCategory": "No category",
+    "quantity": "Quantity",
+    "unit": "Unit",
+    "expiry": "Expiry",
+    "expiryDefault": "Product standard ({{days}} d)",
+    "expiryDefaultNone": "Product standard (not set)",
+    "expiryDays": "Keep for N days",
+    "expiryDate": "Good until a date",
+    "days": "Days",
+    "date": "Good until",
+    "preview": "Spoils: {{when}} · {{source}}",
+    "previewUnknown": "Set the expiry: the product has no standard shelf life.",
+    "source": {
+      "explicit": "date from the supplier",
+      "shelfLife": "by shelf life",
+      "default": "product standard"
+    },
+    "addRow": "Add a product",
+    "removeRow": "Remove row {{index}}",
+    "submit": "Receive the delivery",
+    "submitting": "Receiving…",
+    "cancel": "Cancel",
+    "done_one": "Delivery {{number}} received: {{count}} product",
+    "done_other": "Delivery {{number}} received: {{count}} products",
+    "errors": {
+      "number": "Number: letters, digits and . _ / -",
+      "duplicate": "A delivery with this number already exists.",
+      "createdAt": "Enter the delivery date and time.",
+      "empty": "Add at least one product.",
+      "product": "Choose a product.",
+      "quantity": "Quantity above zero.",
+      "unit": "Choose a unit.",
+      "days": "Days above zero.",
+      "date": "Enter a date.",
+      "dateBeforeDelivery": "The date is before the delivery — the product is already spoiled.",
+      "noShelfLife": "The product has no standard shelf life — set the expiry.",
+      "server": {
+        "row": "Check the “{{product}}” row.",
+        "not_after_receipt": "The expiry must be after the delivery date.",
+        "unresolvable": "One product has no expiry and no standard shelf life.",
+        "invalid_shelf_life": "The shelf life is not valid."
+      }
+    }
+  }
+}

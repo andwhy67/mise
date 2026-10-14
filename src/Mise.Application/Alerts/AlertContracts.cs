@@ -1,4 +1,5 @@
 using Mise.Domain.Alerts;
+using Mise.Domain.Common;
 
 namespace Mise.Application.Alerts;
 
@@ -16,7 +17,12 @@ public sealed record AlertDto(
     DateTimeOffset CreatedAt,
     DateTimeOffset? AcknowledgedAt,
     DateTimeOffset? ResolvedAt,
-    bool IsActive);
+    bool IsActive,
+    MeasureUnit? Unit,
+    decimal? Quantity,
+    decimal? LimitQty,
+    DateTimeOffset? ExpiresAt,
+    bool? AutoWrittenOff);
 
 /// <summary>Фильтры ленты алертов; все необязательные.</summary>
 public sealed record AlertQuery(

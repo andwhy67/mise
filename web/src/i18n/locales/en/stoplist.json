@@ -1,0 +1,41 @@
+{
+  "title": "Stop list",
+  "subtitle": "Which dishes can't be ordered right now and why, what will run out soon and what happened before. Updates itself after every order and delivery.",
+  "now": {
+    "title": "Can't be ordered now",
+    "subtitle": "Products have run out or the dish was taken off the menu.",
+    "shortage": "Ran out",
+    "manual": "Taken off manually",
+    "since": "In the stop list since {{when}}",
+    "empty": "Everything can be ordered",
+    "emptyHint": "There are enough products for every dish on the menu."
+  },
+  "soon": {
+    "title": "Running low",
+    "subtitle": "Forecast for the next {{hours}} hours based on how orders are going.",
+    "consumption": "{{product}} is running out",
+    "expiry": "{{product}} will spoil",
+    "until": "until {{when}}",
+    "empty": "Nothing will run out in the coming hours",
+    "emptyHint": "If orders pick up, the forecast updates itself."
+  },
+  "history": {
+    "title": "What happened before",
+    "subtitle": "When dishes went into the stop list and for how long.",
+    "shortage": "ran out of {{product}}",
+    "manual": "taken off manually",
+    "period": "{{from}} — until {{to}} · {{duration}}",
+    "ongoing": "since {{from}} · still on",
+    "empty": "No dish has been in the stop list yet"
+  },
+  "manual": {
+    "open": "Take a dish off the menu",
+    "title": "Take a dish off the menu",
+    "subtitle": "The dish stays in the stop list until you bring it back. Products are not touched.",
+    "submit": "Take off the menu",
+    "cancel": "Cancel",
+    "removed": "“{{dish}}” is off the menu",
+    "return": "Back on the menu",
+    "returned": "“{{dish}}” is back on the menu"
+  }
+}

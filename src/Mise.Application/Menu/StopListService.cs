@@ -88,10 +88,9 @@ public sealed class StopListService(
         foreach (var dishId in added)
         {
             var state = current[dishId];
-            var limiting = state.Reason == StopReason.Shortage && state.LimitingProductId is { } productId
-                ? snapshot.Products.GetValueOrDefault(productId)?.Name
-                : null;
-            alerts.Add(Alert.StopListOn(Guid.CreateVersion7(now), dishId, dishNames[dishId], limiting, now));
+            var limitingId = state.Reason == StopReason.Shortage ? state.LimitingProductId : null;
+            var limiting = limitingId is { } productId ? snapshot.Products.GetValueOrDefault(productId)?.Name : null;
+            alerts.Add(Alert.StopListOn(Guid.CreateVersion7(now), dishId, dishNames[dishId], limitingId, limiting, now));
         }
 
         // Удалённое блюдо уходит из стопа молча — событие «снова доступно» было бы ложным.

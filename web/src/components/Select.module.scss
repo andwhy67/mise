@@ -1,0 +1,77 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.control {
+  position: relative;
+}
+
+.select {
+  width: 100%;
+  height: var(--input-height);
+  padding: 0 40px 0 14px;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  appearance: none;
+  cursor: pointer;
+  text-overflow: ellipsis;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+
+  &:hover:not(:focus-visible) {
+    border-color: var(--muted);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brand-strong);
+    outline-offset: 0;
+    border-color: transparent;
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--brand) 18%, transparent);
+  }
+
+  &[aria-invalid='true'] {
+    border-color: var(--crit-bar);
+  }
+
+  // Подсказка «Выберите…» — приглушённым цветом, пока ничего не выбрано.
+  &:has(option[value='']:checked) {
+    color: var(--muted);
+  }
+
+  option,
+  optgroup {
+    color: var(--ink);
+    background: var(--surface);
+  }
+}
+
+.chevron {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  color: var(--muted);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--crit-text);
+}

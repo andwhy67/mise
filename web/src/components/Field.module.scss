@@ -1,0 +1,53 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.input {
+  height: var(--input-height);
+  padding: 0 14px;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+
+  &:hover:not(:focus-visible) {
+    border-color: var(--muted);
+  }
+
+  // Мягкое кольцо вокруг фокуса поверх обязательной 2px-обводки.
+  &:focus-visible {
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--brand) 18%, transparent);
+    outline: 2px solid var(--brand-strong);
+    outline-offset: 0;
+    border-color: transparent;
+  }
+
+  &[aria-invalid='true'] {
+    border-color: var(--crit-bar);
+  }
+}
+
+.hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--crit-text);
+}

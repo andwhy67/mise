@@ -38,6 +38,24 @@ public sealed class SecurityTests(MiseApiFactory factory)
     }
 
     [Fact]
+    public async Task Demo_login_by_role_works_only_for_staff_roles()
+    {
+        var client = factory.CreateClientAs(null);
+
+        var config = await client.GetFromJsonAsync<JsonElement>("/api/v1/auth/config");
+        Assert.True(config.GetProperty("demoEnabled").GetBoolean());
+        Assert.Equal(3, config.GetProperty("demoRoles").GetArrayLength());
+
+        var chef = await client.PostAsJsonAsync("/api/v1/auth/demo", new { role = "Chef" });
+        await chef.EnsureStatusAsync(HttpStatusCode.OK);
+        Assert.Equal("chef", (await chef.ReadJsonAsync()).GetProperty("user").GetProperty("login").GetString());
+        Assert.Contains(chef.Headers.GetValues("Set-Cookie"), c => c.StartsWith(RefreshCookie + "="));
+
+        var simulator = await client.PostAsJsonAsync("/api/v1/auth/demo", new { role = "Simulator" });
+        await simulator.EnsureStatusAsync(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task Wrong_password_and_unknown_login_look_the_same()
     {
         var client = factory.CreateClientAs(null);

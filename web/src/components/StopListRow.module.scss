@@ -1,0 +1,42 @@
+.row {
+  padding: var(--space-4) 0;
+
+  & + & {
+    border-top: 1px solid var(--hairline);
+  }
+
+  &:last-child {
+    padding-bottom: 0;
+  }
+}
+
+.group {
+  margin: 0 0 var(--space-1);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.out {
+  color: var(--crit-text);
+}
+
+.soon {
+  color: var(--warn-text);
+}
+
+.dish {
+  margin: 0 0 var(--space-1);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+.reason {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}

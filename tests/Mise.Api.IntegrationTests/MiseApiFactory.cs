@@ -76,7 +76,7 @@ public sealed class MiseApiFactory : WebApplicationFactory<Program>, IAsyncLifet
     public string TokenFor(UserRole role) => _tokens.GetOrAdd(role, r =>
     {
         using var scope = Services.CreateScope();
-        var login = r == UserRole.Simulator ? UserSeeder.SimulatorLogin : UserSeeder.DemoUsers.Single(u => u.Role == r).Login;
+        var login = r == UserRole.Simulator ? UserSeeder.SimulatorLogin : DemoUsers.LoginFor(r)!;
         var user = scope.ServiceProvider.GetRequiredService<MiseDbContext>().Users.AsNoTracking().Single(u => u.Login == login);
         return scope.ServiceProvider.GetRequiredService<ITokenIssuer>().Issue(user, Clock.UtcNow).Token;
     });

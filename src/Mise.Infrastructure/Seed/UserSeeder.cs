@@ -15,13 +15,6 @@ namespace Mise.Infrastructure.Seed;
 /// </summary>
 public sealed class UserSeeder(MiseDbContext db, IPasswordHasher hasher, IClock clock, IOptions<AuthOptions> options, ILogger<UserSeeder> logger)
 {
-    public static readonly (string Login, string DisplayName, UserRole Role)[] DemoUsers =
-    [
-        ("manager", "Менеджер", UserRole.Manager),
-        ("chef", "Шеф-повар", UserRole.Chef),
-        ("warehouse", "Кладовщик", UserRole.Warehouse),
-    ];
-
     public const string SimulatorLogin = "simulator";
 
     public async Task SeedAsync(CancellationToken ct = default)
@@ -29,7 +22,7 @@ public sealed class UserSeeder(MiseDbContext db, IPasswordHasher hasher, IClock 
         var settings = options.Value;
         var wanted = new List<(string Login, string DisplayName, UserRole Role, string Password)>();
         if (!string.IsNullOrWhiteSpace(settings.DemoUsersPassword))
-            wanted.AddRange(DemoUsers.Select(u => (u.Login, u.DisplayName, u.Role, settings.DemoUsersPassword)));
+            wanted.AddRange(DemoUsers.All.Select(u => (u.Login, u.DisplayName, u.Role, settings.DemoUsersPassword)));
         if (!string.IsNullOrWhiteSpace(settings.SimulatorPassword))
             wanted.Add((SimulatorLogin, "Симулятор", UserRole.Simulator, settings.SimulatorPassword));
         if (wanted.Count == 0)

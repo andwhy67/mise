@@ -32,11 +32,13 @@ public sealed class AuthService(
         public const string Inactive = "auth.inactive";
         public const string RefreshInvalid = "auth.refresh_invalid";
         public const string RefreshRace = "auth.refresh_race";
+        public const string DemoUnavailable = "auth.demo_unavailable";
     }
 
     public static class Actions
     {
         public const string Login = "auth.login";
+        public const string DemoLogin = "auth.demo_login";
         public const string LoginFailed = "auth.login_failed";
         public const string Logout = "auth.logout";
         public const string RefreshReuse = "auth.refresh_reuse";
@@ -91,6 +93,25 @@ public sealed class AuthService(
         var session = IssueSession(user, familyId: Guid.CreateVersion7(now), now, out _);
         await db.SaveChangesAsync(ct);
         await audit.RecordAsync(Actions.Login, user.Id, user.Login, "User", user.Id.ToString(), new { role = user.Role.ToString() }, ct);
+        return session;
+    }
+
+    /// <summary>
+    /// Демо-вход по роли (вызывается, только если Demo:Enabled): та же сессия, что и при обычном входе, с аудитом.
+    /// </summary>
+    public async Task<AuthSession> DemoLoginAsync(DemoLoginRequest request, CancellationToken ct)
+    {
+        var login = DemoUsers.LoginFor(request.Role)
+            ?? throw new[] { new FluentValidation.Results.ValidationFailure("role", "Демо-вход доступен для ролей Warehouse, Chef и Manager.") }
+                .ToValidationException();
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Login == login && u.IsActive, ct)
+            ?? throw new UnauthorizedException(Errors.DemoUnavailable, "Демо-учётка не настроена (Auth:DemoUsersPassword).");
+
+        var now = clock.UtcNow;
+        user.RegisterSuccessfulLogin(now);
+        var session = IssueSession(user, Guid.CreateVersion7(now), now, out _);
+        await db.SaveChangesAsync(ct);
+        await audit.RecordAsync(Actions.DemoLogin, user.Id, user.Login, "User", user.Id.ToString(), new { role = user.Role.ToString() }, ct);
         return session;
     }
 

@@ -1,0 +1,63 @@
+{
+  "when": {
+    "expired": "Already spoiled",
+    "today": "Today at {{time}}",
+    "tomorrow": "Tomorrow at {{time}}",
+    "on": {
+      "0": "On Sunday",
+      "1": "On Monday",
+      "2": "On Tuesday",
+      "3": "On Wednesday",
+      "4": "On Thursday",
+      "5": "On Friday",
+      "6": "On Saturday"
+    },
+    "date": "{{date}}",
+    "goodUntilWeekday": {
+      "0": "Good until Sunday",
+      "1": "Good until Monday",
+      "2": "Good until Tuesday",
+      "3": "Good until Wednesday",
+      "4": "Good until Thursday",
+      "5": "Good until Friday",
+      "6": "Good until Saturday"
+    },
+    "goodUntilDate": "Good until {{date}}"
+  },
+  "runway": {
+    "lessThanHour": "Less than an hour left",
+    "hours_one": "Enough for about {{count}} hour",
+    "hours_other": "Enough for about {{count}} hours"
+  },
+  "unit": {
+    "g": "g",
+    "kg": "kg",
+    "ml": "ml",
+    "l": "L",
+    "pcs": "pcs"
+  },
+  "portions": {
+    "upTo_one": "up to {{count}} portion",
+    "upTo_other": "up to {{count}} portions",
+    "enoughFor_one": "enough for {{count}} portion",
+    "enoughFor_other": "enough for {{count}} portions"
+  },
+  "verdict": {
+    "sellFirst": "Sell first",
+    "recommend": "Worth offering",
+    "canOffer": "Can be offered"
+  },
+  "todayLine": "{{weekday}}, {{date}} · now {{time}}",
+  "moment": {
+    "today": "today at {{time}}",
+    "yesterday": "yesterday at {{time}}",
+    "tomorrow": "tomorrow at {{time}}",
+    "date": "{{date}} at {{time}}"
+  },
+  "duration": {
+    "lessThanMinute": "less than a minute",
+    "d": "{{count}} d",
+    "h": "{{count}} h",
+    "min": "{{count}} min"
+  }
+}

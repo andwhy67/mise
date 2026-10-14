@@ -1,0 +1,54 @@
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-weight: 600;
+}
+
+.monogram {
+  display: inline-grid;
+  place-items: center;
+  border: 1.5px solid var(--brand);
+  border-radius: var(--radius-control);
+  color: var(--brand-strong);
+  line-height: 1;
+}
+
+.word {
+  line-height: 1;
+}
+
+.md {
+  .monogram {
+    width: 36px;
+    height: 36px;
+    font-size: 22px;
+  }
+
+  .word {
+    font-size: 26px;
+  }
+}
+
+.lg {
+  .monogram {
+    width: 40px;
+    height: 40px;
+    font-size: 24px;
+  }
+
+  .word {
+    font-size: 28px;
+  }
+}
+
+.inverse {
+  color: #fff;
+
+  .monogram {
+    border-color: #fff;
+    color: #fff;
+  }
+}

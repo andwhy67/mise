@@ -1,0 +1,124 @@
+.group {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  overflow: hidden;
+}
+
+.option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-width: var(--control-height);
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 0;
+  background: var(--surface);
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-base) var(--ease-out),
+    color var(--dur-base) var(--ease-out);
+
+  &:hover:not([aria-pressed='true']) {
+    background: var(--bg);
+    color: var(--ink);
+  }
+
+  & + & {
+    border-left: 1px solid var(--border);
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  &[aria-pressed='true'] {
+    background: var(--brand-tint);
+    color: var(--brand-strong);
+    font-weight: 600;
+
+    // Выбранная иконка коротко «оживает» — подтверждение выбора без лишнего шума.
+    svg {
+      animation: pick 420ms var(--ease-out);
+    }
+  }
+}
+
+.languages {
+  display: inline-flex;
+  align-items: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.languageItem {
+  display: inline-flex;
+  align-items: center;
+}
+
+.language {
+  position: relative;
+  min-width: 36px;
+  min-height: var(--control-height);
+  padding: 0 var(--space-2);
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color var(--dur-base) var(--ease-out);
+
+  // Подчёркивание выбранного языка вырастает из центра, а не появляется скачком.
+  &::after {
+    content: '';
+    position: absolute;
+    left: var(--space-2);
+    right: var(--space-2);
+    bottom: 10px;
+    height: 1.5px;
+    background: currentColor;
+    transform: scaleX(0);
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+
+  &:hover {
+    color: var(--ink);
+  }
+
+  &[aria-pressed='true'] {
+    color: var(--brand-strong);
+    font-weight: 600;
+
+    &::after {
+      transform: scaleX(1);
+    }
+  }
+}
+
+.inverse {
+  color: rgb(255 255 255 / 0.8);
+
+  .language {
+    color: rgb(255 255 255 / 0.85);
+
+    &[aria-pressed='true'] {
+      color: #fff;
+    }
+  }
+}
+
+@keyframes pick {
+  from {
+    transform: scale(0.6) rotate(-35deg);
+  }
+
+  60% {
+    transform: scale(1.12) rotate(6deg);
+  }
+}

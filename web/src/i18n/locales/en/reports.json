@@ -1,0 +1,61 @@
+{
+  "title": "Reports",
+  "subtitle": "How work went: orders, write-offs, what gets wasted and why dishes go into the stop list.",
+  "period": {
+    "label": "Period",
+    "today": "Today",
+    "week": "7 days",
+    "month": "30 days"
+  },
+  "asTable": "Show as a table",
+  "table": {
+    "product": "Product",
+    "day": "Day",
+    "hour": "Hour"
+  },
+  "kpi": {
+    "label": "Period summary",
+    "orders_one": "order taken",
+    "orders_other": "orders taken",
+    "cancelled_one": "{{count}} cancelled",
+    "cancelled_other": "{{count}} cancelled",
+    "revenue": "revenue",
+    "ticket": "average ticket {{ticket}}",
+    "writeOff": "of products written off",
+    "writeOffNote": "of everything received in the period",
+    "stop": "dishes in the stop list on average",
+    "stopNote": "{{hours}} dish-hours in the stop list in total"
+  },
+  "rates": {
+    "title": "What gets wasted most",
+    "subtitle": "Share of the received product that was written off.",
+    "share": "Written off, %",
+    "writtenOff": "Written off",
+    "received": "Received",
+    "tooltip": "{{percent}} % — {{qty}}",
+    "empty": "Nothing was written off in this period"
+  },
+  "stop": {
+    "title": "Why dishes go into the stop list",
+    "subtitle": "How many hours dishes were unavailable because a product ran out.",
+    "hours": "Hours in stop",
+    "events": "Times",
+    "dishes": "Dishes",
+    "tooltip_one": "{{hours}} h · {{count}} time, dishes: {{dishes}}",
+    "tooltip_other": "{{hours}} h · {{count}} times, dishes: {{dishes}}",
+    "empty": "No dish went into the stop list"
+  },
+  "writeoffs": {
+    "title": "Write-offs by day",
+    "subtitle": "How many times products were written off: spoiled or by hand (damage, stock-take).",
+    "expiry": "Spoiled",
+    "manual": "By hand",
+    "empty": "No write-offs in this period"
+  },
+  "consumption": {
+    "title": "Product consumption",
+    "subtitle": "How much went into orders — by hour or by day.",
+    "qty": "Used",
+    "empty": "No orders in this period"
+  }
+}

@@ -1,0 +1,18 @@
+// Общие анимации для CSS-модулей. Имена keyframes в модулях локальные, поэтому модуль подключает их сам:
+// `@include motion.keyframes;` на верхнем уровне и `@include motion.enter;` в правиле.
+
+@mixin keyframes {
+  // Мягкое появление блока: снизу вверх с проявлением.
+  @keyframes enter {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+}
+
+// fill-mode backwards, не both: «застывший» transform после конца анимации делает блок containing block
+// для position: fixed — и прилипающие полосы (корзина на телефоне) уезжают вместе со страницей.
+@mixin enter($duration: var(--dur-enter), $delay: 0ms) {
+  animation: enter $duration var(--ease-out) $delay backwards;
+}

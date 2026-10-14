@@ -1,0 +1,19 @@
+{
+  "title": "What to sell",
+  "subtitle": "Dishes that help use up products before they spoil.",
+  "updated": "Dishes that help use up products before they spoil. Recalculated at {{time}}.",
+  "list": {
+    "title": "Offer these to guests first",
+    "subtitle": "The higher in the list, the more products the dish saves.",
+    "canCook": "Right now: {{portions}}.",
+    "empty": "Nothing is urgent right now",
+    "emptyHint": "Products expiring in the coming days are selling on their own. The list updates as soon as something starts to spoil."
+  },
+  "how": {
+    "title": "How we choose",
+    "spoiling": "We look at products that spoil in the coming hours and days — the sooner and the more, the more important.",
+    "uses": "We find dishes that use these products and count how many portions it takes to use them up.",
+    "canCook": "We only suggest what the kitchen can cook right now: dishes on the stop list are left out.",
+    "live": "The list recalculates itself after every order, delivery and write-off."
+  }
+}

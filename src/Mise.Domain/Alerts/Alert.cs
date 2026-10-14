@@ -52,10 +52,20 @@ public sealed class Alert
     public DateTimeOffset? AcknowledgedAt { get; private set; }
     public DateTimeOffset? ResolvedAt { get; private set; }
 
+    // Структурные детали: интерфейс собирает фразу на языке пользователя, Message — готовый текст на русском.
+    /// <summary>Количество: остаток партии (Expired) или доступный остаток (LowStock).</summary>
+    public decimal? Quantity { get; private set; }
+    /// <summary>Минимальный остаток (LowStock).</summary>
+    public decimal? LimitQty { get; private set; }
+    /// <summary>Когда истекает партия (ExpiringSoon, Expired).</summary>
+    public DateTimeOffset? ExpiresAt { get; private set; }
+    /// <summary>Остаток списан автоматически (Expired).</summary>
+    public bool? AutoWrittenOff { get; private set; }
+
     public bool IsActive => ResolvedAt is null;
 
     public static Alert ExpiringSoon(Guid id, Guid batchId, Guid productId, string productName, ShelfLifeStatus level,
-        decimal hoursLeft, DateTimeOffset now)
+        decimal hoursLeft, DateTimeOffset expiresAt, DateTimeOffset now)
     {
         var severity = level switch
         {
@@ -72,6 +82,7 @@ public sealed class Alert
             ProductId = productId,
             Message = $"{productName}: партия истекает через {RuFormat.Hours(hoursLeft)}.",
             DedupKey = AlertKeys.Batch(batchId, level),
+            ExpiresAt = expiresAt,
             CreatedAt = now,
         };
     }
@@ -79,7 +90,7 @@ public sealed class Alert
     /// <param name="quantity">Остаток партии в момент истечения.</param>
     /// <param name="writtenOff">Остаток уже списан автоматически (иначе — лежит на складе и требует действия).</param>
     public static Alert Expired(Guid id, Guid batchId, Guid productId, string productName, decimal quantity, MeasureUnit unit,
-        bool writtenOff, DateTimeOffset now) => new()
+        bool writtenOff, DateTimeOffset expiresAt, DateTimeOffset now) => new()
     {
         Id = id,
         Type = AlertType.Expired,
@@ -90,6 +101,9 @@ public sealed class Alert
             ? $"{productName}: срок партии истёк, остаток {RuFormat.Quantity(quantity, unit)} списан автоматически."
             : $"{productName}: срок партии истёк, остаток {RuFormat.Quantity(quantity, unit)} нужно списать.",
         DedupKey = AlertKeys.Batch(batchId, ShelfLifeStatus.Expired),
+        Quantity = quantity,
+        ExpiresAt = expiresAt,
+        AutoWrittenOff = writtenOff,
         CreatedAt = now,
     };
 
@@ -104,15 +118,20 @@ public sealed class Alert
             ? $"{productName}: доступного остатка нет (минимум {RuFormat.Quantity(minStock, unit)})."
             : $"{productName}: доступно {RuFormat.Quantity(usable, unit)} при минимуме {RuFormat.Quantity(minStock, unit)}.",
         DedupKey = AlertKeys.LowStock(productId),
+        Quantity = usable,
+        LimitQty = minStock,
         CreatedAt = now,
     };
 
-    public static Alert StopListOn(Guid id, Guid dishId, string dishName, string? limitingProductName, DateTimeOffset now) => new()
+    /// <param name="limitingProductId">Продукт, которого не хватило (ProductId алерта); null — блюдо выключено вручную.</param>
+    public static Alert StopListOn(Guid id, Guid dishId, string dishName, Guid? limitingProductId, string? limitingProductName,
+        DateTimeOffset now) => new()
     {
         Id = id,
         Type = AlertType.StopListOn,
         Severity = AlertSeverity.Warning,
         DishId = dishId,
+        ProductId = limitingProductId,
         Message = limitingProductName is null
             ? $"«{dishName}» в стоп-листе."
             : $"«{dishName}» в стоп-листе: не хватает «{limitingProductName}».",

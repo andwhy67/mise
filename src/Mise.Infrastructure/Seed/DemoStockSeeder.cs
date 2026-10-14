@@ -1,3 +1,4 @@
+using Mise.Application.Common;
 using Mise.Application.Supplies;
 using Mise.Domain.Abstractions;
 using static Mise.Infrastructure.Seed.SeedData.Products;
@@ -26,8 +27,16 @@ public sealed class DemoStockSeeder(SupplyService supplies, IClock clock)
 
         foreach (var request in BuildSupplies(prefix, now))
         {
-            var result = await supplies.CreateAsync(request, idempotencyKey: request.Number, ct);
-            (result.Created ? created : replayed).Add(request.Number);
+            try
+            {
+                var result = await supplies.CreateAsync(request, idempotencyKey: request.Number, ct);
+                (result.Created ? created : replayed).Add(request.Number);
+            }
+            catch (ConflictException ex) when (ex.Code is SupplyService.Errors.IdempotencyKeyReused or SupplyService.Errors.DuplicateNumber)
+            {
+                // Сегодняшняя поставка уже принята: тело отличается только временем (оно считается от «сейчас») — это повтор.
+                replayed.Add(request.Number);
+            }
         }
 
         return new DemoSeedResult(created, replayed);

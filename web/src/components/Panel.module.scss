@@ -1,0 +1,57 @@
+.panel {
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  padding: 26px;
+
+  @media (max-width: 767px) {
+    padding: 18px 16px;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 30px;
+  line-height: 1.1;
+  color: var(--ink);
+
+  @media (max-width: 767px) {
+    font-size: 26px;
+  }
+}
+
+.subtitle {
+  margin: var(--space-2) 0 0;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.action {
+  flex: none;
+  padding-top: 6px;
+  font-size: 14px;
+}
+
+// Телефон: ссылка уходит под заголовок, иначе сжимает его в узкую колонку.
+@media (max-width: 767px) {
+  .header {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .action {
+    padding-top: 0;
+  }
+}

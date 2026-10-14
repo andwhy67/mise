@@ -101,9 +101,9 @@ public sealed class ExpiryMonitorService(
             raisedAlerts.Add(signal.Level == ShelfLifeStatus.Expired
                 ? Alert.Expired(Guid.CreateVersion7(now), signal.BatchId, signal.ProductId, product.Name,
                     writtenOff.TryGetValue(signal.BatchId, out var qty) ? qty : byId[signal.BatchId].RemainingQty, product.Unit,
-                    writtenOff.ContainsKey(signal.BatchId), now)
+                    writtenOff.ContainsKey(signal.BatchId), byId[signal.BatchId].ExpiresAt, now)
                 : Alert.ExpiringSoon(Guid.CreateVersion7(now), signal.BatchId, signal.ProductId, product.Name, signal.Level,
-                    signal.HoursLeft, now));
+                    signal.HoursLeft, byId[signal.BatchId].ExpiresAt, now));
         }
         db.Alerts.AddRange(raisedAlerts);
 

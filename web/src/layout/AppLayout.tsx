@@ -1,65 +1,140 @@
-import { Badge, HStack, IconButton, Text } from '@chakra-ui/react'
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
-import { LuEllipsis, LuLogOut } from 'react-icons/lu'
-import { navItems, primaryNavItems } from '@/app/navigation'
-import { MiseWordmark } from '@/components/brand/MiseWordmark'
-import { ColorModeButton } from '@/components/ui/color-mode'
+import { useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
+import { NavLink, Navigate, Outlet, useLocation } from 'react-router'
+import { useAlertSummary, useStopList } from '@/api/queries'
+import { NAV, canAccess, mobileTabsFor, navFor } from '@/app/navigation'
+import { session, userLine, useSession, type SessionUser } from '@/auth/session'
+import { LiveIndicator } from '@/components/LiveIndicator'
+import { MiseWordmark } from '@/components/MiseWordmark'
+import { LanguageSwitcher, ThemeSwitcher } from '@/components/Switchers'
+import { Toaster } from '@/components/Toaster'
+import { NoAccessPage } from '@/pages/Misc/MiscPages'
+import { realtime } from '@/realtime/connection'
 import styles from './AppLayout.module.scss'
 
+/** Путь ведёт в один из разделов навигации (а не в 404). */
+const isSection = (pathname: string) => NAV.some((entry) => entry.path !== '/' && pathname.startsWith(entry.path))
+
+/** Защищённая зона: восстанавливает сессию по cookie, держит live-соединение, рисует навигацию по роли. */
 export function AppLayout() {
-  const navigate = useNavigate()
+  const state = useSession()
+  const location = useLocation()
+  const queryClient = useQueryClient()
+
+  useEffect(() => {
+    void session.restore()
+  }, [])
+
+  useEffect(() => {
+    if (state.status !== 'signedIn') return
+    realtime.start(queryClient)
+    return () => void realtime.stop()
+  }, [state.status, queryClient])
+
+  if (state.status === 'unknown') return <div className={styles.splash} aria-busy="true" />
+  if (state.status === 'signedOut' || !state.user)
+    return <Navigate to="/login" replace state={{ from: location.pathname, reason: state.reason }} />
+
+  return <Shell user={state.user} />
+}
+
+function Shell({ user }: { user: SessionUser }) {
+  const { t } = useTranslation()
   const { pathname } = useLocation()
-  const current = navItems.find((item) => item.path === pathname)
-  const isMoreActive = !primaryNavItems.some((item) => item.path === pathname)
+  const items = navFor(user.role)
+  const stopCount = useStopList().data?.length ?? 0
+  const alerts = useAlertSummary().data
+  // Счётчики — числом текстом, без плашек (DESIGN.md §5, NavItem): стоп-лист красным, уведомления — красным только при критичных.
+  const counter = (id: string) => {
+    if (id === 'stoplist' && stopCount > 0)
+      return (
+        <span className={styles.count} aria-label={`${t('nav.stopList')}: ${stopCount}`}>
+          {stopCount}
+        </span>
+      )
+    if (id === 'alerts' && alerts && alerts.total > 0)
+      return (
+        <span className={`${styles.count} ${alerts.critical ? '' : styles.countQuiet}`} aria-label={`${t('nav.alerts')}: ${alerts.total}`}>
+          {alerts.total}
+        </span>
+      )
+    return null
+  }
 
   return (
     <div className={styles.shell}>
-      <nav className={styles.sidebar} aria-label="Основная навигация">
-        <Link to="/" className={styles.brand} aria-label="Mise — на главную">
+      <a href="#content" className={styles.skip}>
+        {t('nav.main')}
+      </a>
+
+      {/* Десктоп ≥ 1024: сайдбар без иконок (DESIGN.md §5, NavItem). */}
+      <aside className={styles.sidebar}>
+        <div className={styles.brand}>
           <MiseWordmark />
-        </Link>
-        {navItems.map(({ path, label, icon: Icon }) => (
-          <NavLink key={path} to={path} end={path === '/'} className={styles.navLink}>
-            <Icon aria-hidden />
-            {label}
+        </div>
+        <nav aria-label={t('nav.main')} className={styles.nav}>
+          {[false, true].map((secondary) => (
+            <ul key={String(secondary)} className={styles.navGroup}>
+              {items
+                .filter((item) => Boolean(item.secondary) === secondary)
+                .map((item) => (
+                  <li key={item.id}>
+                    <NavLink to={item.path} end={item.path === '/'} className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}>
+                      <span>{t(item.label)}</span>
+                      {counter(item.id)}
+                    </NavLink>
+                  </li>
+                ))}
+            </ul>
+          ))}
+        </nav>
+        <footer className={styles.sidebarFooter}>
+          <p className={styles.user}>{userLine(user, t(`roles.${user.role}`))}</p>
+          <div className={styles.footerControls}>
+            <ThemeSwitcher />
+            <LanguageSwitcher />
+          </div>
+          <button type="button" className={styles.logout} onClick={() => void session.logout()}>
+            {t('actions.logout')}
+          </button>
+        </footer>
+      </aside>
+
+      {/* Планшет 768–1023: верхняя панель с горизонтальной навигацией. Телефон: шапка + нижняя навигация. */}
+      <header className={styles.topbar}>
+        <MiseWordmark />
+        <nav aria-label={t('nav.main')} className={styles.topNav}>
+          {items.map((item) => (
+            <NavLink key={item.id} to={item.path} end={item.path === '/'} className={({ isActive }) => `${styles.topItem} ${isActive ? styles.active : ''}`}>
+              {t(item.label)}
+              {counter(item.id)}
+            </NavLink>
+          ))}
+        </nav>
+        <span className={styles.mobileLive}>
+          <LiveIndicator short />
+        </span>
+      </header>
+
+      <main id="content" className={styles.main} tabIndex={-1}>
+        {/* key по пути: при переходе экран мягко появляется заново. */}
+        <div key={pathname} className={styles.page}>
+          {/* Раздел чужой роли — понятный экран вместо ошибки 403 от API. Неизвестный путь — 404 из роутера. */}
+          {isSection(pathname) && !canAccess(user.role, pathname) ? <NoAccessPage /> : <Outlet />}
+        </div>
+      </main>
+
+      <nav aria-label={t('nav.main')} className={styles.bottomNav}>
+        {mobileTabsFor(user.role).map((item) => (
+          <NavLink key={item.id} to={item.path} end={item.path === '/'} className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ''}`}>
+            <item.icon aria-hidden="true" strokeWidth={1.8} />
+            <span>{t(item.shortLabel ?? item.label)}</span>
           </NavLink>
         ))}
       </nav>
 
-      <div className={styles.main}>
-        <header className={styles.header}>
-          <Text as="span" fontWeight="600" fontSize="md" truncate>
-            {current?.label ?? 'Mise'}
-          </Text>
-          <HStack gap={1}>
-            {/* Live-индикатор заработает с SignalR в фазе 4. */}
-            <Badge variant="subtle" colorPalette="gray" title="Обновления в реальном времени появятся позже">
-              ● Live скоро
-            </Badge>
-            <ColorModeButton />
-            <IconButton variant="ghost" size="sm" aria-label="Выйти из смены" title="Выйти из смены" onClick={() => navigate('/login')}>
-              <LuLogOut />
-            </IconButton>
-          </HStack>
-        </header>
-
-        <main className={styles.content}>
-          <Outlet />
-        </main>
-      </div>
-
-      <nav className={styles.bottomNav} aria-label="Навигация">
-        {primaryNavItems.map(({ path, label, icon: Icon }) => (
-          <NavLink key={path} to={path} end={path === '/'} className={styles.bottomLink}>
-            <Icon aria-hidden />
-            <span>{label}</span>
-          </NavLink>
-        ))}
-        <NavLink to="/more" className={styles.bottomLink} aria-current={isMoreActive ? 'page' : undefined}>
-          <LuEllipsis aria-hidden />
-          <span>Ещё</span>
-        </NavLink>
-      </nav>
+      <Toaster />
     </div>
   )
 }

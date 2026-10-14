@@ -1,0 +1,60 @@
+{
+  "title": "Stock",
+  "subtitle": "What is in the kitchen and when it spoils. Whatever spoils first is always used first.",
+  "filter": {
+    "label": "Show",
+    "all": "All",
+    "expiring": "Spoiling soon",
+    "low": "Running low",
+    "out": "Out of stock",
+    "spoiled": "Spoiled"
+  },
+  "search": "Find a product",
+  "none": "Out of stock",
+  "low": "Low: keep at least {{min}}",
+  "outOfStock": "Out of stock",
+  "spoiledQty": "{{qty}} already spoiled — write it off",
+  "empty": {
+    "all": "The stock is empty",
+    "expiring": "Nothing spoils in the coming days",
+    "low": "Everything is well stocked",
+    "out": "Everything is in stock",
+    "spoiled": "Nothing has spoiled",
+    "search": "Nothing found",
+    "hint": "Try another filter or receive a delivery."
+  },
+  "details": {
+    "order": "Deliveries in the order they will be used.",
+    "supply": "Delivery of {{date}}",
+    "left": "{{left}} of {{of}} left",
+    "first": "used first",
+    "queue": "number {{rank}} in line",
+    "notUsable": "won't be used",
+    "empty": "Nothing left from deliveries."
+  },
+  "writeOff": {
+    "action": "Write off",
+    "title": "Write off a product",
+    "left": "{{qty}} left",
+    "quantity": "How much to write off",
+    "quantityHint": "Leave empty to write off everything that is left.",
+    "unit": "Unit",
+    "reason": "Reason",
+    "reasons": {
+      "spoiled": "Spoiled",
+      "damaged": "Damaged or broken",
+      "inventory": "Stock-take mismatch",
+      "other": "Other"
+    },
+    "otherLabel": "Describe the reason",
+    "submit": "Write off",
+    "submitting": "Writing off…",
+    "cancel": "Cancel",
+    "done": "Written off: {{product}}, {{qty}}",
+    "errors": {
+      "quantity": "Enter a quantity above zero.",
+      "tooMuch": "Not that much: {{left}} left.",
+      "reason": "Describe the reason — it goes into the log."
+    }
+  }
+}

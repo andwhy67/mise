@@ -1,0 +1,82 @@
+import { describe, expect, it } from 'vitest'
+import type { Product } from '@/api/types'
+import { dishFormToRequest, emptyDishForm, productFormToRequest, productToForm, validateDish, validateProduct } from './catalogForm'
+
+const milk: Product = {
+  id: 'milk',
+  name: 'Молоко 3,2%',
+  unit: 'Milliliter',
+  defaultShelfLifeHours: 120,
+  minStockQty: 2000,
+  packSize: 1000,
+  category: 'Молочные',
+  storageType: 'Холодильник',
+}
+
+describe('продукт: форма ⇄ API', () => {
+  it('в форме — дни и литры, как удобно на кухне', () => {
+    expect(productToForm(milk)).toEqual({
+      name: 'Молоко 3,2%',
+      unit: 'Milliliter',
+      shelfLifeDays: '5',
+      minStock: '2',
+      packSize: '1',
+      category: 'Молочные',
+      storageType: 'Холодильник',
+    })
+  })
+
+  it('в API — часы и базовые единицы', () => {
+    expect(productFormToRequest({ ...productToForm(milk), shelfLifeDays: '1,5', minStock: '0,5' })).toEqual({
+      name: 'Молоко 3,2%',
+      unit: 'Milliliter',
+      defaultShelfLifeHours: 36,
+      minStockQty: 500,
+      packSize: 1000,
+      category: 'Молочные',
+      storageType: 'Холодильник',
+    })
+  })
+
+  it('штуки — без пересчёта; пустой срок — нормы нет', () => {
+    expect(
+      productFormToRequest({ name: 'Яйца', unit: 'Piece', shelfLifeDays: '', minStock: '30', packSize: '10', category: '', storageType: '' }),
+    ).toEqual({ name: 'Яйца', unit: 'Piece', defaultShelfLifeHours: null, minStockQty: 30, packSize: 10, category: null, storageType: null })
+  })
+
+  it('проверка', () => {
+    expect(validateProduct({ name: ' ', unit: 'Gram', shelfLifeDays: '0', minStock: '-1', packSize: '0', category: '', storageType: '' })).toEqual({
+      name: 'name',
+      shelfLifeDays: 'shelfLife',
+      minStock: 'minStock',
+      packSize: 'packSize',
+    })
+    expect(validateProduct(productToForm(milk))).toEqual({})
+  })
+})
+
+describe('блюдо', () => {
+  it('проверка: цена с копейками, состав без повторов и нулей', () => {
+    const form = {
+      ...emptyDishForm(),
+      name: 'Блины',
+      price: '320,555',
+      ingredients: [
+        { key: 'a', productId: 'milk', quantity: '200' },
+        { key: 'b', productId: 'milk', quantity: '50' },
+        { key: 'c', productId: '', quantity: '0' },
+      ],
+    }
+    expect(validateDish(form)).toEqual({ price: 'price', 'b.product': 'duplicate', 'c.product': 'product', 'c.quantity': 'quantity' })
+  })
+
+  it('пустой состав — ошибка', () => {
+    expect(validateDish({ ...emptyDishForm(), name: 'Чай', price: '100', ingredients: [] })).toEqual({ ingredients: 'empty' })
+  })
+
+  it('в API', () => {
+    expect(
+      dishFormToRequest({ name: ' Блины ', category: 'Завтраки', price: '320,5', isActive: true, ingredients: [{ key: 'a', productId: 'milk', quantity: '200' }] }),
+    ).toEqual({ name: 'Блины', category: 'Завтраки', price: 320.5, isActive: true, ingredients: [{ productId: 'milk', quantity: 200 }] })
+  })
+})

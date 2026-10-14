@@ -1,0 +1,93 @@
+{
+  "title": "Catalog",
+  "subtitle": "Products with standard shelf life and dishes with per-portion recipes. Expiry, stock and the stop list are calculated from them.",
+  "tabs": {
+    "label": "Section",
+    "products": "Products",
+    "dishes": "Dishes"
+  },
+  "noCategory": "No category",
+  "notFound": "Nothing found",
+  "save": "Save",
+  "cancel": "Cancel",
+  "delete": "Delete",
+  "deleteConfirm": "Delete for sure?",
+  "deleteYes": "Yes, delete",
+  "deleteNo": "No",
+  "saved": "“{{name}}” saved",
+  "created": "“{{name}}” added",
+  "deleted": "“{{name}}” deleted",
+  "units": {
+    "base": {
+      "Gram": "Grams (weight)",
+      "Milliliter": "Millilitres (volume)",
+      "Piece": "Pieces"
+    },
+    "big": {
+      "Gram": "kg",
+      "Milliliter": "L",
+      "Piece": "pcs"
+    }
+  },
+  "storage": {
+    "fridge": "Fridge",
+    "freezer": "Freezer",
+    "dry": "Dry store"
+  },
+  "products": {
+    "add": "Add a product",
+    "new": "New product",
+    "search": "Find a product",
+    "empty": "No products yet",
+    "formHint": "Standard shelf life is used when the supplier gives no date; the minimum stock drives “What to order”.",
+    "shelfLife": "Keeps {{days}} d",
+    "noShelfLife": "No standard shelf life",
+    "minStock": "Keep at least {{qty}}",
+    "name": "Name",
+    "unit": "Counted in",
+    "shelfLifeDays": "Standard shelf life, days",
+    "shelfLifeHint": "Empty — the expiry is given in every delivery.",
+    "minStockLabel": "Minimum stock, {{unit}}",
+    "minStockHint": "Below it the product appears in “What to order”.",
+    "packSizeLabel": "Supplier pack, {{unit}}",
+    "packSizeHint": "Orders are rounded up to whole packs.",
+    "category": "Category",
+    "storage": "Stored in",
+    "unitLocked": "The unit of an existing product isn't changed — it already has stock and movements."
+  },
+  "dishes": {
+    "add": "Add a dish",
+    "new": "New dish",
+    "search": "Find a dish",
+    "empty": "No dishes yet",
+    "formHint": "The recipe is per portion — products are taken from stock by it when an order is placed.",
+    "ingredients_one": "{{count}} product in the recipe",
+    "ingredients_other": "{{count}} products in the recipe",
+    "offMenu": "Off the menu",
+    "name": "Name",
+    "category": "Category",
+    "price": "Price, ₽",
+    "active": "On the menu",
+    "activeHint": "Untick to take the dish off the menu by hand — it goes into the stop list.",
+    "composition": "Recipe per portion",
+    "compositionHint": "Weight and volume in grams and millilitres, everything else in pieces.",
+    "product": "Product",
+    "productPlaceholder": "Choose a product",
+    "perPortion": "Per portion",
+    "perPortionUnit": "Per portion, {{unit}}",
+    "addIngredient": "Add a product",
+    "removeIngredient": "Remove from the recipe: {{name}}"
+  },
+  "errors": {
+    "name": "Enter a name.",
+    "duplicateName": "This name already exists.",
+    "shelfLife": "Above zero (or leave empty).",
+    "minStock": "Zero or more.",
+    "packSize": "Above zero.",
+    "price": "Price — a number with at most two decimals.",
+    "emptyComposition": "Add at least one product to the recipe.",
+    "product": "Choose a product.",
+    "duplicate": "This product is already in the recipe.",
+    "quantity": "Above zero."
+  }
+}

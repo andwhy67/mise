@@ -1,0 +1,119 @@
+.search {
+  position: relative;
+  margin-bottom: var(--space-3);
+
+  svg {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    width: 18px;
+    height: 18px;
+    color: var(--muted);
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+
+  input {
+    width: 100%;
+    height: var(--control-height);
+    padding: 0 14px 0 42px;
+    border: 1px solid var(--border-input);
+    border-radius: var(--radius-control);
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    font-size: 16px;
+    transition: border-color var(--dur-fast) var(--ease-out);
+
+    &::placeholder {
+      color: var(--muted);
+    }
+
+    &:hover:not(:focus-visible) {
+      border-color: var(--muted);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--brand-strong);
+      outline-offset: 0;
+      border-color: transparent;
+    }
+  }
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li + li {
+    border-top: 1px solid var(--hairline);
+  }
+}
+
+// Строка-кнопка открывает карточку: название · норма/состав · минимум/цена.
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-4);
+  width: calc(100% + var(--space-6));
+  margin: 0 calc(var(--space-3) * -1);
+  padding: var(--space-3);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out);
+
+  &:hover {
+    background: var(--bg);
+
+    .title {
+      color: var(--brand-strong);
+    }
+  }
+
+  @media (max-width: 767px) {
+    grid-template-columns: minmax(0, 1fr) auto;
+
+    .cell:first-of-type {
+      display: none;
+    }
+  }
+}
+
+.name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.title {
+  font-weight: 600;
+  color: var(--ink);
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.meta {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.price {
+  font-weight: 500;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}

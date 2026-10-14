@@ -1,0 +1,200 @@
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+
+  @media (max-width: 1023px) {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+}
+
+.status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4) var(--space-8);
+}
+
+.statusMain {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+// Пока симулятор работает, квадрат статуса мягко «дышит» — видно, что процесс идёт.
+.live :global([aria-hidden='true']) {
+  animation: breathe 1.6s ease-in-out infinite;
+}
+
+.statusMeta {
+  margin: var(--space-1) 0 0;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.speed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.speedHint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.counters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin: var(--space-5) 0 0;
+  border-top: 1px solid var(--hairline);
+
+  @media (max-width: 767px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.counter {
+  padding: var(--space-4) var(--space-4) 0 0;
+
+  dt {
+    font-size: 13px;
+    color: var(--ink-2);
+  }
+
+  dd {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: 32px;
+    font-weight: 500;
+    line-height: 1.1;
+    color: var(--ink);
+    font-variant-numeric: var(--numerals-serif);
+    animation: tick var(--dur-enter) var(--ease-out) backwards;
+  }
+}
+
+.scenarios {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+
+  @media (max-width: 767px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.scenario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-base) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+
+  &:hover:not(:disabled) {
+    border-color: var(--brand-strong);
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  &[aria-checked='true'] {
+    border-color: var(--brand);
+    background: var(--brand-tint);
+
+    .scenarioTitle {
+      color: var(--brand-strong);
+    }
+  }
+
+  &:disabled {
+    cursor: progress;
+  }
+}
+
+.scenarioTitle {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.scenarioText {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.activity {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.event {
+  display: grid;
+  grid-template-columns: 48px 80px minmax(0, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  font-size: 13px;
+  animation: tick var(--dur-enter) var(--ease-out) backwards;
+
+  & + & {
+    border-top: 1px solid var(--hairline);
+  }
+
+  @media (max-width: 767px) {
+    grid-template-columns: 48px minmax(0, 1fr);
+
+    .eventText {
+      grid-column: 1 / -1;
+    }
+  }
+}
+
+.eventTime {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.eventKind {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.eventText {
+  color: var(--ink-2);
+}
+
+@keyframes breathe {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@keyframes tick {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}

@@ -1,0 +1,165 @@
+.kpi {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+
+  @media (max-width: 1023px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.kpiCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: var(--space-5) var(--space-6);
+  border-left: 1px solid var(--hairline);
+
+  &:first-child {
+    border-left: 0;
+  }
+
+  @media (max-width: 1023px) {
+    &:nth-child(odd) {
+      border-left: 0;
+    }
+
+    &:nth-child(n + 3) {
+      border-top: 1px solid var(--hairline);
+    }
+  }
+
+  @media (max-width: 767px) {
+    padding: var(--space-4);
+  }
+}
+
+.kpiValue {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 40px;
+  line-height: 1.05;
+  color: var(--brand-strong);
+  font-variant-numeric: var(--numerals-serif);
+  overflow-wrap: anywhere;
+
+  @media (max-width: 767px) {
+    font-size: 30px;
+  }
+}
+
+.kpiText {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.kpiNote {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-6);
+  align-items: start;
+
+  @media (max-width: 1023px) {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+}
+
+.figure {
+  margin: var(--space-4) 0 0;
+}
+
+.chart {
+  min-width: 0;
+
+  // Recharts рисует SVG: подписи — шрифтом интерфейса.
+  :global(.recharts-text) {
+    font-family: var(--font-sans);
+  }
+
+  :global(.recharts-legend-item-text) {
+    color: var(--ink-2) !important;
+  }
+}
+
+.table {
+  margin-top: var(--space-3);
+  font-size: 13px;
+
+  summary {
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+    color: var(--brand-strong);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+    text-underline-offset: 3px;
+    cursor: pointer;
+  }
+
+  table {
+    width: 100%;
+    margin-top: var(--space-2);
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+
+  th,
+  td {
+    padding: var(--space-2) var(--space-2) var(--space-2) 0;
+    border-bottom: 1px solid var(--hairline);
+    text-align: left;
+    font-weight: 400;
+    color: var(--ink-2);
+  }
+
+  thead th {
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  tbody th {
+    color: var(--ink);
+  }
+}
+
+.tooltip {
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.tooltipLabel {
+  margin: 0 0 2px;
+  font-weight: 600;
+}
+
+.tooltipRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--ink-2);
+}
+
+.tooltipSquare {
+  width: 8px;
+  height: 8px;
+  flex: none;
+}
+
+.productSelect {
+  min-width: 200px;
+}

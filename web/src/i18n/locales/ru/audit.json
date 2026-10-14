@@ -1,0 +1,52 @@
+{
+  "title": "Журнал",
+  "subtitle": "Кто, что и когда сделал. Нажмите на запись, чтобы увидеть подробности.",
+  "filter": {
+    "action": "Действие",
+    "allActions": "Все действия",
+    "user": "Кто",
+    "allUsers": "Все пользователи"
+  },
+  "groups": {
+    "stock": "Склад и поставки",
+    "orders": "Заказы",
+    "catalog": "Справочники",
+    "people": "Вход и пользователи",
+    "simulator": "Симулятор"
+  },
+  "actions": {
+    "supply.create": "Принял поставку",
+    "batch.write_off": "Списал продукт",
+    "demo.seed_stock": "Наполнил склад демо-поставками",
+    "order.create": "Принял заказ",
+    "order.status": "Сменил статус заказа",
+    "order.cancel": "Отменил заказ",
+    "product.create": "Добавил продукт",
+    "product.update": "Изменил продукт",
+    "product.delete": "Удалил продукт",
+    "dish.create": "Добавил блюдо",
+    "dish.update": "Изменил блюдо",
+    "dish.ingredients": "Изменил состав блюда",
+    "dish.delete": "Удалил блюдо",
+    "auth.login": "Вошёл",
+    "auth.demo_login": "Вошёл (демо)",
+    "auth.login_failed": "Неудачная попытка входа",
+    "auth.logout": "Вышел",
+    "auth.refresh_reuse": "Повтор старого токена — сессия отозвана",
+    "user.create": "Добавил пользователя",
+    "user.update": "Изменил пользователя",
+    "user.reset_password": "Сбросил пароль",
+    "simulator.start": "Запустил симулятор",
+    "simulator.stop": "Остановил симулятор",
+    "simulator.scenario": "Сменил сценарий симулятора",
+    "simulator.speed": "Сменил скорость симулятора"
+  },
+  "system": "Система",
+  "empty": "Записей нет",
+  "emptyHint": "Попробуйте другой фильтр.",
+  "more": "Показать ещё",
+  "fields": {
+    "entity": "Объект",
+    "ip": "Адрес"
+  }
+}

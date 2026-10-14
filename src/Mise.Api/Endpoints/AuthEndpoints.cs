@@ -30,6 +30,27 @@ internal static class AuthEndpoints
             .WithSummary("Вход: access-токен (15 мин) в ответе, refresh — в httpOnly-cookie")
             .WithDescription("Демо-учётки: manager, chef, warehouse (пароль — DEMO_PASSWORD). После 5 неудач — блокировка на 5 мин; 10 попыток в минуту с IP.");
 
+        auth.MapGet("/config", (IConfiguration configuration) =>
+            {
+                var demo = configuration.GetValue("Demo:Enabled", false);
+                return new AuthConfigDto(demo, demo ? DemoUsers.All.Select(u => u.Role).ToList() : []);
+            })
+            .AllowAnonymous()
+            .WithSummary("Настройки экрана входа: доступен ли демо-вход и для каких ролей");
+
+        auth.MapPost("/demo", async (DemoLoginRequest request, AuthService service, HttpContext http, IOptions<AuthOptions> options,
+                IConfiguration configuration, CancellationToken ct) =>
+            {
+                if (!configuration.GetValue("Demo:Enabled", false))
+                    return Results.NotFound();
+                var session = await service.DemoLoginAsync(request, ct);
+                SetRefreshCookie(http, session, options.Value);
+                return Results.Ok(new LoginResponse(session.AccessToken, session.AccessTokenExpiresAt, session.User));
+            })
+            .AllowAnonymous()
+            .RequireRateLimiting(RateLimitingOptions.LoginPolicy)
+            .WithSummary("Демо-вход по роли без пароля (только при Demo:Enabled)");
+
         auth.MapPost("/refresh", async (AuthService service, HttpContext http, IOptions<AuthOptions> options, CancellationToken ct) =>
             {
                 try

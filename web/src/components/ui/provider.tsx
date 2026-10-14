@@ -1,16 +1,16 @@
 import { ChakraProvider } from '@chakra-ui/react'
 import { QueryClientProvider } from '@tanstack/react-query'
-import type { PropsWithChildren } from 'react'
+import { Suspense, type PropsWithChildren } from 'react'
 import { queryClient } from '@/api/queryClient'
 import { system } from '@/theme/system'
-import { ColorModeProvider } from './color-mode'
 
+/** Chakra (примитивы), кэш запросов; Suspense ждёт первый словарь i18n — без мигания ключей вместо текста. */
 export function Provider({ children }: PropsWithChildren) {
   return (
     <ChakraProvider value={system}>
-      <ColorModeProvider>
-        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-      </ColorModeProvider>
+      <QueryClientProvider client={queryClient}>
+        <Suspense fallback={null}>{children}</Suspense>
+      </QueryClientProvider>
     </ChakraProvider>
   )
 }

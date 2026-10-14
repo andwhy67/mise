@@ -1,16 +1,84 @@
-// Глобальные мелочи поверх preflight Chakra.
+// Глобальные основы поверх preflight Chakra: фон, шрифты, фокус, движение (DESIGN.md §2, §7, §11).
 html {
   -webkit-text-size-adjust: 100%;
   text-rendering: optimizeLegibility;
 }
 
+html,
 body {
-  font-feature-settings: 'cv11', 'ss01', 'tnum';
+  background: var(--bg);
+  color: var(--ink);
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.55;
+  font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
 }
 
 a {
-  color: inherit;
+  color: var(--brand-strong);
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    text-decoration-color var(--dur-fast) var(--ease-out),
+    text-underline-offset var(--dur-fast) var(--ease-out);
+}
+
+// Смена темы: старый снимок неподвижен, новый раскрывается кругом от кнопки (lib/viewTransition.ts).
+:root[data-transition='theme']::view-transition-old(root),
+:root[data-transition='theme']::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+// Смена языка: короткий cross-fade с лёгким сдвигом — текст «перелистывается», а не мигает.
+:root[data-transition='language']::view-transition-old(root) {
+  animation: vt-out 140ms var(--ease-out) both;
+}
+
+:root[data-transition='language']::view-transition-new(root) {
+  animation: vt-in 260ms var(--ease-out) 40ms both;
+}
+
+@keyframes vt-out {
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes vt-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+
+// Видимый фокус для всего интерактивного (2px, цвет бренда).
+:focus-visible {
+  outline: 2px solid var(--brand-strong);
+  outline-offset: 2px;
+}
+
+// Пока открыт лист (<dialog>), страница под ним не прокручивается.
+body:has(dialog[open]) {
+  overflow: hidden;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {

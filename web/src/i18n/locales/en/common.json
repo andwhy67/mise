@@ -1,0 +1,125 @@
+{
+  "app": {
+    "name": "Mise",
+    "tagline": "Restaurant stock, shelf life and stop list"
+  },
+  "nav": {
+    "home": "Home",
+    "stock": "Stock",
+    "supplies": "Deliveries",
+    "orders": "Orders",
+    "order": "Order",
+    "stopList": "Stop list",
+    "stop": "Stop",
+    "hotOffers": "What to sell",
+    "reports": "Reports",
+    "alerts": "Notifications",
+    "catalog": "Catalog",
+    "simulator": "Simulator",
+    "users": "Users",
+    "audit": "Log",
+    "more": "More",
+    "main": "Main navigation"
+  },
+  "roles": {
+    "Warehouse": "storekeeper",
+    "Chef": "chef",
+    "Manager": "manager",
+    "Simulator": "simulator"
+  },
+  "theme": {
+    "label": "Appearance",
+    "light": "Light",
+    "dark": "Graphite",
+    "system": "System"
+  },
+  "language": {
+    "label": "Language"
+  },
+  "live": {
+    "live": "Updates automatically",
+    "liveShort": "Online",
+    "connecting": "Connecting…",
+    "reconnecting": "Reconnecting…",
+    "offline": "No connection"
+  },
+  "actions": {
+    "howCalculated": "How this is calculated",
+    "hideCalculation": "Hide calculation",
+    "details": "Details",
+    "hideDetails": "Hide",
+    "showAll": "Show all",
+    "retry": "Try again",
+    "close": "Close",
+    "logout": "Sign out",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "state": {
+    "loading": "Loading…",
+    "error": "Couldn't load the data.",
+    "errorHint": "Check the connection and try again.",
+    "empty": "Everything is in its place",
+    "notFoundTitle": "Nothing on this shelf",
+    "notFoundText": "Shall we check the other shelves?",
+    "toHome": "Go home",
+    "noAccessTitle": "This section is not for your role",
+    "noAccessText": "If you need it for work, ask a manager to change your role."
+  },
+  "errors": {
+    "network": "Can't reach the server. Check your connection.",
+    "auth": {
+      "invalid_credentials": "Couldn't sign in. Check your login and password.",
+      "locked": "Too many failed attempts. Try again in a few minutes.",
+      "inactive": "This account is disabled. Ask a manager.",
+      "demo_unavailable": "Demo access isn't set up right now."
+    },
+    "rate_limited": "Too many requests. Please wait a minute.",
+    "unknown": "Something went wrong. Please try again.",
+    "validation": "Please check what you entered.",
+    "order": {
+      "insufficient_stock": "Not enough products for this order.",
+      "dish_unavailable": "One of the dishes can't be ordered right now.",
+      "idempotency_key_reused": "This order was already sent with different contents. Refresh the page.",
+      "invalid_transition": "The order has moved on — refresh the list.",
+      "not_cancellable": "This order can no longer be cancelled."
+    },
+    "batch": {
+      "insufficient_quantity": "Not that much is left.",
+      "not_writable": "This delivery is already used up or written off.",
+      "invalid_quantity": "The quantity is not valid.",
+      "not_usable": "This delivery has already spoiled."
+    },
+    "unit": {
+      "incompatible": "This unit doesn't fit the product.",
+      "too_precise": "Too many decimal places."
+    },
+    "supply": {
+      "duplicate_number": "A delivery with this number already exists.",
+      "idempotency_key_reused": "This delivery was already sent with different contents. Reopen the form.",
+      "duplicate_id": "This delivery already exists."
+    },
+    "expiry": {
+      "not_after_receipt": "The expiry must be after the delivery date.",
+      "unresolvable": "Couldn't determine the expiry date.",
+      "invalid_shelf_life": "The shelf life is not valid."
+    },
+    "product": {
+      "duplicate_name": "A product with this name already exists.",
+      "in_use": "The product can't be deleted: it is in stock or used in recipes.",
+      "unit_locked": "The unit can't change: the product already has movements."
+    },
+    "dish": {
+      "duplicate_name": "A dish with this name already exists.",
+      "in_use": "The dish can't be deleted: it is in orders. Take it off the menu instead."
+    },
+    "user": {
+      "duplicate_login": "This login already exists.",
+      "last_manager": "You can't deactivate or demote the last manager — appoint another one first."
+    }
+  },
+  "stepper": {
+    "less": "{{name}}: one portion less",
+    "more": "{{name}}: one portion more"
+  }
+}

@@ -84,6 +84,7 @@ public sealed class SimulatorTests(MiseApiFactory factory)
     public async Task Demo_seed_creates_interesting_stock_once_per_day()
     {
         var first = await PostAsync("/api/v1/demo/seed-stock", null);
+        factory.Clock.Advance(TimeSpan.FromMinutes(1)); // повтор позже — тело поставок другое (время), но это повтор
         var second = await PostAsync("/api/v1/demo/seed-stock", null);
 
         Assert.Equal(3, first.GetProperty("created").GetArrayLength());

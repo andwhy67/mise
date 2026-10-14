@@ -1,0 +1,96 @@
+/* Токены Mise — DESIGN.md §2. Светлая тема по умолчанию, «Графит» — класс .dark на <html> (theme/colorScheme.ts). */
+:root {
+  /* Поверхности */
+  --bg: #f2f7fb;
+  --surface: #ffffff;
+  --border: #d5e3ef;
+  --hairline: #e3ecf4;
+  --border-input: #a9c2d6;
+
+  /* Текст */
+  --ink: #12263a;
+  --ink-2: #2f4558;
+  --muted: #4c6479;
+
+  /* Бренд */
+  --brand: #0077b8;
+  --brand-strong: #005f96;
+  --brand-tint: #e3f1fb;
+  --on-brand-text: #ffffff;
+
+  /* Статусы: текст / маркер и полоска */
+  --fresh-text: #1e7f5c;
+  --fresh-bar: #2e9e73;
+  --warn-text: #8a5200;
+  --warn-bar: #e0900f;
+  --crit-text: #b3261e;
+  --crit-bar: #c62f2f;
+  --expired-text: #7a1f18;
+  --expired-bar: #7a1f18;
+  --info-text: #005f96;
+  --info-bar: #0077b8;
+
+  /* Шрифты */
+  --font-serif: 'Cormorant Garamond', 'Times New Roman', serif;
+  --font-sans: 'Golos Text', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* Размеры */
+  --radius-control: 6px;
+  --radius-panel: 8px;
+  --sidebar-width: 232px;
+  --bottom-nav-height: 72px;
+  --control-height: 44px;
+  --input-height: 48px;
+
+  /* Отступы (шкала 4/8) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  /* Длительности: отклик на наведение, смена состояния, появление блока. */
+  --dur-fast: 140ms;
+  --dur-base: 220ms;
+  --dur-enter: 320ms;
+  /* Cormorant по умолчанию рисует старостильные цифры: «211» читается как «2II». Для чисел — выровненные. */
+  --numerals-serif: lining-nums tabular-nums;
+  color-scheme: light;
+}
+
+/* «Графит» — тёплый приглушённый серый, не чёрный (DESIGN.md §2.1a). */
+:root.dark {
+  --bg: #2b2e33;
+  --surface: #34383e;
+  --border: #4a5058;
+  --hairline: #3e434a;
+  --border-input: #6a727b;
+
+  --ink: #eceae6;
+  --ink-2: #c9cdd2;
+  --muted: #a2aab3;
+
+  --brand: #4fa8dc;
+  --brand-strong: #86c4ea;
+  --brand-tint: #2f4352;
+  --on-brand-text: #12263a;
+
+  --fresh-text: #7ccfa6;
+  --fresh-bar: #4fb585;
+  --warn-text: #e9b656;
+  --warn-bar: #e0a23a;
+  --crit-text: #f2867d;
+  --crit-bar: #e0665c;
+  --expired-text: #e7a39c;
+  --expired-bar: #b8584f;
+  --info-text: #86c4ea;
+  --info-bar: #4fa8dc;
+  color-scheme: dark;
+}

@@ -78,7 +78,7 @@ public sealed class AlertService(IMiseDbContext db, IClock clock)
         var productIds = alerts.Where(a => a.ProductId is not null).Select(a => a.ProductId!.Value).Distinct().ToList();
         var dishIds = alerts.Where(a => a.DishId is not null).Select(a => a.DishId!.Value).Distinct().ToList();
         var products = await db.Products.AsNoTracking().Where(p => productIds.Contains(p.Id))
-            .ToDictionaryAsync(p => p.Id, p => p.Name, ct);
+            .ToDictionaryAsync(p => p.Id, p => new { p.Name, p.Unit }, ct);
         var dishes = await db.Dishes.AsNoTracking().Where(d => dishIds.Contains(d.Id))
             .ToDictionaryAsync(d => d.Id, d => d.Name, ct);
 
@@ -86,9 +86,11 @@ public sealed class AlertService(IMiseDbContext db, IClock clock)
             .Select(a => new AlertDto(
                 a.Id, a.Type, a.Severity, a.Message,
                 a.BatchId,
-                a.ProductId, a.ProductId is { } p ? products.GetValueOrDefault(p) : null,
+                a.ProductId, a.ProductId is { } p ? products.GetValueOrDefault(p)?.Name : null,
                 a.DishId, a.DishId is { } d ? dishes.GetValueOrDefault(d) : null,
-                a.CreatedAt, a.AcknowledgedAt, a.ResolvedAt, a.IsActive))
+                a.CreatedAt, a.AcknowledgedAt, a.ResolvedAt, a.IsActive,
+                a.ProductId is { } unitOf ? products.GetValueOrDefault(unitOf)?.Unit : null,
+                a.Quantity, a.LimitQty, a.ExpiresAt, a.AutoWrittenOff))
             .ToList();
     }
 }

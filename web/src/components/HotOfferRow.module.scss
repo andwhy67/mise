@@ -1,0 +1,106 @@
+@use '../styles/motion';
+
+@include motion.keyframes;
+
+.row {
+  display: grid;
+  grid-template-columns: 50px 1fr;
+  gap: var(--space-4);
+  padding: var(--space-6) 0;
+
+  & + & {
+    border-top: 1px solid var(--hairline);
+  }
+
+  &:last-child {
+    padding-bottom: 0;
+  }
+}
+
+.compact {
+  grid-template-columns: 1fr;
+  padding: var(--space-5) 0;
+}
+
+// На телефоне номер не показывается (DESIGN.md §2.2): порядок и так виден по списку.
+@media (max-width: 767px) {
+  .row {
+    grid-template-columns: 1fr;
+    padding: var(--space-5) 0;
+  }
+
+  .rank {
+    display: none;
+  }
+}
+
+.rank {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 40px;
+  line-height: 0.95;
+  color: var(--muted);
+  text-align: center;
+  font-variant-numeric: var(--numerals-serif);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.dish {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ink);
+
+  @media (max-width: 767px) {
+    font-size: 15px;
+  }
+}
+
+.reason {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.toggle {
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--brand-strong);
+  font: inherit;
+  font-size: 13px;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+  text-underline-offset: 3px;
+  cursor: pointer;
+  transition:
+    text-decoration-color var(--dur-fast) var(--ease-out),
+    text-underline-offset var(--dur-fast) var(--ease-out);
+
+  &:hover {
+    text-decoration-color: currentColor;
+    text-underline-offset: 5px;
+  }
+}
+
+.details {
+  @include motion.enter(var(--dur-base));
+
+  width: 100%;
+  margin-top: var(--space-1);
+  padding: var(--space-4);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-control);
+  font-size: 13px;
+  color: var(--ink-2);
+}

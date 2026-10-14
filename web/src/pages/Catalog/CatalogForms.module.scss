@@ -1,0 +1,180 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.pair,
+.triple {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+
+  @media (max-width: 767px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.triple {
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.2fr) minmax(0, 0.8fr);
+}
+
+.note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.error {
+  margin: 0;
+  font-size: 14px;
+  color: var(--crit-text);
+}
+
+.checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  cursor: pointer;
+
+  input {
+    width: 20px;
+    height: 20px;
+    margin: 2px 0 0;
+    accent-color: var(--brand);
+  }
+
+  > span {
+    display: flex;
+    flex-direction: column;
+    font-weight: 600;
+  }
+}
+
+.checkboxHint {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--ink-2);
+}
+
+.ingredients {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-4) 0 0;
+  border: 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.legend {
+  float: left;
+  width: 100%;
+  margin-bottom: var(--space-1);
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.ingredientList {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ingredient {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 0.8fr) 32px 44px;
+  gap: var(--space-3);
+  align-items: start;
+  animation: row-in var(--dur-base) var(--ease-out) backwards;
+
+  @media (max-width: 767px) {
+    grid-template-columns: minmax(0, 1fr) 80px 28px 44px;
+    gap: var(--space-2);
+  }
+}
+
+.unit {
+  display: flex;
+  align-items: center;
+  height: var(--input-height);
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: var(--input-height);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  &:hover {
+    background: color-mix(in srgb, var(--crit-bar) 12%, transparent);
+    color: var(--crit-text);
+  }
+}
+
+// У первой строки над полями есть подписи — единица и кнопка опускаются на их высоту.
+.offsetFirst {
+  margin-top: 26px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--hairline);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.danger {
+  color: var(--crit-text) !important;
+}
+
+.confirm {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  animation: row-in var(--dur-base) var(--ease-out);
+}
+
+.confirmText {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--crit-text);
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}

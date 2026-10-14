@@ -1,0 +1,51 @@
+.indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.live {
+  color: var(--fresh-text);
+
+  .dot {
+    background: var(--fresh-bar);
+    animation: pulse 2s ease-in-out infinite;
+  }
+}
+
+.pending {
+  color: var(--warn-text);
+
+  .dot {
+    background: var(--warn-bar);
+  }
+}
+
+.offline {
+  color: var(--crit-text);
+
+  .dot {
+    background: var(--crit-bar);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.35;
+  }
+}

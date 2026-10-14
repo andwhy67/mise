@@ -1,0 +1,68 @@
+{
+  "title": "Today's essentials",
+  "takeOrder": "Take an order",
+  "takeSupply": "Receive a delivery",
+  "summaryLabel": "Current summary",
+  "summary": {
+    "stop_one": "dish can't be ordered: products ran out",
+    "stop_other": "dishes can't be ordered: products ran out",
+    "stopNone": "every dish can be ordered",
+    "stopLink": "See which",
+    "expiring_one": "product will spoil soon",
+    "expiring_other": "products will spoil soon",
+    "expiringLink": "What to use first",
+    "orders_one": "order taken this shift",
+    "orders_other": "orders taken this shift",
+    "ordersLink": "Open orders",
+    "toOrder_one": "product needs ordering",
+    "toOrder_other": "products need ordering",
+    "toOrderLink": "What to order and how much"
+  },
+  "offers": {
+    "title": "What to sell first",
+    "subtitle": "These dishes help use up products that are about to spoil.",
+    "empty": "Nothing is about to spoil",
+    "emptyHint": "Products are fresh — sell as usual.",
+    "first": "{{product}} ({{qty}}) must be used {{when}}",
+    "next": "{{product}} ({{qty}}) — {{when}}",
+    "portions": "This dish makes {{portions}}.",
+    "calculation": {
+      "score": "Urgency score: {{score}} out of 100",
+      "reason": "{{product}}: {{atRisk}} at risk, expires {{when}}",
+      "unsold": "≈{{qty}} won't sell at the usual pace",
+      "share": "this dish's share of the product's use — {{share}}",
+      "formula": "The formula is described in docs/hot-offers.md"
+    }
+  },
+  "stop": {
+    "title": "Can't be ordered",
+    "out": "Ran out",
+    "soon": "Running low",
+    "manual": "Switched off manually",
+    "shortage": "Missing: {{product}} — {{left}} left, a portion needs {{need}}.",
+    "soonConsumption": "{{product}}: {{runway}}.",
+    "soonExpiry": "{{product}} spoils {{when}}, the rest won't make a portion.",
+    "empty": "Everything is in its place",
+    "emptyHint": "Every dish can be ordered.",
+    "showAll": "Full stop list"
+  },
+  "expiry": {
+    "title": "About to spoil",
+    "subtitle": "Use what spoils first.",
+    "showAll": "Show all stock",
+    "empty": "Nothing spoils in the next two days",
+    "emptyHint": "The stock is in order."
+  },
+  "toOrder": {
+    "title": "What to order",
+    "subtitle": "To last the next three days with a margin.",
+    "quantity": "Order {{qty}}",
+    "runsOut": "runs out {{when}}",
+    "belowMin": "below the minimum stock",
+    "waste": "{{qty}} will spoil unused",
+    "noHistory": "no usage yet — topping up to the minimum",
+    "empty": "Nothing needs ordering yet",
+    "emptyHint": "The stock will last the next three days.",
+    "showAll": "All recommendations"
+  }
+}

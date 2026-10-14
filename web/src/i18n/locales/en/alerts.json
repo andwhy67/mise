@@ -1,0 +1,38 @@
+{
+  "title": "Notifications",
+  "subtitle": "What happened in stock and on the menu. Mark “Got it” once it's handled.",
+  "filter": {
+    "label": "Show",
+    "attention": "Need attention",
+    "all": "All"
+  },
+  "ack": "Got it",
+  "ackAll": "Mark all",
+  "ackAllDone_one": "{{count}} notification marked",
+  "ackAllDone_other": "{{count}} notifications marked",
+  "acknowledged": "Marked {{when}}",
+  "resolved": "No longer relevant",
+  "more": "Show more",
+  "open": {
+    "stock": "Open stock",
+    "stoplist": "Open stop list"
+  },
+  "empty": {
+    "attention": "Everything is in its place",
+    "attentionHint": "No new notifications — nothing is spoiling and everything can be ordered.",
+    "all": "No notifications yet",
+    "allHint": "They appear when something starts to spoil or run out."
+  },
+  "text": {
+    "expiring": "{{product}} will spoil {{when}}",
+    "expiringQty": "{{product}}: {{qty}} will spoil {{when}}",
+    "expired": "{{product}} has spoiled",
+    "expiredAuto": "{{product}}: {{qty}} spoiled and was written off automatically",
+    "expiredManual": "{{product}}: {{qty}} spoiled — write it off",
+    "low": "{{product}}: {{qty}} left — below the minimum ({{limit}})",
+    "lowNoLimit": "{{product}}: {{qty}} left — time to reorder",
+    "stopOn": "“{{dish}}” can't be ordered: out of {{product}}",
+    "stopManual": "“{{dish}}” was taken off the menu",
+    "stopOff": "“{{dish}}” can be ordered again"
+  }
+}

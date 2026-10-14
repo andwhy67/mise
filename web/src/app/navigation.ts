@@ -1,41 +1,73 @@
-import type { IconType } from 'react-icons'
 import {
-  LuBookOpen,
-  LuChartColumn,
-  LuClipboardList,
-  LuFlame,
-  LuLayoutDashboard,
-  LuOctagonX,
-  LuPackage,
-  LuPlay,
-  LuTimer,
-  LuTruck,
-  LuUsers,
-  LuWarehouse,
-} from 'react-icons/lu'
+  BarChart3,
+  Ban,
+  Bell,
+  BookOpen,
+  ClipboardList,
+  Flame,
+  Gauge,
+  Home,
+  Menu,
+  Package,
+  ScrollText,
+  Truck,
+  Users,
+  type LucideIcon,
+} from 'lucide-react'
+import type { UserRole } from '@/auth/session'
 
-export interface NavItem {
+export interface NavEntry {
+  id: string
   path: string
+  /** Ключ перевода в common:nav. */
   label: string
-  icon: IconType
-  description: string
-  /** Показывать в нижней навигации на телефоне (максимум 4 + «Ещё»). */
-  primary?: boolean
+  /** Короткая подпись для нижней навигации. */
+  shortLabel?: string
+  icon: LucideIcon
+  roles: UserRole[]
+  /** Вторичный раздел: в сайдбаре — отдельной группой, на телефоне — в «Ещё». */
+  secondary?: boolean
 }
 
-export const navItems: NavItem[] = [
-  { path: '/', label: 'Обзор', icon: LuLayoutDashboard, primary: true, description: 'Ключевые показатели смены, горячие предложения и алерты.' },
-  { path: '/stock', label: 'Остатки', icon: LuWarehouse, primary: true, description: 'Остатки по продуктам и партиям, оставшийся срок, FEFO-порядок.' },
-  { path: '/batches', label: 'Сроки', icon: LuTimer, description: 'Лента истекающих партий с фильтрами по статусу и горизонту.' },
-  { path: '/supplies', label: 'Поставки', icon: LuTruck, description: 'Приём поставок, список и детали партий.' },
-  { path: '/orders', label: 'Заказы', icon: LuClipboardList, primary: true, description: 'Создание заказов, проверка наличия и списание по FEFO.' },
-  { path: '/stoplist', label: 'Стоп-лист', icon: LuOctagonX, primary: true, description: 'Блюда в стопе, ограничивающий продукт, прогноз и история.' },
-  { path: '/hot-offers', label: 'Горячие', icon: LuFlame, description: 'Блюда, которые стоит продавать в первую очередь, и почему.' },
-  { path: '/supply-suggestions', label: 'Что заказать', icon: LuPackage, description: 'Рекомендации поставок: что, сколько и насколько срочно.' },
-  { path: '/analytics', label: 'Аналитика', icon: LuChartColumn, description: 'Списания, дефицитные ингредиенты, расход и KPI.' },
-  { path: '/catalog', label: 'Справочники', icon: LuBookOpen, description: 'Продукты, блюда и их составы.' },
-  { path: '/simulator', label: 'Симулятор', icon: LuPlay, description: 'Генератор поставок и заказов: сценарии и скорость.' },
-  { path: '/users', label: 'Пользователи', icon: LuUsers, description: 'Пользователи, роли и журнал действий.' },
+const ALL: UserRole[] = ['Warehouse', 'Chef', 'Manager']
+
+/** Разделы на языке кухни (DESIGN.md §1.1, п. 9); права совпадают с политиками API. */
+export const NAV: NavEntry[] = [
+  { id: 'home', path: '/', label: 'nav.home', icon: Home, roles: ALL },
+  { id: 'stock', path: '/stock', label: 'nav.stock', icon: Package, roles: ALL },
+  { id: 'supplies', path: '/supplies', label: 'nav.supplies', icon: Truck, roles: ['Warehouse', 'Manager'] },
+  { id: 'orders', path: '/orders', label: 'nav.orders', shortLabel: 'nav.order', icon: ClipboardList, roles: ['Chef', 'Manager'] },
+  { id: 'stoplist', path: '/stoplist', label: 'nav.stopList', shortLabel: 'nav.stop', icon: Ban, roles: ALL },
+  { id: 'hot-offers', path: '/hot-offers', label: 'nav.hotOffers', icon: Flame, roles: ['Chef', 'Manager'] },
+  { id: 'reports', path: '/reports', label: 'nav.reports', icon: BarChart3, roles: ['Manager'] },
+  { id: 'alerts', path: '/alerts', label: 'nav.alerts', icon: Bell, roles: ALL, secondary: true },
+  { id: 'catalog', path: '/catalog', label: 'nav.catalog', icon: BookOpen, roles: ['Manager'], secondary: true },
+  { id: 'simulator', path: '/simulator', label: 'nav.simulator', icon: Gauge, roles: ['Manager'], secondary: true },
+  { id: 'users', path: '/users', label: 'nav.users', icon: Users, roles: ['Manager'], secondary: true },
+  { id: 'audit', path: '/audit', label: 'nav.audit', icon: ScrollText, roles: ['Manager'], secondary: true },
 ]
 
-export const primaryNavItems = navItems.filter((item) => item.primary)
+/** Нижняя навигация телефона: 4 главных раздела роли + «Ещё» (DESIGN.md §3, §6.4). */
+const MOBILE_TABS: Record<Exclude<UserRole, 'Simulator'>, string[]> = {
+  Manager: ['home', 'stock', 'orders', 'stoplist'],
+  Chef: ['home', 'hot-offers', 'orders', 'stoplist'],
+  Warehouse: ['home', 'stock', 'supplies', 'stoplist'],
+}
+
+export const MORE: NavEntry = { id: 'more', path: '/more', label: 'nav.more', icon: Menu, roles: ALL }
+
+export const navFor = (role: UserRole) => NAV.filter((entry) => entry.roles.includes(role))
+
+export function mobileTabsFor(role: UserRole): NavEntry[] {
+  const ids = MOBILE_TABS[role as keyof typeof MOBILE_TABS] ?? MOBILE_TABS.Chef
+  return [...ids.map((id) => NAV.find((entry) => entry.id === id)!), MORE]
+}
+
+/** Разделы, которые на телефоне живут в «Ещё». */
+export function moreFor(role: UserRole): NavEntry[] {
+  const tabs = new Set(mobileTabsFor(role).map((entry) => entry.id))
+  return navFor(role).filter((entry) => !tabs.has(entry.id))
+}
+
+export const canAccess = (role: UserRole, path: string) =>
+  path === '/' || navFor(role).some((entry) => entry.path !== '/' && path.startsWith(entry.path)) || path === '/more'

@@ -1,0 +1,81 @@
+.region {
+  position: fixed;
+  right: var(--space-6);
+  bottom: var(--space-6);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: min(380px, calc(100vw - 32px));
+  pointer-events: none;
+
+  @media (max-width: 767px) {
+    right: var(--space-4);
+    bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + var(--space-3));
+  }
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-2) var(--space-3) var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  pointer-events: auto;
+  animation: toast-in var(--dur-enter) var(--ease-out);
+}
+
+.square {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-top: 7px;
+}
+
+@each $tone in fresh, warn, crit, expired, info {
+  .#{$tone} {
+    background: var(--#{$tone}-bar);
+  }
+}
+
+.text {
+  flex: 1;
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.close {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin: -6px 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out);
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover {
+    background: var(--bg);
+    color: var(--ink);
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}

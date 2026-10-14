@@ -1,0 +1,147 @@
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+
+  @media (max-width: 1023px) {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+// Пункт как в StopListRow: группа мелкими капителями цветом, блюдо, причина.
+.row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: var(--space-4) 0;
+
+  & + & {
+    border-top: 1px solid var(--hairline);
+  }
+
+  &:last-child {
+    padding-bottom: 0;
+  }
+}
+
+.group {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.out {
+  color: var(--crit-text);
+}
+
+.soon {
+  color: var(--warn-text);
+}
+
+.dish {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.reason {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.meta {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.action {
+  min-height: 36px;
+  margin-top: var(--space-1);
+}
+
+.history {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.historyRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(0, 1.6fr);
+  gap: var(--space-1) var(--space-4);
+  padding: var(--space-3) 0;
+  font-size: 14px;
+
+  & + & {
+    border-top: 1px solid var(--hairline);
+  }
+
+  @media (max-width: 767px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.historyDish {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.historyReason {
+  color: var(--ink-2);
+}
+
+.historyWhen {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.choice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out);
+
+  &:hover {
+    background: var(--bg);
+  }
+
+  &:has(input:checked) {
+    background: var(--brand-tint);
+    color: var(--brand-strong);
+    font-weight: 600;
+  }
+
+  input {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--brand);
+  }
+}

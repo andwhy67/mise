@@ -1,0 +1,52 @@
+{
+  "title": "Log",
+  "subtitle": "Who did what and when. Open an entry to see the details.",
+  "filter": {
+    "action": "Action",
+    "allActions": "All actions",
+    "user": "Who",
+    "allUsers": "All users"
+  },
+  "groups": {
+    "stock": "Stock and deliveries",
+    "orders": "Orders",
+    "catalog": "Catalog",
+    "people": "Sign-in and users",
+    "simulator": "Simulator"
+  },
+  "actions": {
+    "supply.create": "Received a delivery",
+    "batch.write_off": "Wrote off a product",
+    "demo.seed_stock": "Filled the stock with demo deliveries",
+    "order.create": "Took an order",
+    "order.status": "Changed an order status",
+    "order.cancel": "Cancelled an order",
+    "product.create": "Added a product",
+    "product.update": "Changed a product",
+    "product.delete": "Deleted a product",
+    "dish.create": "Added a dish",
+    "dish.update": "Changed a dish",
+    "dish.ingredients": "Changed a recipe",
+    "dish.delete": "Deleted a dish",
+    "auth.login": "Signed in",
+    "auth.demo_login": "Signed in (demo)",
+    "auth.login_failed": "Failed sign-in attempt",
+    "auth.logout": "Signed out",
+    "auth.refresh_reuse": "Old token reused — session revoked",
+    "user.create": "Added a user",
+    "user.update": "Changed a user",
+    "user.reset_password": "Reset a password",
+    "simulator.start": "Started the simulator",
+    "simulator.stop": "Stopped the simulator",
+    "simulator.scenario": "Changed the simulator scenario",
+    "simulator.speed": "Changed the simulator speed"
+  },
+  "system": "System",
+  "empty": "No entries",
+  "emptyHint": "Try another filter.",
+  "more": "Show more",
+  "fields": {
+    "entity": "Object",
+    "ip": "Address"
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "title": "Orders",
+  "subtitle": "Build an order — before sending we check there are enough products for all of it together.",
+  "portions_one": "{{count}} portion",
+  "portions_other": "{{count}} portions",
+  "menu": {
+    "title": "Menu",
+    "subtitle": "How many portions can be cooked from what is in stock.",
+    "search": "Find a dish",
+    "other": "No category",
+    "notFound": "Nothing found",
+    "empty": "The menu has no dishes yet",
+    "emptyHint": "Add dishes in the catalog.",
+    "canCook": "Right now: {{portions}}",
+    "outOf": "Can't be ordered: out of {{product}}",
+    "unavailable": "Can't be ordered",
+    "manual": "Taken off the menu",
+    "stop": "Stop",
+    "add": "Add",
+    "addLabel": "Add “{{dish}}” to the order"
+  },
+  "cart": {
+    "title": "Order",
+    "empty": "The order is empty",
+    "emptyHint": "Pick dishes from the menu — portions and the total appear here.",
+    "portions_one": "{{count}} portion",
+    "portions_other": "{{count}} portions",
+    "total_one": "Total for {{count}} portion",
+    "total_other": "Total for {{count}} portions",
+    "open": "Check out",
+    "submit": "Take the order",
+    "submitting": "Sending…",
+    "done": "Order {{number}} taken · {{total}}",
+    "notEnough": "Not enough for the whole order",
+    "refused": "Order not taken: products are missing",
+    "missingLine": "{{product}}: need {{need}}, have {{have}} (for: {{dishes}})",
+    "missingHint": "Reduce portions or remove a dish. Nothing was taken from stock."
+  },
+  "recent": {
+    "title": "Recent orders",
+    "subtitle": "Newest first. Tap an order to see what was taken from stock.",
+    "empty": "No orders yet",
+    "emptyHint": "The first order appears here as soon as it is sent.",
+    "more": "Show more"
+  },
+  "status": {
+    "Created": "Taken",
+    "Cooking": "Cooking",
+    "Done": "Ready",
+    "Cancelled": "Cancelled"
+  },
+  "next": {
+    "Cooking": "Start cooking",
+    "Done": "Ready"
+  },
+  "details": {
+    "items": "Contents",
+    "item_one": "{{dish}} × {{count}} · {{amount}}",
+    "item_other": "{{dish}} × {{count}} · {{amount}}",
+    "consumption": "Taken from stock",
+    "consumed": "{{product}}: {{qty}} (delivery good until {{until}})",
+    "returned": "{{qty}} returned"
+  },
+  "cancel": {
+    "action": "Cancel",
+    "title": "Cancel order {{number}}?",
+    "text": "Products go back to the same deliveries if they haven't spoiled yet. Spoiled products can't be returned — they stay written off.",
+    "keep": "Keep the order",
+    "confirm": "Cancel the order",
+    "done": "Order cancelled, products are back in stock",
+    "doneLost": "Order cancelled. Some products had already spoiled and were not returned."
+  }
+}

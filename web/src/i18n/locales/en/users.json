@@ -1,0 +1,49 @@
+{
+  "title": "Users",
+  "subtitle": "Who works in the system and what they can access. The role decides sections and actions.",
+  "add": "Add a user",
+  "new": "New user",
+  "newHint": "Tell the password to the employee in person.",
+  "empty": "No users",
+  "you": "you",
+  "lastLogin": "Last signed in {{when}}",
+  "neverLoggedIn": "Never signed in",
+  "inactive": "Deactivated",
+  "roles": {
+    "Manager": "Manager",
+    "Chef": "Chef",
+    "Warehouse": "Warehouse",
+    "Simulator": "Simulator (service)"
+  },
+  "roleHints": {
+    "Manager": "Everything: reports, catalog, users, simulator, log.",
+    "Chef": "Orders, stop list, “What to sell”, stock (view only).",
+    "Warehouse": "Deliveries, stock and write-offs, “What to order”.",
+    "Simulator": "A service account for the simulator — not for signing in."
+  },
+  "login": "Login",
+  "loginHint": "3–32 characters: Latin letters, digits, “.”, “_”, “-”.",
+  "displayName": "Name",
+  "role": "Role",
+  "password": "Password",
+  "passwordHint": "At least {{min}} characters.",
+  "active": "Account is active",
+  "activeHint": "A deactivated user can't sign in, their sessions end.",
+  "activeSelf": "You can't deactivate yourself.",
+  "save": "Save",
+  "create": "Add",
+  "cancel": "Cancel",
+  "saved": "“{{name}}” saved",
+  "created": "“{{name}}” added",
+  "resetTitle": "Reset the password",
+  "resetHint": "The new password works immediately, all of the user's sessions end.",
+  "newPassword": "New password",
+  "reset": "Reset",
+  "passwordReset": "Password of “{{name}}” changed",
+  "errors": {
+    "login": "Login: 3–32 characters, Latin letters, digits, “.”, “_”, “-”.",
+    "displayName": "Enter a name.",
+    "password": "Password — at least {{min}} characters.",
+    "duplicate": "This login already exists."
+  }
+}

@@ -1,0 +1,176 @@
+.page {
+  min-height: 100dvh;
+  display: flex;
+  background: var(--surface);
+}
+
+// Левая часть — только типографика на синем (DESIGN.md §6.1); в «Графите» — поверхность фона.
+.hero {
+  flex: 1.35;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-12) var(--space-16);
+  background: var(--brand);
+  color: #fff;
+
+  :global(.dark) & {
+    background: var(--bg);
+    color: var(--ink);
+    border-right: 1px solid var(--border);
+
+    em {
+      color: var(--brand-strong);
+    }
+  }
+}
+
+.heroText {
+  margin: auto 0;
+  max-width: 560px;
+  animation: rise 900ms var(--ease-out) backwards;
+}
+
+.heroTitle {
+  margin: 0 0 var(--space-6);
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 104px;
+  line-height: 0.95;
+
+  em {
+    font-style: italic;
+  }
+}
+
+.transcription {
+  margin: 0 0 var(--space-4);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.lead {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.55;
+}
+
+.formSide {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-6) var(--space-10);
+}
+
+.controls {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.formWrap {
+  width: 100%;
+  max-width: 360px;
+  margin: auto;
+  padding: var(--space-8) 0;
+}
+
+.title {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 42px;
+  line-height: 1.05;
+  color: var(--ink);
+}
+
+.greeting {
+  margin: 0 0 var(--space-6);
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.notice {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.error {
+  min-height: 20px;
+  margin: calc(var(--space-2) * -1) 0 0;
+  font-size: 14px;
+  color: var(--crit-text);
+}
+
+.demo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  margin: var(--space-5) 0 0;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--hairline);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.demoItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.slogan {
+  margin: var(--space-8) 0 0;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 22px;
+  line-height: 1.25;
+  color: var(--ink);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+// Телефон: форма сверху, синий блок ниже (DESIGN.md §6.1).
+@media (max-width: 1023px) {
+  .page {
+    flex-direction: column-reverse;
+  }
+
+  .hero {
+    padding: var(--space-10) var(--space-6);
+  }
+
+  .heroTitle {
+    font-size: 64px;
+  }
+
+  .formSide {
+    padding: var(--space-4) var(--space-5) 0;
+  }
+
+  .formWrap {
+    padding: var(--space-6) 0 var(--space-10);
+  }
+}
