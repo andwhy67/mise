@@ -18,11 +18,24 @@ public interface IStockLocks
     /// <summary><c>SELECT … FOR UPDATE</c> партий по id в том же детерминированном порядке.</summary>
     Task<IReadOnlyList<Batch>> LockBatchesAsync(IReadOnlyCollection<Guid> batchIds, CancellationToken ct);
 
+    /// <summary>
+    /// <c>SELECT … FOR UPDATE</c> партий, которые пора закрывать по сроку: активные с остатком и <c>expires_at &lt;= now</c>,
+    /// а при <paramref name="includeExpired"/> — и уже помеченные Expired с несписанным остатком.
+    /// Порядок тот же, что у заказов (<c>product_id, expires_at, id</c>), — без дедлоков с ними.
+    /// </summary>
+    Task<IReadOnlyList<Batch>> LockExpiryCandidatesAsync(DateTimeOffset now, bool includeExpired, int limit, CancellationToken ct);
+
     /// <summary><c>SELECT … FOR UPDATE</c> заказа (сериализует отмену и смену статуса).</summary>
     Task<Order?> LockOrderAsync(Guid orderId, CancellationToken ct);
 
     /// <summary>Транзакционный advisory lock по имени (<c>pg_advisory_xact_lock</c>) — снимается при commit/rollback.</summary>
     Task AcquireTransactionLockAsync(string name, CancellationToken ct);
+
+    /// <summary>
+    /// Неблокирующая попытка взять транзакционный advisory lock (<c>pg_try_advisory_xact_lock</c>):
+    /// false — его держит другой инстанс/поток, работу нужно пропустить.
+    /// </summary>
+    Task<bool> TryAcquireTransactionLockAsync(string name, CancellationToken ct);
 
     /// <summary>Следующий номер заказа из последовательности БД.</summary>
     Task<long> NextOrderNumberAsync(CancellationToken ct);

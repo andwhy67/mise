@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Mise.Domain.Alerts;
 using Mise.Domain.Catalog;
 using Mise.Domain.Menu;
 using Mise.Domain.Orders;
@@ -24,6 +25,7 @@ public interface IMiseDbContext
     DbSet<Order> Orders { get; }
     DbSet<OrderItem> OrderItems { get; }
     DbSet<StopListEntry> StopListEntries { get; }
+    DbSet<Alert> Alerts { get; }
 
     ChangeTracker ChangeTracker { get; }
 

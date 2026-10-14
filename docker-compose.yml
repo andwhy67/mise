@@ -45,6 +45,9 @@ services:
       Database__MigrateOnStartup: "true"
       Seed__Enabled: ${SEED_ENABLED:-true}
       Swagger__Enabled: ${SWAGGER_ENABLED:-true}
+      Expiry__Enabled: ${EXPIRY_ENABLED:-true}
+      Expiry__IntervalSeconds: ${EXPIRY_INTERVAL_SECONDS:-30}
+      Expiry__AutoWriteOff: ${EXPIRY_AUTO_WRITE_OFF:-true}
     ports:
       - "${API_PORT:-5080}:8080"
     depends_on:

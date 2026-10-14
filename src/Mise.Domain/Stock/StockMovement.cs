@@ -59,4 +59,28 @@ public sealed class StockMovement
         Reason = "Отмена заказа",
         CreatedAt = now,
     };
+
+    public const string ExpiryWriteOffReason = "Истёк срок годности";
+
+    public static StockMovement ExpiryWriteOff(Guid id, Batch batch, decimal quantity, DateTimeOffset now) => new()
+    {
+        Id = id,
+        BatchId = batch.Id,
+        ProductId = batch.ProductId,
+        Type = MovementType.ExpiryWriteOff,
+        QtyDelta = -quantity,
+        Reason = ExpiryWriteOffReason,
+        CreatedAt = now,
+    };
+
+    public static StockMovement ManualWriteOff(Guid id, Batch batch, decimal quantity, string reason, DateTimeOffset now) => new()
+    {
+        Id = id,
+        BatchId = batch.Id,
+        ProductId = batch.ProductId,
+        Type = MovementType.ManualWriteOff,
+        QtyDelta = -quantity,
+        Reason = reason,
+        CreatedAt = now,
+    };
 }

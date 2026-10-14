@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
+using Mise.Application.Expiry;
 using Mise.Domain.Abstractions;
 using Mise.Infrastructure.Time;
 using Testcontainers.PostgreSql;
@@ -34,6 +36,15 @@ public sealed class MiseApiFactory : WebApplicationFactory<Program>, IAsyncLifet
         await Task.WhenAll(_postgres.StartAsync(), _redis.StartAsync());
     }
 
+    /// <summary>Один тик мониторинга сроков на текущем времени <see cref="Clock"/> (фоновый воркер в тестах выключен).</summary>
+    public async Task<ExpiryRunResult> RunExpiryTickAsync(bool autoWriteOff = true)
+    {
+        await using var scope = Services.CreateAsyncScope();
+        var service = ActivatorUtilities.CreateInstance<ExpiryMonitorService>(scope.ServiceProvider,
+            Options.Create(new ExpiryOptions { AutoWriteOff = autoWriteOff }));
+        return await service.RunOnceAsync(CancellationToken.None);
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
@@ -42,6 +53,8 @@ public sealed class MiseApiFactory : WebApplicationFactory<Program>, IAsyncLifet
         builder.UseSetting("Database:MigrateOnStartup", "true");
         builder.UseSetting("Seed:Enabled", "true");
         builder.UseSetting("Cors:AllowedOrigins", "http://localhost:5173");
+        // Тик мониторинга сроков тесты вызывают сами (RunExpiryTickAsync) — детерминированно, вместе с FakeClock.
+        builder.UseSetting("Expiry:Enabled", "false");
         builder.ConfigureTestServices(services => services.Replace(ServiceDescriptor.Singleton<IClock>(Clock)));
     }
 

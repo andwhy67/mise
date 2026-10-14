@@ -24,6 +24,7 @@ public sealed class Batch
         public const string InsufficientQuantity = "batch.insufficient_quantity";
         public const string NotUsable = "batch.not_usable";
         public const string NotReturnable = "batch.not_returnable";
+        public const string NotWritable = "batch.not_writable";
     }
 
     private Batch() { }
@@ -84,6 +85,39 @@ public sealed class Batch
         RemainingQty -= quantity;
         if (RemainingQty == 0)
             Status = BatchStatus.Depleted;
+    }
+
+    /// <summary>Перевод активной партии в Expired, когда срок наступил. Возвращает true, если статус изменился.</summary>
+    public bool MarkExpired(DateTimeOffset now)
+    {
+        if (Status != BatchStatus.Active || RemainingQty <= 0 || now < ExpiresAt)
+            return false;
+        Status = BatchStatus.Expired;
+        return true;
+    }
+
+    /// <summary>Списать можно только то, что физически лежит на складе: активную или просроченную партию с остатком.</summary>
+    public bool CanBeWrittenOff => Status is BatchStatus.Active or BatchStatus.Expired && RemainingQty > 0;
+
+    /// <summary>
+    /// Списание (по сроку или вручную): <paramref name="quantity"/> = null — весь остаток.
+    /// Обнулённая партия получает статус WrittenOff. Возвращает списанное количество.
+    /// </summary>
+    public decimal WriteOff(decimal? quantity)
+    {
+        if (!CanBeWrittenOff)
+            throw new DomainException(Errors.NotWritable, "Партия уже израсходована или списана — списывать нечего.");
+        var qty = quantity ?? RemainingQty;
+        if (qty <= 0)
+            throw new DomainException(Errors.InvalidQuantity, "Количество для списания должно быть больше нуля.");
+        if (qty > RemainingQty)
+            throw new DomainException(Errors.InsufficientQuantity,
+                $"В партии осталось {RemainingQty}, а требуется списать {qty}.");
+
+        RemainingQty -= qty;
+        if (RemainingQty == 0)
+            Status = BatchStatus.WrittenOff;
+        return qty;
     }
 
     /// <summary>Возврат допустим только в непросроченную и не списанную партию.</summary>

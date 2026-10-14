@@ -24,6 +24,86 @@ namespace Mise.Infrastructure.Persistence.Migrations
 
             modelBuilder.HasSequence("order_number_seq");
 
+            modelBuilder.Entity("Mise.Domain.Alerts.Alert", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("AcknowledgedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("acknowledged_at");
+
+                    b.Property<Guid?>("BatchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("batch_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DedupKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("dedup_key");
+
+                    b.Property<Guid?>("DishId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("dish_id");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("message");
+
+                    b.Property<Guid?>("ProductId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("product_id");
+
+                    b.Property<DateTimeOffset?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("resolved_at");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("severity");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("type");
+
+                    b.HasKey("Id")
+                        .HasName("pk_alerts");
+
+                    b.HasIndex("BatchId")
+                        .HasDatabaseName("ix_alerts_batch_id");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("ix_alerts_created_at");
+
+                    b.HasIndex("DedupKey")
+                        .IsUnique()
+                        .HasDatabaseName("ux_alerts_open_dedup_key")
+                        .HasFilter("dedup_key IS NOT NULL AND resolved_at IS NULL");
+
+                    b.HasIndex("DishId")
+                        .HasDatabaseName("ix_alerts_dish_id");
+
+                    b.HasIndex("ProductId")
+                        .HasDatabaseName("ix_alerts_product_id");
+
+                    b.HasIndex("Severity")
+                        .HasDatabaseName("ix_alerts_attention")
+                        .HasFilter("acknowledged_at IS NULL AND resolved_at IS NULL");
+
+                    b.ToTable("alerts", (string)null);
+                });
+
             modelBuilder.Entity("Mise.Domain.Catalog.Dish", b =>
                 {
                     b.Property<Guid>("Id")
@@ -538,6 +618,27 @@ namespace Mise.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("ck_supply_items_shelf_life_positive", "shelf_life_hours IS NULL OR shelf_life_hours > 0");
                         });
+                });
+
+            modelBuilder.Entity("Mise.Domain.Alerts.Alert", b =>
+                {
+                    b.HasOne("Mise.Domain.Stock.Batch", null)
+                        .WithMany()
+                        .HasForeignKey("BatchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_alerts_batches_batch_id");
+
+                    b.HasOne("Mise.Domain.Catalog.Dish", null)
+                        .WithMany()
+                        .HasForeignKey("DishId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_alerts_dishes_dish_id");
+
+                    b.HasOne("Mise.Domain.Catalog.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_alerts_products_product_id");
                 });
 
             modelBuilder.Entity("Mise.Domain.Catalog.DishIngredient", b =>

@@ -47,6 +47,21 @@ internal sealed class PostgresStockLocks(MiseDbContext db) : IStockLocks
             .ToListAsync(ct);
     }
 
+    public async Task<IReadOnlyList<Batch>> LockExpiryCandidatesAsync(DateTimeOffset now, bool includeExpired, int limit, CancellationToken ct)
+    {
+        EnsureTransaction();
+        return await db.Batches
+            .FromSql($"""
+                SELECT * FROM batches
+                WHERE remaining_qty > 0
+                  AND ((status = 'Active' AND expires_at <= {now}) OR ({includeExpired} AND status = 'Expired'))
+                ORDER BY product_id, expires_at, id
+                LIMIT {limit}
+                FOR UPDATE
+                """)
+            .ToListAsync(ct);
+    }
+
     public async Task<Order?> LockOrderAsync(Guid orderId, CancellationToken ct)
     {
         EnsureTransaction();
@@ -57,6 +72,14 @@ internal sealed class PostgresStockLocks(MiseDbContext db) : IStockLocks
     {
         EnsureTransaction();
         await db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock(hashtext({name}))", ct);
+    }
+
+    public async Task<bool> TryAcquireTransactionLockAsync(string name, CancellationToken ct)
+    {
+        EnsureTransaction();
+        return await db.Database
+            .SqlQuery<bool>($"SELECT pg_try_advisory_xact_lock(hashtext({name})) AS \"Value\"")
+            .SingleAsync(ct);
     }
 
     // Константа времени компиляции — без подстановки пользовательских данных.

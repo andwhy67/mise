@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Mise.Application.Abstractions;
 using Mise.Domain.Abstractions;
+using Mise.Domain.Alerts;
 using Mise.Domain.Menu;
 
 namespace Mise.Application.Menu;
@@ -55,12 +56,33 @@ public sealed class StopListService(IMiseDbContext db, IStockLocks locks, IClock
                 added.Add(dishId);
         }
 
+        RaiseAlerts(snapshot, current, added, removed, now);
+
         await db.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
 
         if (added.Count + removed.Count > 0)
             logger.LogInformation("Stop list changed: +{Added} −{Removed}", added.Count, removed.Count);
         return new StopListChanges(added, removed);
+    }
+
+    /// <summary>Вход и выход блюда из стоп-листа — события для ленты алертов (смена причины без выхода — не событие).</summary>
+    private void RaiseAlerts(MenuSnapshot snapshot, IReadOnlyDictionary<Guid, (StopReason Reason, Guid? LimitingProductId)> current,
+        IEnumerable<Guid> added, IEnumerable<Guid> removed, DateTimeOffset now)
+    {
+        var dishNames = snapshot.Dishes.ToDictionary(d => d.Id, d => d.Name);
+        foreach (var dishId in added)
+        {
+            var state = current[dishId];
+            var limiting = state.Reason == StopReason.Shortage && state.LimitingProductId is { } productId
+                ? snapshot.Products.GetValueOrDefault(productId)?.Name
+                : null;
+            db.Alerts.Add(Alert.StopListOn(Guid.CreateVersion7(now), dishId, dishNames[dishId], limiting, now));
+        }
+
+        // Удалённое блюдо уходит из стопа молча — событие «снова доступно» было бы ложным.
+        foreach (var dishId in removed.Where(dishNames.ContainsKey))
+            db.Alerts.Add(Alert.StopListOff(Guid.CreateVersion7(now), dishId, dishNames[dishId], now));
     }
 
     /// <summary>

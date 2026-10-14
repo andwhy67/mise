@@ -29,6 +29,14 @@ internal static class StockEndpoints
             .WithTags("Склад")
             .WithSummary("Лента партий по сроку: фильтры по статусу срока (?status=Warning&status=Critical) и горизонту");
 
+        api.MapPost("/batches/{id:guid}/write-off",
+                (Guid id, WriteOffRequest request, WriteOffService service, CancellationToken ct) => service.WriteOffAsync(id, request, ct))
+            .WithTags("Склад")
+            .WithSummary("Ручное списание партии (причина обязательна)")
+            .WithDescription(
+                "Без quantity списывается весь остаток. Можно списать активную или просроченную партию; " +
+                "израсходованную/списанную — 409, больше остатка — 422.");
+
         return api;
     }
 }

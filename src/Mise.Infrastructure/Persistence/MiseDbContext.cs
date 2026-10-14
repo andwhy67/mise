@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Mise.Application.Abstractions;
 using Mise.Application.Common;
+using Mise.Domain.Alerts;
 using Mise.Domain.Catalog;
 using Mise.Domain.Menu;
 using Mise.Domain.Orders;
@@ -23,6 +24,7 @@ public sealed class MiseDbContext(DbContextOptions<MiseDbContext> options) : DbC
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<StopListEntry> StopListEntries => Set<StopListEntry>();
+    public DbSet<Alert> Alerts => Set<Alert>();
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {

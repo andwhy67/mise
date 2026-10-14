@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Mise.Api.Endpoints;
+using Mise.Application.Expiry;
 using Mise.Application.Stock;
 using Mise.Infrastructure.Persistence;
 using Mise.Infrastructure.Seed;
@@ -36,6 +37,12 @@ internal static class ApiServiceCollectionExtensions
                 catch (ArgumentException) { return false; }
             }, "Stock:ShelfLife: некорректные пороги статусов срока.")
             .ValidateOnStart();
+
+        services.AddOptions<ExpiryOptions>()
+            .Bind(configuration.GetSection(ExpiryOptions.SectionName))
+            .Validate(o => o.IsValid(), "Expiry: IntervalSeconds должен быть в [1;3600], BatchSize — в [1;10000].")
+            .ValidateOnStart();
+        services.AddHostedService<ExpiryWorker>();
 
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(options => options.SwaggerDoc("v1", new() { Title = "Mise API", Version = "v1" }));
@@ -86,6 +93,7 @@ internal static class ApiServiceCollectionExtensions
         v1.MapStockEndpoints();
         v1.MapOrderEndpoints();
         v1.MapMenuEndpoints();
+        v1.MapAlertEndpoints();
         return app;
     }
 
