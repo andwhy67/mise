@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.SignalR.Client;
+using Mise.Domain.Users;
 
 namespace Mise.Api.IntegrationTests;
 
@@ -26,13 +27,15 @@ internal sealed class HubRecorder : IAsyncDisposable
             connection.On<JsonElement>(name, payload => _events.Enqueue((name, payload)));
     }
 
-    public static async Task<HubRecorder> ConnectAsync(MiseApiFactory factory)
+    public static async Task<HubRecorder> ConnectAsync(MiseApiFactory factory, UserRole role = UserRole.Manager)
     {
+        var token = factory.TokenFor(role);
         var connection = new HubConnectionBuilder()
             .WithUrl(new Uri(factory.Server.BaseAddress, "hubs/stock"), options =>
             {
                 options.HttpMessageHandlerFactory = _ => factory.Server.CreateHandler();
                 options.Transports = HttpTransportType.LongPolling;
+                options.AccessTokenProvider = () => Task.FromResult<string?>(token);
             })
             .Build();
         var recorder = new HubRecorder(connection);

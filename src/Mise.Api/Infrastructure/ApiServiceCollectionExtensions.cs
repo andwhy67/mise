@@ -1,16 +1,16 @@
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
+using Mise.Api.Auth;
 using Mise.Api.Endpoints;
 using Mise.Api.Realtime;
-using Mise.Application.Realtime;
 using Mise.Application.Expiry;
 using Mise.Application.Forecasting;
 using Mise.Application.HotOffers;
-using Mise.Domain.HotOffers;
+using Mise.Application.Realtime;
 using Mise.Application.Stock;
+using Mise.Domain.HotOffers;
 using Mise.Infrastructure.Persistence;
-using Mise.Infrastructure.Seed;
 using Serilog;
 using StackExchange.Redis;
 
@@ -22,6 +22,9 @@ internal static class ApiServiceCollectionExtensions
 
     public static IServiceCollection AddApiServices(this IServiceCollection services, IConfiguration configuration)
     {
+        // Первым: остальные фоновые задачи и HTTP-сервер стартуют только после подготовки БД.
+        services.AddHostedService<DatabaseInitializer>();
+
         services.AddProblemDetails(options => options.CustomizeProblemDetails = ctx =>
         {
             ctx.ProblemDetails.Instance ??= ctx.HttpContext.Request.Path;
@@ -64,8 +67,25 @@ internal static class ApiServiceCollectionExtensions
 
         services.AddRealtime(configuration);
 
+        services.AddMiseSecurity(configuration);
+
         services.AddEndpointsApiExplorer();
-        services.AddSwaggerGen(options => options.SwaggerDoc("v1", new() { Title = "Mise API", Version = "v1" }));
+        services.AddSwaggerGen(options =>
+        {
+            options.SwaggerDoc("v1", new() { Title = "Mise API", Version = "v1" });
+            var bearer = new OpenApiSecurityScheme
+            {
+                Name = "Authorization",
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                BearerFormat = "JWT",
+                In = ParameterLocation.Header,
+                Description = "Access-токен из POST /api/v1/auth/login",
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" },
+            };
+            options.AddSecurityDefinition("Bearer", bearer);
+            options.AddSecurityRequirement(new OpenApiSecurityRequirement { [bearer] = [] });
+        });
 
         var origins = (configuration["Cors:AllowedOrigins"] ?? string.Empty)
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -108,7 +128,9 @@ internal static class ApiServiceCollectionExtensions
 
     public static WebApplication UseApiPipeline(this WebApplication app)
     {
+        app.UseForwardedHeaders();
         app.UseMiddleware<CorrelationIdMiddleware>();
+        app.UseMiddleware<SecurityHeadersMiddleware>();
         app.UseSerilogRequestLogging();
         app.UseExceptionHandler();
         app.UseStatusCodePages();
@@ -119,7 +141,13 @@ internal static class ApiServiceCollectionExtensions
             app.UseSwaggerUI(options => options.SwaggerEndpoint("/swagger/v1/swagger.json", "Mise API v1"));
         }
 
+        if (!app.Environment.IsDevelopment() && app.Configuration.GetValue("Security:Hsts", true))
+            app.UseHsts();
+
         app.UseCors(CorsPolicy);
+        app.UseAuthentication();
+        app.UseRateLimiter();
+        app.UseAuthorization();
         return app;
     }
 
@@ -128,10 +156,13 @@ internal static class ApiServiceCollectionExtensions
         app.MapHealthChecks("/health", new HealthCheckOptions
         {
             ResponseWriter = HealthResponseWriter.WriteAsync,
-        });
+        }).AllowAnonymous();
 
         var v1 = app.MapGroup("/api/v1");
         v1.MapSystemEndpoints();
+        v1.MapAuthEndpoints();
+        v1.MapUserEndpoints();
+        v1.MapAuditEndpoints();
         v1.MapCatalogEndpoints();
         v1.MapSupplyEndpoints();
         v1.MapStockEndpoints();
@@ -147,20 +178,5 @@ internal static class ApiServiceCollectionExtensions
 
         app.MapHub<StockHub>(StockHub.Path);
         return app;
-    }
-
-    /// <summary>Миграции и (по флагу Seed:Enabled) стартовый словарь.</summary>
-    public static async Task ApplyMigrationsAsync(this WebApplication app)
-    {
-        if (!app.Configuration.GetValue("Database:MigrateOnStartup", false))
-            return;
-
-        await using var scope = app.Services.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<MiseDbContext>();
-        await db.Database.MigrateAsync();
-        Log.Information("Database migrations applied");
-
-        if (app.Configuration.GetValue("Seed:Enabled", false))
-            await scope.ServiceProvider.GetRequiredService<DatabaseSeeder>().SeedAsync();
     }
 }

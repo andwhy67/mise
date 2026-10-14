@@ -5,6 +5,7 @@ using Mise.Application.Common;
 using Mise.Application.Menu;
 using Mise.Domain.Abstractions;
 using Mise.Domain.Alerts;
+using Mise.Domain.Forecasting;
 using Mise.Domain.Orders;
 using Mise.Domain.Stock;
 
@@ -104,7 +105,9 @@ public sealed class AnalyticsService(IMiseDbContext db, IClock clock, IConsumpti
         int limit, CancellationToken ct)
     {
         await aggregator.RefreshAsync(ct);
-        var query = db.ConsumptionHours.AsNoTracking().Where(c => c.HourBucket >= period.From && c.HourBucket < period.To);
+        // Корзины, пересекающиеся с периодом: час 13:00 входит в период с 13:40 (расход 13:40–14:00 в нём же).
+        var firstBucket = ConsumptionRateEstimator.FloorToHour(period.From);
+        var query = db.ConsumptionHours.AsNoTracking().Where(c => c.HourBucket >= firstBucket && c.HourBucket < period.To);
         if (productId is { } id)
             query = query.Where(c => c.ProductId == id);
         var rows = await (

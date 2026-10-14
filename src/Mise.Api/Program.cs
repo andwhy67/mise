@@ -26,7 +26,6 @@ try
     app.UseApiPipeline();
     app.MapApiEndpoints();
 
-    await app.ApplyMigrationsAsync();
     await app.RunAsync();
 }
 catch (Exception ex) when (ex is not HostAbortedException)

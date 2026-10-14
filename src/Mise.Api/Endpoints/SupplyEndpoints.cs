@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Mise.Api.Auth;
 using Mise.Application.Common;
 using Mise.Application.Supplies;
 
@@ -16,6 +17,8 @@ internal static class SupplyEndpoints
 
         supplies.MapPost("/", CreateAsync)
             .WithSummary("Принять поставку")
+            .RequireAuthorization(AuthPolicies.Supplies)
+            .Audited("supply.create", "Supply")
             .WithDescription(
                 "Каждая позиция становится отдельной партией со своим сроком годности: явная дата → срок позиции от даты " +
                 "создания поставки → срок по умолчанию из словаря. Повтор с тем же Idempotency-Key и тем же телом " +

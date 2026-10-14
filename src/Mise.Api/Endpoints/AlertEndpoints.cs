@@ -1,3 +1,4 @@
+using Mise.Api.Auth;
 using Mise.Application.Alerts;
 using Mise.Application.Common;
 using Mise.Domain.Alerts;
@@ -35,7 +36,8 @@ internal static class AlertEndpoints
             .WithSummary("Сколько алертов требуют внимания (не подтверждены и актуальны) — по важности");
 
         alerts.MapPost("/{id:guid}/ack", (Guid id, AlertService service, CancellationToken ct) => service.AcknowledgeAsync(id, ct))
-            .WithSummary("Подтвердить алерт (идемпотентно)");
+            .WithSummary("Подтвердить алерт (идемпотентно)")
+            .RequireAuthorization(AuthPolicies.Staff);
 
         return api;
     }

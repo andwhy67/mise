@@ -8,6 +8,7 @@ internal static class SystemEndpoints
     {
         group.MapGet("/ping", (IClock clock) => TypedResults.Ok(new PingResponse("ok", clock.UtcNow)))
             .WithName("Ping")
+            .AllowAnonymous()
             .WithTags("System");
         return group;
     }

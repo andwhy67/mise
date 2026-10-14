@@ -22,6 +22,10 @@ public sealed class SimulatorOptions
     public bool AutoStart { get; set; }
 
     public string InstanceId { get; set; } = Environment.MachineName;
+
+    /// <summary>Служебная учётная запись (роль Simulator). Пароль пустой — запросы без входа.</summary>
+    public string Login { get; set; } = "simulator";
+    public string? Password { get; set; }
 }
 
 /// <summary>

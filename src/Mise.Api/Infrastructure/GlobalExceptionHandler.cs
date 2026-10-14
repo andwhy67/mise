@@ -26,6 +26,7 @@ internal sealed class GlobalExceptionHandler(
             ConflictException conflict => Problem(StatusCodes.Status409Conflict, "Конфликт", conflict.Message, conflict.Code),
             UniqueConstraintViolationException => Problem(StatusCodes.Status409Conflict, "Конфликт",
                 "Запись с такими данными уже существует.", "unique_violation"),
+            UnauthorizedException unauthorized => Problem(StatusCodes.Status401Unauthorized, "Нужен вход", unauthorized.Message, unauthorized.Code),
             BusinessRuleException rule => WithDetails(
                 Problem(StatusCodes.Status422UnprocessableEntity, "Операция невозможна", rule.Message, rule.Code), rule.Details),
             DomainException domain => Problem(StatusCodes.Status422UnprocessableEntity, "Операция невозможна", domain.Message, domain.Code),

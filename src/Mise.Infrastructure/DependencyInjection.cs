@@ -5,6 +5,8 @@ using Mise.Application.Abstractions;
 using Mise.Domain.Abstractions;
 using Mise.Infrastructure.Persistence;
 using Mise.Application.Simulator;
+using Mise.Application.Auth;
+using Mise.Infrastructure.Security;
 using Mise.Infrastructure.Seed;
 using Mise.Infrastructure.Simulator;
 using Mise.Infrastructure.Time;
@@ -31,6 +33,9 @@ public static class DependencyInjection
         services.AddScoped<IConsumptionAggregator, PostgresConsumptionAggregator>();
         services.AddScoped<DatabaseSeeder>();
         services.AddScoped<DemoStockSeeder>();
+        services.AddScoped<UserSeeder>();
+        services.AddScoped<ReadOnlyRoleProvisioner>();
+        services.AddSingleton<IPasswordHasher, IdentityPasswordHasher>();
         services.AddSingleton<ISimulatorControlStore, RedisSimulatorControlStore>();
 
         services.AddSingleton<IConnectionMultiplexer>(_ =>

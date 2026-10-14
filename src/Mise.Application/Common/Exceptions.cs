@@ -7,6 +7,12 @@ public sealed class NotFoundException(string resource, object id)
     public string Resource { get; } = resource;
 }
 
+/// <summary>Не удалось подтвердить личность (вход, refresh) → 401 с кодом.</summary>
+public sealed class UnauthorizedException(string code, string message) : Exception(message)
+{
+    public string Code { get; } = code;
+}
+
 /// <summary>Конфликт с текущим состоянием (дубликат, повтор ключа, ссылки) → 409.</summary>
 public sealed class ConflictException(string code, string message) : Exception(message)
 {

@@ -49,6 +49,13 @@ services:
       Expiry__IntervalSeconds: ${EXPIRY_INTERVAL_SECONDS:-30}
       Expiry__AutoWriteOff: ${EXPIRY_AUTO_WRITE_OFF:-true}
       Demo__Enabled: ${DEMO_ENABLED:-true}
+      Auth__SigningKey: ${AUTH_SIGNING_KEY:-dev-only-signing-key-not-for-production-0123456789}
+      Auth__DemoUsersPassword: ${DEMO_PASSWORD:-mise-demo}
+      Auth__SimulatorPassword: ${SIMULATOR_PASSWORD:-mise-simulator}
+      Auth__CookieSecure: ${AUTH_COOKIE_SECURE:-false}
+      ForwardedHeaders__TrustAllProxies: ${TRUST_PROXY_HEADERS:-true}
+      Database__ReadOnlyUser: ${DB_READONLY_USER:-mise_readonly}
+      Database__ReadOnlyPassword: ${DB_READONLY_PASSWORD:-mise_readonly_dev}
     ports:
       - "${API_PORT:-5080}:8080"
     depends_on:
@@ -77,6 +84,8 @@ services:
       ConnectionStrings__Redis: redis:6379
       Simulator__ApiBaseUrl: http://api:8080
       Simulator__AutoStart: ${SIMULATOR_AUTOSTART:-false}
+      Simulator__Login: simulator
+      Simulator__Password: ${SIMULATOR_PASSWORD:-mise-simulator}
     depends_on:
       api:
         condition: service_healthy
@@ -88,8 +97,8 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-mise}
-      POSTGRES_USER: ${POSTGRES_USER:-mise}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mise_dev_password}
+      GF_DB_USER: ${DB_READONLY_USER:-mise_readonly}
+      GF_DB_PASSWORD: ${DB_READONLY_PASSWORD:-mise_readonly_dev}
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change_me}
       GF_AUTH_ANONYMOUS_ENABLED: ${GRAFANA_ANONYMOUS:-true}
@@ -109,7 +118,8 @@ services:
       timeout: 5s
       retries: 10
     depends_on:
-      postgres:
+      # Роль только на чтение создаёт API при старте.
+      api:
         condition: service_healthy
 
 volumes:

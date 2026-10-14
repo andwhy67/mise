@@ -6,7 +6,7 @@
 
 Поставки по партиям → остатки по партиям → заказы со списанием по **FEFO** → авто-стоп-лист → сигнализация сроков и автосписание → **горячие предложения** с объяснением → аналитика, прогноз, предложения поставок → real-time UI.
 
-> Статус: **Фаза 6 — прогноз стоп-листа, предложения поставок, аналитика, Grafana.** Стек поднимается одной командой; бизнес-функции появляются по фазам из `PLAN.md` §12.
+> Статус: **Фаза 7 — безопасность: вход, роли, аудит, лимиты; prod-конфигурация.** Дальше — фронтенд. Стек поднимается одной командой; бизнес-функции появляются по фазам из `PLAN.md` §12.
 
 ## Быстрый старт (Docker)
 
@@ -28,6 +28,35 @@ docker compose up -d --build
 Postgres и Redis публикуются только на `127.0.0.1` (порты `5432` и `6380`; Redis на `6380`, чтобы не конфликтовать с локальным Redis). Порты меняются в `.env`.
 
 Остановить: `docker compose down` (данные сохраняются в volume; `-v` — удалить и их).
+
+### Вход и роли
+
+Всё API, кроме `/health`, `/api/v1/ping` и `/api/v1/auth/*`, требует входа (`Authorization: Bearer <accessToken>`).
+
+| Логин | Роль | Пароль |
+|---|---|---|
+| `manager` | Manager — всё: справочники, пользователи, аналитика, аудит, симулятор | `DEMO_PASSWORD` (по умолчанию `mise-demo`) |
+| `chef` | Chef — заказы, KPI дашборда, подтверждение алертов | то же |
+| `warehouse` | Warehouse — поставки, списания, предложения поставок | то же |
+| `simulator` | Simulator — служебная: поставки и заказы, без лимитов | `SIMULATOR_PASSWORD` |
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:5080/api/v1/auth/login -H "Content-Type: application/json" \
+  -d '{"login":"manager","password":"mise-demo"}' | python -c "import json,sys; print(json.load(sys.stdin)['accessToken'])")
+curl -H "Authorization: Bearer $TOKEN" http://localhost:5080/api/v1/stock
+```
+
+Access-токен живёт 15 мин; `POST /auth/refresh` выдаёт новый по httpOnly-cookie (ротация). Подробно — `docs/assumptions.md`, H1–H13.
+
+### Prod-запуск
+
+```bash
+cp .env.example .env    # заменить все секреты: AUTH_SIGNING_KEY (openssl rand -base64 48), DEMO_PASSWORD, SIMULATOR_PASSWORD,
+                        # POSTGRES_PASSWORD, DB_READONLY_PASSWORD, GRAFANA_ADMIN_PASSWORD
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+Наружу — только web (`:8081`: SPA + `/api`, `/hubs`, `/health` через nginx) и Grafana (`:3001`). Без секретов compose не стартует.
 
 ## Разработка
 
@@ -84,6 +113,9 @@ dotnet ef migrations add <Name> -p src/Mise.Infrastructure -s src/Mise.Api -o Pe
 | `GET` | `/alerts?type=&severity=&acknowledged=&active=&productId=&batchId=&dishId=` | Лента алертов: скоро истечёт, истёк, мало остатка, стоп-лист вкл/выкл |
 | `GET` | `/alerts/summary` | Сколько алертов требуют внимания (по важности) |
 | `POST` | `/alerts/{id}/ack` | Подтвердить алерт |
+| `POST` | `/auth/login`, `/auth/refresh`, `/auth/logout`; `GET /auth/me` | Вход (access в ответе, refresh — httpOnly-cookie), ротация, выход |
+| `GET/POST/PUT` | `/users`, `/users/{id}`, `POST /users/{id}/password` | Пользователи и роли (Manager) |
+| `GET` | `/audit?action=&userId=&entity=&from=&to=` | Журнал аудита (Manager) |
 | `GET` | `/hot-offers?limit=&scorer=` | Что продавать в первую очередь: score 0–100, `reasons[]` и объяснение ([алгоритм](docs/hot-offers.md)) |
 | `GET` | `/simulator/state` | Желаемое и фактическое состояние симулятора, счётчики, последние события |
 | `POST` | `/simulator/start`, `/stop`, `/scenario`, `/speed` | Управление: сценарии `Normal`, `RushHour`, `SupplyDelay`, `Spoilage`, `FreshDelivery`, `Chaos`; скорость ×1…×60 |
@@ -118,7 +150,7 @@ curl -X POST http://localhost:5080/api/v1/supplies \
 
 ## Стек
 
-- **Backend:** C# / ASP.NET Core (.NET 9), EF Core + Npgsql, SignalR (Redis backplane), Serilog, Swagger, ProblemDetails (RFC 7807)
+- **Backend:** C# / ASP.NET Core (.NET 9), EF Core + Npgsql, SignalR (Redis backplane), JWT + роли, rate limiting, Serilog, Swagger, ProblemDetails (RFC 7807)
 - **Хранилища:** PostgreSQL 16, Redis 7
 - **Frontend:** React 19 + TypeScript + Vite + Chakra UI v3 + SCSS-модули, TanStack Query, React Router
 - **Тесты:** xUnit + Testcontainers, Vitest + Testing Library

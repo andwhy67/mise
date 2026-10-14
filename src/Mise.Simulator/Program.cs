@@ -36,9 +36,14 @@ public static class Program
 
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<RetryCounter>();
+        services.AddSingleton<ApiTokenCache>();
+        services.AddTransient<ApiAuthHandler>();
+        services.AddHttpClient(ApiTokenCache.AuthClient, (sp, http) =>
+            http.BaseAddress = new Uri(sp.GetRequiredService<IOptions<SimulatorOptions>>().Value.ApiBaseUrl));
         // Ретраи только на сетевые ошибки, 5xx, 408 и 429; POST безопасно повторять — у заказов и поставок Idempotency-Key.
         services.AddHttpClient<IMiseApi, MiseApiClient>((sp, http) =>
                 http.BaseAddress = new Uri(sp.GetRequiredService<IOptions<SimulatorOptions>>().Value.ApiBaseUrl))
+            .AddHttpMessageHandler<ApiAuthHandler>()
             .AddStandardResilienceHandler()
             .Configure((HttpStandardResilienceOptions options, IServiceProvider sp) =>
             {

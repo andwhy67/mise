@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Mise.Domain.Alerts;
+using Mise.Domain.Audit;
+using Mise.Domain.Users;
 using Mise.Domain.Catalog;
 using Mise.Domain.Menu;
 using Mise.Domain.Orders;
@@ -27,6 +29,9 @@ public interface IMiseDbContext
     DbSet<StopListEntry> StopListEntries { get; }
     DbSet<Alert> Alerts { get; }
     DbSet<ConsumptionHour> ConsumptionHours { get; }
+    DbSet<User> Users { get; }
+    DbSet<RefreshToken> RefreshTokens { get; }
+    DbSet<AuditEntry> Audit { get; }
 
     ChangeTracker ChangeTracker { get; }
 

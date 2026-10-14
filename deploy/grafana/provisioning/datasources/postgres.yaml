@@ -6,7 +6,8 @@ datasources:
     type: grafana-postgresql-datasource
     access: proxy
     url: postgres:5432
-    user: ${POSTGRES_USER}
+    # Роль только на чтение (создаёт API, без доступа к users/refresh_tokens).
+    user: ${GF_DB_USER}
     isDefault: true
     editable: false
     jsonData:
@@ -15,4 +16,4 @@ datasources:
       postgresVersion: 1600
       timescaledb: false
     secureJsonData:
-      password: ${POSTGRES_PASSWORD}
+      password: ${GF_DB_PASSWORD}

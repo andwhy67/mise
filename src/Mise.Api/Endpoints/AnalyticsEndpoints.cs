@@ -1,3 +1,4 @@
+using Mise.Api.Auth;
 using Mise.Application.Analytics;
 using Mise.Application.Forecasting;
 
@@ -20,6 +21,7 @@ internal static class AnalyticsEndpoints
                 service.GetSupplySuggestionsAsync(horizonHours, ct))
             .WithTags("Поставки")
             .WithSummary("Что и сколько заказать: рекомендуемая партия, срочность, причины")
+            .RequireAuthorization(AuthPolicies.Warehouse)
             .WithDescription(
                 "need = расход за горизонт + страховой запас − остаток, который доживёт; ограничение — сколько успеем использовать " +
                 "до порчи; округление до упаковки. horizonHours: по умолчанию 72.");
@@ -33,20 +35,24 @@ internal static class AnalyticsEndpoints
 
         analytics.MapGet("/writeoffs", async (AnalyticsService service, CancellationToken ct, DateTimeOffset? from = null, DateTimeOffset? to = null) =>
                 await service.GetWriteOffsAsync(service.ResolvePeriod(from, to), ct))
-            .WithSummary("Списания по дням, продуктам и причинам (по сроку / вручную); период по умолчанию — 7 дней");
+            .WithSummary("Списания по дням, продуктам и причинам (по сроку / вручную); период по умолчанию — 7 дней")
+            .RequireAuthorization(AuthPolicies.Manager);
 
         analytics.MapGet("/deficit", async (AnalyticsService service, CancellationToken ct, DateTimeOffset? from = null, DateTimeOffset? to = null) =>
                 await service.GetDeficitAsync(service.ResolvePeriod(from, to), ct))
-            .WithSummary("Дефицитные ингредиенты: попадания блюд в стоп из-за продукта, минуты в стопе, доля времени ниже минимума");
+            .WithSummary("Дефицитные ингредиенты: попадания блюд в стоп из-за продукта, минуты в стопе, доля времени ниже минимума")
+            .RequireAuthorization(AuthPolicies.Manager);
 
         analytics.MapGet("/consumption", async (AnalyticsService service, CancellationToken ct, DateTimeOffset? from = null,
                 DateTimeOffset? to = null, ConsumptionBucket bucket = ConsumptionBucket.Hour, Guid? productId = null, int limit = 10) =>
                 await service.GetConsumptionAsync(service.ResolvePeriod(from, to), bucket, productId, limit, ct))
-            .WithSummary("Расход по продуктам: ряды по часам или суткам (Москва), топ по объёму");
+            .WithSummary("Расход по продуктам: ряды по часам или суткам (Москва), топ по объёму")
+            .RequireAuthorization(AuthPolicies.Manager);
 
         analytics.MapGet("/kpi", async (AnalyticsService service, CancellationToken ct, DateTimeOffset? from = null, DateTimeOffset? to = null) =>
                 await service.GetKpiAsync(service.ResolvePeriod(from, to), ct))
-            .WithSummary("KPI периода (заказы, выручка, доля списаний, время в стопе) и плитки «сейчас/сегодня» для дашборда");
+            .WithSummary("KPI периода (заказы, выручка, доля списаний, время в стопе) и плитки «сейчас/сегодня» для дашборда")
+            .RequireAuthorization(AuthPolicies.Dashboard);
 
         return api;
     }

@@ -4,6 +4,7 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="EFCore.NamingConventions" />
     <PackageReference Include="StackExchange.Redis" />
+    <PackageReference Include="Microsoft.Extensions.Identity.Core" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Mise.Application\Mise.Application.csproj" />
