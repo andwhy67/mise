@@ -24,3 +24,5 @@ public sealed record BatchStatusChangedEvent(IReadOnlyList<BatchDto> Batches);
 public sealed record OrderEvent(OrderListItemDto Order);
 
 public sealed record SupplyReceivedEvent(SupplyListItemDto Supply);
+
+// HotOffersChanged несёт текущий топ целиком (HotOffersDto): он маленький, а клиенту нужен порядок.

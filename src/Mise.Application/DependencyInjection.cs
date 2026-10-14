@@ -4,12 +4,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Mise.Application.Alerts;
 using Mise.Application.Catalog;
 using Mise.Application.Expiry;
+using Mise.Application.HotOffers;
 using Mise.Application.Menu;
 using Mise.Application.Orders;
 using Mise.Application.Realtime;
 using Mise.Application.Simulator;
 using Mise.Application.Stock;
 using Mise.Application.Supplies;
+using Mise.Domain.HotOffers;
 
 namespace Mise.Application;
 
@@ -36,6 +38,11 @@ public static class DependencyInjection
         services.AddScoped<ExpiryMonitorService>();
         services.AddScoped<RealtimePayloadBuilder>();
         services.AddScoped<SimulatorService>();
+        services.AddScoped<HotOfferService>();
+        services.AddSingleton<HotOfferState>();
+        services.AddSingleton<IHotOfferScorer, HotOfferScorerV1>();
+        services.AddSingleton<IHotOfferScorer, HotOfferScorerV2>();
+        services.AddOptions<HotOfferOptions>();
         services.AddOptions<StockOptions>();
         services.AddOptions<ExpiryOptions>();
         return services;

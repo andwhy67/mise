@@ -6,7 +6,7 @@
 
 Поставки по партиям → остатки по партиям → заказы со списанием по **FEFO** → авто-стоп-лист → сигнализация сроков и автосписание → **горячие предложения** с объяснением → аналитика, прогноз, предложения поставок → real-time UI.
 
-> Статус: **Фаза 4 — real-time (SignalR) и симулятор.** Стек поднимается одной командой; бизнес-функции появляются по фазам из `PLAN.md` §12.
+> Статус: **Фаза 5 — горячие предложения.** Стек поднимается одной командой; бизнес-функции появляются по фазам из `PLAN.md` §12.
 
 ## Быстрый старт (Docker)
 
@@ -80,6 +80,7 @@ dotnet ef migrations add <Name> -p src/Mise.Infrastructure -s src/Mise.Api -o Pe
 | `GET` | `/alerts?type=&severity=&acknowledged=&active=&productId=&batchId=&dishId=` | Лента алертов: скоро истечёт, истёк, мало остатка, стоп-лист вкл/выкл |
 | `GET` | `/alerts/summary` | Сколько алертов требуют внимания (по важности) |
 | `POST` | `/alerts/{id}/ack` | Подтвердить алерт |
+| `GET` | `/hot-offers?limit=&scorer=` | Что продавать в первую очередь: score 0–100, `reasons[]` и объяснение ([алгоритм](docs/hot-offers.md)) |
 | `GET` | `/simulator/state` | Желаемое и фактическое состояние симулятора, счётчики, последние события |
 | `POST` | `/simulator/start`, `/stop`, `/scenario`, `/speed` | Управление: сценарии `Normal`, `RushHour`, `SupplyDelay`, `Spoilage`, `FreshDelivery`, `Chaos`; скорость ×1…×60 |
 | `POST` | `/demo/seed-stock` | Демо-наполнение склада (при `DEMO_ENABLED=true`) |
@@ -88,7 +89,7 @@ dotnet ef migrations add <Name> -p src/Mise.Infrastructure -s src/Mise.Api -o Pe
 
 ### Real-time и симулятор
 
-SignalR-хаб `/hubs/stock` (через nginx — тот же origin, что и веб): события `StockChanged`, `AvailabilityChanged`, `StopListChanged`, `AlertRaised`, `BatchStatusChanged`, `OrderCreated`, `OrderStatusChanged`, `SupplyReceived`, `SimulatorStateChanged`. Только дельты, склеенные за 250 мс; Redis backplane для нескольких инстансов API.
+SignalR-хаб `/hubs/stock` (через nginx — тот же origin, что и веб): события `StockChanged`, `AvailabilityChanged`, `StopListChanged`, `AlertRaised`, `BatchStatusChanged`, `OrderCreated`, `OrderStatusChanged`, `SupplyReceived`, `HotOffersChanged`, `SimulatorStateChanged`. Только дельты, склеенные за 250 мс; Redis backplane для нескольких инстансов API.
 
 Симулятор (`simulator` в compose) — отдельный процесс, работает с API по REST как внешняя касса и склад. Стартует остановленным:
 
@@ -137,4 +138,5 @@ docs/                   допущения, идеи, (позже) алгори�
 
 - `PLAN.md` — полный план, алгоритмы, API, дорожная карта
 - `docs/assumptions.md` — принятые допущения
+- `docs/hot-offers.md` — алгоритм горячих предложений: формула, параметры, разобранный пример
 - `docs/ideas.md` — идеи сверх ТЗ

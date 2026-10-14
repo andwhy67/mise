@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.SignalR;
+using Mise.Application.HotOffers;
 using Mise.Application.Realtime;
 using Mise.Application.Simulator;
 
@@ -19,6 +20,7 @@ public interface IStockClient
     Task OrderStatusChanged(OrderEvent e);
     Task SupplyReceived(SupplyReceivedEvent e);
     Task SimulatorStateChanged(SimulatorStateDto e);
+    Task HotOffersChanged(HotOffersDto e);
 }
 
 /// <summary>Хаб только для рассылки сервер → клиенты; состояние клиент берёт из REST (в т.ч. после реконнекта).</summary>

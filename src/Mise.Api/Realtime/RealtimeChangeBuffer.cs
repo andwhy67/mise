@@ -47,6 +47,8 @@ internal sealed class RealtimeChangeBuffer : IRealtimeNotifier
 
     public void SimulatorStateChanged(SimulatorStateDto state) => Update(c => c.Simulator = state);
 
+    public void HotOffersMayHaveChanged() => Update(c => c.HotOffersCheck = true);
+
     private void Update(Action<RealtimeChangeSet> change)
     {
         bool empty;

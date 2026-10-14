@@ -11,7 +11,7 @@ internal sealed class HubRecorder : IAsyncDisposable
     public static readonly string[] EventNames =
     [
         "StockChanged", "AvailabilityChanged", "StopListChanged", "AlertRaised", "BatchStatusChanged",
-        "OrderCreated", "OrderStatusChanged", "SupplyReceived", "SimulatorStateChanged",
+        "OrderCreated", "OrderStatusChanged", "SupplyReceived", "SimulatorStateChanged", "HotOffersChanged",
     ];
 
     private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(10);

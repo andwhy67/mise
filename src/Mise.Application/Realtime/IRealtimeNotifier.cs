@@ -30,4 +30,7 @@ public interface IRealtimeNotifier
     void SupplyReceived(Guid supplyId);
 
     void SimulatorStateChanged(SimulatorStateDto state);
+
+    /// <summary>Пересчитать горячие предложения (таймер: срочность растёт со временем) → HotOffersChanged, если выдача изменилась.</summary>
+    void HotOffersMayHaveChanged();
 }

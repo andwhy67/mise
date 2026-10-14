@@ -1,4 +1,5 @@
 using Mise.Application.Alerts;
+using Mise.Application.HotOffers;
 using Mise.Application.Menu;
 using Mise.Application.Orders;
 using Mise.Application.Simulator;
@@ -17,6 +18,7 @@ public sealed record RealtimePayload(
     AvailabilityChangedEvent? Availability,
     StopListChangedEvent? StopList,
     AlertRaisedEvent? Alerts,
+    HotOffersDto? HotOffers,
     SimulatorStateDto? Simulator);
 
 /// <summary>
@@ -28,7 +30,8 @@ public sealed class RealtimePayloadBuilder(
     MenuQueryService menu,
     AlertService alerts,
     OrderService orders,
-    SupplyService supplies)
+    SupplyService supplies,
+    HotOfferService hotOffers)
 {
     public async Task<RealtimePayload> BuildAsync(RealtimeChangeSet changes, CancellationToken ct)
     {
@@ -51,6 +54,7 @@ public sealed class RealtimePayloadBuilder(
         }
 
         var alertItems = await alerts.GetByIdsAsync(changes.Alerts, ct);
+        var hotOffersChanged = changes.AffectsHotOffers ? await hotOffers.GetIfChangedAsync(ct) : null;
 
         return new RealtimePayload(
             supplyItems.Select(s => new SupplyReceivedEvent(s)).ToArray(),
@@ -61,6 +65,7 @@ public sealed class RealtimePayloadBuilder(
             availability.Count > 0 ? new AvailabilityChangedEvent(availability) : null,
             stopList,
             alertItems.Count > 0 ? new AlertRaisedEvent(alertItems) : null,
+            hotOffersChanged,
             changes.Simulator);
     }
 }

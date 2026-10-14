@@ -21,10 +21,17 @@ public sealed class RealtimeChangeSet
     public HashSet<Guid> Supplies { get; } = [];
     public SimulatorStateDto? Simulator { get; set; }
 
+    /// <summary>Явный запрос пересчёта горячих предложений (по таймеру).</summary>
+    public bool HotOffersCheck { get; set; }
+
+    /// <summary>Изменения, после которых горячие предложения могли поменяться.</summary>
+    public bool AffectsHotOffers =>
+        HotOffersCheck || Products.Count + Batches.Count + Dishes.Count + StopListAdded.Count + StopListRemoved.Count > 0;
+
     public bool IsEmpty =>
         Products.Count + Batches.Count + Dishes.Count + StopListAdded.Count + StopListRemoved.Count + Alerts.Count
         + OrdersCreated.Count + OrdersUpdated.Count + Supplies.Count == 0
-        && Simulator is null;
+        && Simulator is null && !HotOffersCheck;
 
     public void AddStopListChanges(StopListChanges changes)
     {

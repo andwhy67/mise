@@ -5,6 +5,8 @@ using Mise.Api.Endpoints;
 using Mise.Api.Realtime;
 using Mise.Application.Realtime;
 using Mise.Application.Expiry;
+using Mise.Application.HotOffers;
+using Mise.Domain.HotOffers;
 using Mise.Application.Stock;
 using Mise.Infrastructure.Persistence;
 using Mise.Infrastructure.Seed;
@@ -45,6 +47,13 @@ internal static class ApiServiceCollectionExtensions
             .Validate(o => o.IsValid(), "Expiry: IntervalSeconds должен быть в [1;3600], BatchSize — в [1;10000].")
             .ValidateOnStart();
         services.AddHostedService<ExpiryWorker>();
+
+        services.AddOptions<HotOfferOptions>()
+            .Bind(configuration.GetSection(HotOfferOptions.SectionName))
+            .Validate<IEnumerable<IHotOfferScorer>>((o, scorers) => o.IsValid(scorers.Select(s => s.Version)),
+                "HotOffers: неизвестный Scorer или некорректные параметры (см. docs/hot-offers.md).")
+            .ValidateOnStart();
+        services.AddHostedService<HotOffersTicker>();
 
         services.AddRealtime(configuration);
 
@@ -122,6 +131,7 @@ internal static class ApiServiceCollectionExtensions
         v1.MapOrderEndpoints();
         v1.MapMenuEndpoints();
         v1.MapAlertEndpoints();
+        v1.MapHotOfferEndpoints();
         v1.MapSimulatorEndpoints();
         if (app.Configuration.GetValue("Demo:Enabled", false))
             v1.MapDemoEndpoints();

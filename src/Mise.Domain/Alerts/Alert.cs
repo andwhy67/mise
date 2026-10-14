@@ -1,4 +1,3 @@
-using System.Globalization;
 using Mise.Domain.Common;
 using Mise.Domain.Expiry;
 
@@ -39,8 +38,6 @@ public static class AlertKeys
 /// </summary>
 public sealed class Alert
 {
-    private static readonly CultureInfo Ru = CultureInfo.GetCultureInfo("ru-RU");
-
     private Alert() { }
 
     public Guid Id { get; private set; }
@@ -73,7 +70,7 @@ public sealed class Alert
             Severity = severity,
             BatchId = batchId,
             ProductId = productId,
-            Message = $"{productName}: партия истекает через {FormatHours(hoursLeft)}.",
+            Message = $"{productName}: партия истекает через {RuFormat.Hours(hoursLeft)}.",
             DedupKey = AlertKeys.Batch(batchId, level),
             CreatedAt = now,
         };
@@ -90,8 +87,8 @@ public sealed class Alert
         BatchId = batchId,
         ProductId = productId,
         Message = writtenOff
-            ? $"{productName}: срок партии истёк, остаток {FormatQty(quantity, unit)} списан автоматически."
-            : $"{productName}: срок партии истёк, остаток {FormatQty(quantity, unit)} нужно списать.",
+            ? $"{productName}: срок партии истёк, остаток {RuFormat.Quantity(quantity, unit)} списан автоматически."
+            : $"{productName}: срок партии истёк, остаток {RuFormat.Quantity(quantity, unit)} нужно списать.",
         DedupKey = AlertKeys.Batch(batchId, ShelfLifeStatus.Expired),
         CreatedAt = now,
     };
@@ -104,8 +101,8 @@ public sealed class Alert
         Severity = usable <= 0 ? AlertSeverity.Critical : AlertSeverity.Warning,
         ProductId = productId,
         Message = usable <= 0
-            ? $"{productName}: доступного остатка нет (минимум {FormatQty(minStock, unit)})."
-            : $"{productName}: доступно {FormatQty(usable, unit)} при минимуме {FormatQty(minStock, unit)}.",
+            ? $"{productName}: доступного остатка нет (минимум {RuFormat.Quantity(minStock, unit)})."
+            : $"{productName}: доступно {RuFormat.Quantity(usable, unit)} при минимуме {RuFormat.Quantity(minStock, unit)}.",
         DedupKey = AlertKeys.LowStock(productId),
         CreatedAt = now,
     };
@@ -135,14 +132,4 @@ public sealed class Alert
     public void Acknowledge(DateTimeOffset now) => AcknowledgedAt ??= now;
 
     public void Resolve(DateTimeOffset now) => ResolvedAt ??= now;
-
-    private static string FormatQty(decimal value, MeasureUnit unit) => $"{value.ToString("0.###", Ru)} {unit switch
-    {
-        MeasureUnit.Gram => "г",
-        MeasureUnit.Milliliter => "мл",
-        _ => "шт",
-    }}";
-
-    private static string FormatHours(decimal hours) =>
-        hours >= 1 ? $"{decimal.Round(hours, 1).ToString("0.#", Ru)} ч" : $"{Math.Max(1, (int)decimal.Round(hours * 60)).ToString(Ru)} мин";
 }

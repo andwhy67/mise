@@ -72,6 +72,8 @@ internal sealed class RealtimePublisher(
                 await clients.StopListChanged(stopList);
             if (payload.Alerts is { } alerts)
                 await clients.AlertRaised(alerts);
+            if (payload.HotOffers is { } hotOffers)
+                await clients.HotOffersChanged(hotOffers);
             if (payload.Simulator is { } simulator)
                 await clients.SimulatorStateChanged(simulator);
         }

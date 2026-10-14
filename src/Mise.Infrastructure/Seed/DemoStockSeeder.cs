@@ -33,7 +33,8 @@ public sealed class DemoStockSeeder(SupplyService supplies, IClock clock)
         return new DemoSeedResult(created, replayed);
     }
 
-    private static IEnumerable<CreateSupplyRequest> BuildSupplies(string prefix, DateTimeOffset now)
+    /// <summary>Поставки демо-набора (открыто для тестов: тот же набор проверяется скорером горячих предложений).</summary>
+    public static IEnumerable<CreateSupplyRequest> BuildSupplies(string prefix, DateTimeOffset now)
     {
         // Основной запас: свежий, срок — по умолчанию из словаря.
         yield return new CreateSupplyRequest(
