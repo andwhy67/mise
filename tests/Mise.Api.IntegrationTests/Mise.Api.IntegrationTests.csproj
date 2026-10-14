@@ -11,9 +11,11 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Testcontainers.PostgreSql" />
     <PackageReference Include="Testcontainers.Redis" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Mise.Api\Mise.Api.csproj" />
+    <ProjectReference Include="..\..\src\Mise.Simulator\Mise.Simulator.csproj" Aliases="simulator" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />

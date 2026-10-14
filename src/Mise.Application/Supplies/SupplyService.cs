@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Mise.Application.Abstractions;
 using Mise.Application.Common;
 using Mise.Application.Menu;
+using Mise.Application.Realtime;
 using Mise.Domain.Abstractions;
 using Mise.Domain.Catalog;
 using Mise.Domain.Common;
@@ -13,7 +14,12 @@ using Mise.Domain.Supplies;
 
 namespace Mise.Application.Supplies;
 
-public sealed class SupplyService(IMiseDbContext db, IClock clock, StopListService stopList, IValidator<CreateSupplyRequest> validator)
+public sealed class SupplyService(
+    IMiseDbContext db,
+    IClock clock,
+    StopListService stopList,
+    IRealtimeNotifier notifier,
+    IValidator<CreateSupplyRequest> validator)
 {
     /// <summary>Допустимое «опережение» даты поставки относительно часов сервера (assumptions A3).</summary>
     public static readonly TimeSpan MaxClockSkew = TimeSpan.FromMinutes(5);
@@ -97,6 +103,8 @@ public sealed class SupplyService(IMiseDbContext db, IClock clock, StopListServi
             throw new ConflictException(Errors.DuplicateNumber, $"Поставка с номером «{supply.Number}» уже зарегистрирована.");
         }
 
+        notifier.SupplyReceived(supply.Id);
+        notifier.StockChanged(productIds);
         await stopList.TryRefreshAsync(ct);
         return new CreateSupplyResult(ToDto(supply, batches, products), Created: true);
     }
@@ -115,6 +123,15 @@ public sealed class SupplyService(IMiseDbContext db, IClock clock, StopListServi
             .ToListAsync(ct);
         return new PagedResult<SupplyListItemDto>(items, total, page.SafePage, page.SafePageSize);
     }
+
+    public async Task<IReadOnlyList<SupplyListItemDto>> GetListItemsAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct) =>
+        ids.Count == 0
+            ? []
+            : await db.Supplies.AsNoTracking()
+                .Where(s => ids.Contains(s.Id))
+                .OrderBy(s => s.RegisteredAt).ThenBy(s => s.Id)
+                .Select(s => new SupplyListItemDto(s.Id, s.Number, s.CreatedAt, s.RegisteredAt, s.SupplierName, s.Items.Count))
+                .ToListAsync(ct);
 
     private static Batch RegisterItem(Supply supply, int lineNo, CreateSupplyItemRequest item, Product product, DateTimeOffset createdAt, DateTimeOffset now)
     {

@@ -55,6 +55,8 @@ public sealed class MiseApiFactory : WebApplicationFactory<Program>, IAsyncLifet
         builder.UseSetting("Cors:AllowedOrigins", "http://localhost:5173");
         // Тик мониторинга сроков тесты вызывают сами (RunExpiryTickAsync) — детерминированно, вместе с FakeClock.
         builder.UseSetting("Expiry:Enabled", "false");
+        builder.UseSetting("Realtime:DebounceMilliseconds", "50");
+        builder.UseSetting("Demo:Enabled", "true");
         builder.ConfigureTestServices(services => services.Replace(ServiceDescriptor.Singleton<IClock>(Clock)));
     }
 

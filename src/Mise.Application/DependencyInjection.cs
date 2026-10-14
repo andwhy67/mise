@@ -6,6 +6,8 @@ using Mise.Application.Catalog;
 using Mise.Application.Expiry;
 using Mise.Application.Menu;
 using Mise.Application.Orders;
+using Mise.Application.Realtime;
+using Mise.Application.Simulator;
 using Mise.Application.Stock;
 using Mise.Application.Supplies;
 
@@ -13,7 +15,7 @@ namespace Mise.Application;
 
 public static class DependencyInjection
 {
-    /// <summary>Регистрация use cases и валидаторов. Опции (<see cref="StockOptions"/>, <see cref="ExpiryOptions"/>) привязывает хост.</summary>
+    /// <summary>Регистрация use cases и валидаторов. <see cref="IRealtimeNotifier"/> и <see cref="ISimulatorControlStore"/> регистрирует хост/инфраструктура. Опции (<see cref="StockOptions"/>, <see cref="ExpiryOptions"/>) привязывает хост.</summary>
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         // Сообщения FluentValidation — на русском, независимо от культуры сервера.
@@ -32,6 +34,8 @@ public static class DependencyInjection
         services.AddScoped<WriteOffService>();
         services.AddScoped<AlertService>();
         services.AddScoped<ExpiryMonitorService>();
+        services.AddScoped<RealtimePayloadBuilder>();
+        services.AddScoped<SimulatorService>();
         services.AddOptions<StockOptions>();
         services.AddOptions<ExpiryOptions>();
         return services;

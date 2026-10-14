@@ -61,9 +61,11 @@ public sealed record ProductBatchesDto(StockItemDto Stock, IReadOnlyList<BatchDt
 /// <param name="ShelfStatuses">Фильтр по статусу срока (Fresh/Warning/Critical/Expired).</param>
 /// <param name="ExpiringWithinHours">Только партии, истекающие не позже чем через N часов (включая уже истёкшие).</param>
 /// <param name="IncludeClosed">Включать израсходованные и списанные партии.</param>
+/// <param name="BatchIds">Только указанные партии (внутреннее использование: дельты real-time).</param>
 public sealed record BatchQuery(
     Guid? ProductId = null,
     IReadOnlyCollection<ShelfLifeStatus>? ShelfStatuses = null,
     decimal? ExpiringWithinHours = null,
     bool IncludeClosed = false,
-    int Limit = 200);
+    int Limit = 200,
+    IReadOnlyCollection<Guid>? BatchIds = null);

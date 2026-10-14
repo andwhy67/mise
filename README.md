@@ -6,7 +6,7 @@
 
 Поставки по партиям → остатки по партиям → заказы со списанием по **FEFO** → авто-стоп-лист → сигнализация сроков и автосписание → **горячие предложения** с объяснением → аналитика, прогноз, предложения поставок → real-time UI.
 
-> Статус: **Фаза 3 — мониторинг сроков, алерты, автосписание.** Стек поднимается одной командой; бизнес-функции появляются по фазам из `PLAN.md` §12.
+> Статус: **Фаза 4 — real-time (SignalR) и симулятор.** Стек поднимается одной командой; бизнес-функции появляются по фазам из `PLAN.md` §12.
 
 ## Быстрый старт (Docker)
 
@@ -80,8 +80,24 @@ dotnet ef migrations add <Name> -p src/Mise.Infrastructure -s src/Mise.Api -o Pe
 | `GET` | `/alerts?type=&severity=&acknowledged=&active=&productId=&batchId=&dishId=` | Лента алертов: скоро истечёт, истёк, мало остатка, стоп-лист вкл/выкл |
 | `GET` | `/alerts/summary` | Сколько алертов требуют внимания (по важности) |
 | `POST` | `/alerts/{id}/ack` | Подтвердить алерт |
+| `GET` | `/simulator/state` | Желаемое и фактическое состояние симулятора, счётчики, последние события |
+| `POST` | `/simulator/start`, `/stop`, `/scenario`, `/speed` | Управление: сценарии `Normal`, `RushHour`, `SupplyDelay`, `Spoilage`, `FreshDelivery`, `Chaos`; скорость ×1…×60 |
+| `POST` | `/demo/seed-stock` | Демо-наполнение склада (при `DEMO_ENABLED=true`) |
 
 Фоновый `ExpiryWorker` раз в 30 с (`EXPIRY_INTERVAL_SECONDS`): поднимает алерты при пересечении порогов срока (Warning ≤ 50% и ≤ 24 ч, Critical ≤ 20% и ≤ 6 ч), переводит истёкшие партии в `Expired` и списывает остаток (`EXPIRY_AUTO_WRITE_OFF=true`), ведёт LowStock и пересчитывает стоп-лист. При нескольких инстансах тик выполняет один (advisory lock).
+
+### Real-time и симулятор
+
+SignalR-хаб `/hubs/stock` (через nginx — тот же origin, что и веб): события `StockChanged`, `AvailabilityChanged`, `StopListChanged`, `AlertRaised`, `BatchStatusChanged`, `OrderCreated`, `OrderStatusChanged`, `SupplyReceived`, `SimulatorStateChanged`. Только дельты, склеенные за 250 мс; Redis backplane для нескольких инстансов API.
+
+Симулятор (`simulator` в compose) — отдельный процесс, работает с API по REST как внешняя касса и склад. Стартует остановленным:
+
+```bash
+curl -X POST http://localhost:5080/api/v1/demo/seed-stock
+curl -X POST http://localhost:5080/api/v1/simulator/start -H "Content-Type: application/json" -d '{"scenario":"RushHour","speed":60}'
+curl http://localhost:5080/api/v1/simulator/state
+curl -X POST http://localhost:5080/api/v1/simulator/stop
+```
 
 Срок годности партии: явная дата в позиции → `createdAt` поставки + `shelfLifeHours` позиции → срок по умолчанию из словаря → иначе 400. Ошибки — RFC 7807 (`400` валидация с `errors`, `404`, `409` с `code`, `422`).
 
@@ -97,7 +113,7 @@ curl -X POST http://localhost:5080/api/v1/supplies \
 
 ## Стек
 
-- **Backend:** C# / ASP.NET Core (.NET 9), EF Core + Npgsql, Serilog, Swagger, ProblemDetails (RFC 7807)
+- **Backend:** C# / ASP.NET Core (.NET 9), EF Core + Npgsql, SignalR (Redis backplane), Serilog, Swagger, ProblemDetails (RFC 7807)
 - **Хранилища:** PostgreSQL 16, Redis 7
 - **Frontend:** React 19 + TypeScript + Vite + Chakra UI v3 + SCSS-модули, TanStack Query, React Router
 - **Тесты:** xUnit + Testcontainers, Vitest + Testing Library
@@ -111,8 +127,8 @@ src/
   Mise.Application/     use cases, DTO, валидация
   Mise.Infrastructure/  EF Core, миграции, Redis, часы (SystemClock/FakeClock)
   Mise.Api/             HTTP API, health, Swagger, middleware
-  Mise.Simulator/       генератор поставок и заказов (фаза 4)
-tests/                  Domain / Application / Api.IntegrationTests (Testcontainers)
+  Mise.Simulator/       симулятор ресторана: заказы и поставки через REST, управление через Redis
+tests/                  Domain / Application / Simulator / Api.IntegrationTests (Testcontainers)
 web/                    React-клиент
 docs/                   допущения, идеи, (позже) алгоритмы и демо-сценарий
 ```

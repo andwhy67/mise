@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Mise.Application.Abstractions;
 using Mise.Application.Common;
 using Mise.Application.Menu;
+using Mise.Application.Realtime;
 using Mise.Domain.Abstractions;
 using Mise.Domain.Common;
 using Mise.Domain.Stock;
@@ -41,7 +42,7 @@ internal sealed class WriteOffRequestValidator : AbstractValidator<WriteOffReque
 
 /// <summary>Ручное списание партии (бой, порча, инвентаризация): движение ManualWriteOff под блокировкой партии.</summary>
 public sealed class WriteOffService(IMiseDbContext db, IStockLocks locks, IClock clock, StopListService stopList,
-    IValidator<WriteOffRequest> validator)
+    IRealtimeNotifier notifier, IValidator<WriteOffRequest> validator)
 {
     public async Task<WriteOffResultDto> WriteOffAsync(Guid batchId, WriteOffRequest request, CancellationToken ct)
     {
@@ -88,6 +89,8 @@ public sealed class WriteOffService(IMiseDbContext db, IStockLocks locks, IClock
                 batch.Status, movement.Id, reason, now);
         }
 
+        notifier.StockChanged([result.ProductId]);
+        notifier.BatchStatusChanged([result.BatchId]);
         await stopList.TryRefreshAsync(ct);
         return result;
     }

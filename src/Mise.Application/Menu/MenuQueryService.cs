@@ -20,6 +20,20 @@ public sealed class MenuQueryService(IMiseDbContext db, IClock clock)
             .ToList();
     }
 
+    /// <summary>Доступность блюд, в составе которых есть указанные продукты, плюс явно указанные блюда (дельта).</summary>
+    public async Task<IReadOnlyList<DishAvailabilityDto>> GetAvailabilityForAsync(
+        IReadOnlyCollection<Guid> productIds, IReadOnlyCollection<Guid> dishIds, CancellationToken ct)
+    {
+        if (productIds.Count == 0 && dishIds.Count == 0)
+            return [];
+        var snapshot = await MenuSnapshot.LoadAsync(db, clock.UtcNow, ct);
+        return snapshot.Dishes
+            .Where(d => dishIds.Contains(d.Id) || d.Ingredients.Any(i => productIds.Contains(i.ProductId)))
+            .Select(d => snapshot.ToDto(d, MenuAvailability.Calculate(d, snapshot.Usable)))
+            .OrderBy(d => d.DishName)
+            .ToList();
+    }
+
     public async Task<IReadOnlyList<StopListItemDto>> GetStopListAsync(CancellationToken ct)
     {
         var snapshot = await MenuSnapshot.LoadAsync(db, clock.UtcNow, ct);

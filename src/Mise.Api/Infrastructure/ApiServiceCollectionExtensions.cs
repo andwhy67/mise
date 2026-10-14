@@ -2,6 +2,8 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Mise.Api.Endpoints;
+using Mise.Api.Realtime;
+using Mise.Application.Realtime;
 using Mise.Application.Expiry;
 using Mise.Application.Stock;
 using Mise.Infrastructure.Persistence;
@@ -44,6 +46,8 @@ internal static class ApiServiceCollectionExtensions
             .ValidateOnStart();
         services.AddHostedService<ExpiryWorker>();
 
+        services.AddRealtime(configuration);
+
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(options => options.SwaggerDoc("v1", new() { Title = "Mise API", Version = "v1" }));
 
@@ -60,6 +64,30 @@ internal static class ApiServiceCollectionExtensions
             .AddRedis(sp => sp.GetRequiredService<IConnectionMultiplexer>(), "redis", tags: ["ready"]);
 
         return services;
+    }
+
+    /// <summary>SignalR (+ Redis backplane), буфер изменений и фоновая рассылка, ретрансляция статуса симулятора.</summary>
+    private static void AddRealtime(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddOptions<RealtimeOptions>()
+            .Bind(configuration.GetSection(RealtimeOptions.SectionName))
+            .Validate(o => o.IsValid(), "Realtime:DebounceMilliseconds должен быть в [0;10000].")
+            .ValidateOnStart();
+
+        var redis = configuration.GetConnectionString("Redis")
+            ?? throw new InvalidOperationException("ConnectionStrings:Redis is not configured.");
+        services.AddSignalR()
+            .AddJsonProtocol(options => options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()))
+            .AddStackExchangeRedis(redis, options =>
+            {
+                options.Configuration.ChannelPrefix = RedisChannel.Literal("mise:signalr");
+                options.Configuration.AbortOnConnectFail = false;
+            });
+
+        services.AddSingleton<RealtimeChangeBuffer>();
+        services.AddSingleton<IRealtimeNotifier>(sp => sp.GetRequiredService<RealtimeChangeBuffer>());
+        services.AddHostedService<RealtimePublisher>();
+        services.AddHostedService<SimulatorStatusRelay>();
     }
 
     public static WebApplication UseApiPipeline(this WebApplication app)
@@ -94,6 +122,11 @@ internal static class ApiServiceCollectionExtensions
         v1.MapOrderEndpoints();
         v1.MapMenuEndpoints();
         v1.MapAlertEndpoints();
+        v1.MapSimulatorEndpoints();
+        if (app.Configuration.GetValue("Demo:Enabled", false))
+            v1.MapDemoEndpoints();
+
+        app.MapHub<StockHub>(StockHub.Path);
         return app;
     }
 

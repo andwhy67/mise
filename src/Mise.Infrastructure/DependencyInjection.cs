@@ -4,7 +4,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Mise.Application.Abstractions;
 using Mise.Domain.Abstractions;
 using Mise.Infrastructure.Persistence;
+using Mise.Application.Simulator;
 using Mise.Infrastructure.Seed;
+using Mise.Infrastructure.Simulator;
 using Mise.Infrastructure.Time;
 using StackExchange.Redis;
 
@@ -27,6 +29,8 @@ public static class DependencyInjection
         services.AddScoped<IMiseDbContext>(sp => sp.GetRequiredService<MiseDbContext>());
         services.AddScoped<IStockLocks, PostgresStockLocks>();
         services.AddScoped<DatabaseSeeder>();
+        services.AddScoped<DemoStockSeeder>();
+        services.AddSingleton<ISimulatorControlStore, RedisSimulatorControlStore>();
 
         services.AddSingleton<IConnectionMultiplexer>(_ =>
         {

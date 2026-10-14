@@ -31,6 +31,26 @@ public sealed class StockQueryService(IMiseDbContext db, IClock clock, IOptions<
         return products.Select(p => Summarize(p, batches[p.Id], now)).ToList();
     }
 
+    /// <summary>Сводка только по указанным продуктам (дельта для real-time).</summary>
+    public async Task<IReadOnlyList<StockItemDto>> GetStockItemsAsync(IReadOnlyCollection<Guid> productIds, CancellationToken ct)
+    {
+        if (productIds.Count == 0)
+            return [];
+        var now = clock.UtcNow;
+        var products = await db.Products.AsNoTracking().Where(p => productIds.Contains(p.Id)).OrderBy(p => p.Name).ToListAsync(ct);
+        var batches = (await db.Batches.AsNoTracking()
+                .Where(b => productIds.Contains(b.ProductId) && OpenStatuses.Contains(b.Status) && b.RemainingQty > 0)
+                .ToListAsync(ct))
+            .ToLookup(b => b.ProductId);
+        return products.Select(p => Summarize(p, batches[p.Id], now)).ToList();
+    }
+
+    /// <summary>Партии по id в текущем состоянии (включая закрытые) — дельта для real-time.</summary>
+    public Task<IReadOnlyList<BatchDto>> GetBatchesByIdsAsync(IReadOnlyCollection<Guid> batchIds, CancellationToken ct) =>
+        batchIds.Count == 0
+            ? Task.FromResult<IReadOnlyList<BatchDto>>([])
+            : QueryBatchesAsync(new BatchQuery(IncludeClosed: true, Limit: batchIds.Count, BatchIds: batchIds), ct);
+
     public async Task<ProductBatchesDto> GetProductBatchesAsync(Guid productId, bool includeClosed, CancellationToken ct)
     {
         var product = await db.Products.AsNoTracking().FirstOrDefaultAsync(p => p.Id == productId, ct)
@@ -52,6 +72,8 @@ public sealed class StockQueryService(IMiseDbContext db, IClock clock, IOptions<
         var batches = db.Batches.AsNoTracking();
         if (query.ProductId is { } productId)
             batches = batches.Where(b => b.ProductId == productId);
+        if (query.BatchIds is { } batchIds)
+            batches = batches.Where(b => batchIds.Contains(b.Id));
         if (!query.IncludeClosed)
             batches = batches.Where(b => OpenStatuses.Contains(b.Status) && b.RemainingQty > 0);
         if (query.ExpiringWithinHours is { } hours)

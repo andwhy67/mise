@@ -51,6 +51,16 @@ public sealed class AlertService(IMiseDbContext db, IClock clock)
             counts.GetValueOrDefault(AlertSeverity.Info));
     }
 
+    public async Task<IReadOnlyList<AlertDto>> GetByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct)
+    {
+        if (ids.Count == 0)
+            return [];
+        var alerts = await db.Alerts.AsNoTracking().Where(a => ids.Contains(a.Id))
+            .OrderByDescending(a => a.CreatedAt).ThenByDescending(a => a.Id)
+            .ToListAsync(ct);
+        return await ToDtosAsync(alerts, ct);
+    }
+
     /// <summary>Подтверждение идемпотентно: повтор не меняет время первого подтверждения.</summary>
     public async Task<AlertDto> AcknowledgeAsync(Guid id, CancellationToken ct)
     {

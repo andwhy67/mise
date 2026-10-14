@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Mise.Application.Abstractions;
 using Mise.Application.Menu;
+using Mise.Application.Realtime;
 using Mise.Application.Stock;
 using Mise.Domain.Abstractions;
 using Mise.Domain.Alerts;
@@ -20,6 +21,7 @@ public sealed class ExpiryMonitorService(
     IStockLocks locks,
     IClock clock,
     StopListService stopList,
+    IRealtimeNotifier notifier,
     IOptions<StockOptions> stockOptions,
     IOptions<ExpiryOptions> expiryOptions,
     ILogger<ExpiryMonitorService> logger)
@@ -92,31 +94,39 @@ public sealed class ExpiryMonitorService(
         }
 
         var byId = batches.ToDictionary(b => b.Id);
+        var raisedAlerts = new List<Alert>();
         foreach (var signal in plan.Signals)
         {
             var product = products[signal.ProductId];
-            db.Alerts.Add(signal.Level == ShelfLifeStatus.Expired
+            raisedAlerts.Add(signal.Level == ShelfLifeStatus.Expired
                 ? Alert.Expired(Guid.CreateVersion7(now), signal.BatchId, signal.ProductId, product.Name,
                     writtenOff.TryGetValue(signal.BatchId, out var qty) ? qty : byId[signal.BatchId].RemainingQty, product.Unit,
                     writtenOff.ContainsKey(signal.BatchId), now)
                 : Alert.ExpiringSoon(Guid.CreateVersion7(now), signal.BatchId, signal.ProductId, product.Name, signal.Level,
                     signal.HoursLeft, now));
         }
+        db.Alerts.AddRange(raisedAlerts);
 
         // Сначала фиксируем партии: дальнейшие запросы в этой транзакции видят их новое состояние.
         await db.SaveChangesAsync(ct);
 
         var resolved = await ResolveStaleExpiringAsync(now, ct);
         var (lowRaised, lowResolved) = await SyncLowStockAsync(products.Values, now, ct);
+        raisedAlerts.AddRange(lowRaised);
 
         await db.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
+
+        var changedBatches = plan.ToExpire.Concat(plan.ToWriteOff).DistinctBy(b => b.Id).ToList();
+        notifier.BatchStatusChanged(changedBatches.Select(b => b.Id));
+        notifier.StockChanged(changedBatches.Select(b => b.ProductId).Distinct());
+        notifier.AlertsRaised(raisedAlerts.Select(a => a.Id));
 
         return new ExpiryRunResult(
             Skipped: false,
             Expired: plan.ToExpire.Count,
             WrittenOff: plan.ToWriteOff.Count,
-            AlertsRaised: plan.Signals.Count + lowRaised,
+            AlertsRaised: raisedAlerts.Count,
             AlertsResolved: resolved + lowResolved,
             StopList: StopListChanges.None);
     }
@@ -143,7 +153,7 @@ public sealed class ExpiryMonitorService(
     }
 
     /// <summary>Один открытый LowStock на продукт: открывается при usable &lt; min_stock_qty, закрывается при восстановлении.</summary>
-    private async Task<(int Raised, int Resolved)> SyncLowStockAsync(IEnumerable<Domain.Catalog.Product> products, DateTimeOffset now,
+    private async Task<(List<Alert> Raised, int Resolved)> SyncLowStockAsync(IEnumerable<Domain.Catalog.Product> products, DateTimeOffset now,
         CancellationToken ct)
     {
         var usable = await MenuSnapshot.LoadUsableAsync(db, now, ct);
@@ -151,7 +161,8 @@ public sealed class ExpiryMonitorService(
             .Where(a => a.ProductId is not null)
             .ToDictionary(a => a.ProductId!.Value);
 
-        int raised = 0, resolved = 0;
+        var raised = new List<Alert>();
+        var resolved = 0;
         foreach (var product in products)
         {
             var qty = usable.GetValueOrDefault(product.Id);
@@ -161,8 +172,9 @@ public sealed class ExpiryMonitorService(
 
             if (isLow && existing is null)
             {
-                db.Alerts.Add(Alert.LowStock(Guid.CreateVersion7(now), product.Id, product.Name, qty, product.MinStockQty, product.Unit, now));
-                raised++;
+                var alert = Alert.LowStock(Guid.CreateVersion7(now), product.Id, product.Name, qty, product.MinStockQty, product.Unit, now);
+                db.Alerts.Add(alert);
+                raised.Add(alert);
             }
             else if (!isLow && existing is not null)
             {

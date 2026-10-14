@@ -48,6 +48,7 @@ services:
       Expiry__Enabled: ${EXPIRY_ENABLED:-true}
       Expiry__IntervalSeconds: ${EXPIRY_INTERVAL_SECONDS:-30}
       Expiry__AutoWriteOff: ${EXPIRY_AUTO_WRITE_OFF:-true}
+      Demo__Enabled: ${DEMO_ENABLED:-true}
     ports:
       - "${API_PORT:-5080}:8080"
     depends_on:
@@ -64,6 +65,22 @@ services:
       - "${WEB_PORT:-8081}:80"
     depends_on:
       api:
+        condition: service_healthy
+
+  simulator:
+    build:
+      context: .
+      dockerfile: src/Mise.Simulator/Dockerfile
+    restart: unless-stopped
+    environment:
+      DOTNET_ENVIRONMENT: Production
+      ConnectionStrings__Redis: redis:6379
+      Simulator__ApiBaseUrl: http://api:8080
+      Simulator__AutoStart: ${SIMULATOR_AUTOSTART:-false}
+    depends_on:
+      api:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
 volumes:

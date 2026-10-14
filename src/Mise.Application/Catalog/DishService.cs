@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Mise.Application.Abstractions;
 using Mise.Application.Common;
 using Mise.Application.Menu;
+using Mise.Application.Realtime;
 using Mise.Domain.Abstractions;
 using Mise.Domain.Catalog;
 
@@ -13,6 +14,7 @@ public sealed class DishService(
     IMiseDbContext db,
     IClock clock,
     StopListService stopList,
+    IRealtimeNotifier notifier,
     IValidator<CreateDishRequest> createValidator,
     IValidator<UpdateDishRequest> updateValidator,
     IValidator<SetDishIngredientsRequest> ingredientsValidator)
@@ -47,6 +49,7 @@ public sealed class DishService(
         dish.SetIngredients(request.Ingredients.Select(i => (i.ProductId, i.Quantity)));
         db.Dishes.Add(dish);
         await SaveAsync(ct);
+        notifier.DishesChanged([dish.Id]);
         await stopList.TryRefreshAsync(ct);
         return ToDto(dish, products);
     }
@@ -64,6 +67,7 @@ public sealed class DishService(
         dish.Price = request.Price;
         dish.IsActive = request.IsActive;
         await SaveAsync(ct);
+        notifier.DishesChanged([dish.Id]);
         await stopList.TryRefreshAsync(ct);
         return ToDto(dish, await LoadProductsAsync(dish.Ingredients.Select(i => i.ProductId), ct));
     }
@@ -77,6 +81,7 @@ public sealed class DishService(
 
         dish.SetIngredients(request.Ingredients.Select(i => (i.ProductId, i.Quantity)));
         await db.SaveChangesAsync(ct);
+        notifier.DishesChanged([dish.Id]);
         await stopList.TryRefreshAsync(ct);
         return ToDto(dish, products);
     }

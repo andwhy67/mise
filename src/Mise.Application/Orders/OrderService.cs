@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Mise.Application.Abstractions;
 using Mise.Application.Common;
 using Mise.Application.Menu;
+using Mise.Application.Realtime;
 using Mise.Domain.Abstractions;
 using Mise.Domain.Catalog;
 using Mise.Domain.Orders;
@@ -20,6 +21,7 @@ public sealed class OrderService(
     IStockLocks locks,
     IClock clock,
     StopListService stopList,
+    IRealtimeNotifier notifier,
     IValidator<CreateOrderRequest> createValidator,
     IValidator<ChangeOrderStatusRequest> statusValidator)
 {
@@ -46,7 +48,10 @@ public sealed class OrderService(
 
         try
         {
-            var order = await PlaceAsync(request, dishes, demand, key, hash, ct);
+            var (order, depleted) = await PlaceAsync(request, dishes, demand, key, hash, ct);
+            notifier.OrderCreated(order.Id);
+            notifier.StockChanged(demand.Keys);
+            notifier.BatchStatusChanged(depleted);
             await stopList.TryRefreshAsync(ct);
             return new CreateOrderResult(await GetAsync(order.Id, ct), Created: true);
         }
@@ -60,7 +65,8 @@ public sealed class OrderService(
         }
     }
 
-    private async Task<Order> PlaceAsync(
+    /// <returns>Заказ и партии, израсходованные им до нуля (сменили статус на Depleted).</returns>
+    private async Task<(Order Order, IReadOnlyList<Guid> Depleted)> PlaceAsync(
         CreateOrderRequest request,
         IReadOnlyDictionary<Guid, Dish> dishes,
         IReadOnlyDictionary<Guid, decimal> demand,
@@ -88,23 +94,27 @@ public sealed class OrderService(
         }
 
         var batchById = batches.SelectMany(g => g).ToDictionary(b => b.Id);
+        var depleted = new List<Guid>();
         foreach (var allocation in plan.Values.SelectMany(p => p.Allocations))
         {
             var batch = batchById[allocation.BatchId];
             batch.Consume(allocation.Quantity, now);
             db.StockMovements.Add(StockMovement.OrderConsumption(Guid.CreateVersion7(now), batch, allocation.Quantity, order.Id, now));
+            if (batch.Status == BatchStatus.Depleted)
+                depleted.Add(batch.Id);
         }
 
         db.Orders.Add(order);
         await db.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
-        return order;
+        return (order, depleted);
     }
 
     public async Task<CancelOrderResult> CancelAsync(Guid id, CancellationToken ct)
     {
         var returned = new List<CancelledLineDto>();
         var lost = new List<CancelledLineDto>();
+        var reactivated = new List<Guid>();
         await using (var transaction = await db.Database.BeginTransactionAsync(ct))
         {
             var now = clock.UtcNow;
@@ -127,6 +137,8 @@ public sealed class OrderService(
                 var dto = new CancelledLineDto(batch.ProductId, name, unit, batch.Id, line.Qty);
                 if (batch.CanAcceptReturnAt(now))
                 {
+                    if (batch.Status == BatchStatus.Depleted)
+                        reactivated.Add(batch.Id);
                     batch.Return(line.Qty, now);
                     db.StockMovements.Add(StockMovement.OrderCancelReturn(Guid.CreateVersion7(now), batch, line.Qty, id, now));
                     returned.Add(dto);
@@ -143,6 +155,9 @@ public sealed class OrderService(
             await transaction.CommitAsync(ct);
         }
 
+        notifier.OrderStatusChanged(id);
+        notifier.StockChanged(returned.Select(r => r.ProductId).Distinct());
+        notifier.BatchStatusChanged(reactivated);
         await stopList.TryRefreshAsync(ct);
         return new CancelOrderResult(await GetAsync(id, ct), returned, lost);
     }
@@ -157,6 +172,7 @@ public sealed class OrderService(
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
         }
+        notifier.OrderStatusChanged(id);
         return await GetAsync(id, ct);
     }
 
@@ -197,16 +213,24 @@ public sealed class OrderService(
             query = query.Where(o => o.Status == s);
 
         var total = await query.CountAsync(ct);
-        var items = await query
-            .OrderByDescending(o => o.CreatedAt).ThenByDescending(o => o.Id)
-            .Skip(page.Skip).Take(page.SafePageSize)
-            .Select(o => new OrderListItemDto(
-                o.Id, o.Number, o.Status, o.CreatedAt,
-                o.Items.Sum(i => i.Quantity),
-                o.Items.Sum(i => i.PriceSnapshot * i.Quantity)))
+        var items = await ToListItems(query
+                .OrderByDescending(o => o.CreatedAt).ThenByDescending(o => o.Id)
+                .Skip(page.Skip).Take(page.SafePageSize))
             .ToListAsync(ct);
         return new PagedResult<OrderListItemDto>(items, total, page.SafePage, page.SafePageSize);
     }
+
+    public async Task<IReadOnlyList<OrderListItemDto>> GetListItemsAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct) =>
+        ids.Count == 0
+            ? []
+            : await ToListItems(db.Orders.AsNoTracking().Where(o => ids.Contains(o.Id)).OrderBy(o => o.CreatedAt).ThenBy(o => o.Id))
+                .ToListAsync(ct);
+
+    private static IQueryable<OrderListItemDto> ToListItems(IQueryable<Order> orders) =>
+        orders.Select(o => new OrderListItemDto(
+            o.Id, o.Number, o.Status, o.CreatedAt,
+            o.Items.Sum(i => i.Quantity),
+            o.Items.Sum(i => i.PriceSnapshot * i.Quantity)));
 
     private async Task<Dictionary<Guid, Dish>> LoadDishesAsync(CreateOrderRequest request, CancellationToken ct)
     {
