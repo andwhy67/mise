@@ -110,4 +110,24 @@ public sealed class HotOfferTests(MiseApiFactory factory)
             .Where(o => o.GetProperty("dishId").GetGuid() == dishId)
             .Select(o => (decimal?)o.GetProperty("score").GetDecimal())
             .FirstOrDefault();
+
+    [Fact]
+    public async Task Menu_ranking_lists_every_available_dish_once_and_skips_the_stop_list()
+    {
+        var menu = await _client.GetFromJsonAsync<JsonElement>("/api/v1/hot-offers/menu");
+        var availability = await _client.GetFromJsonAsync<JsonElement>("/api/v1/menu/availability");
+
+        var ranked = menu.GetProperty("items").EnumerateArray().ToList();
+        var available = availability.EnumerateArray().Where(d => !d.GetProperty("inStopList").GetBoolean() && d.GetProperty("maxPortions").GetInt32() > 0)
+            .Select(d => d.GetProperty("dishId").GetGuid()).ToHashSet();
+
+        Assert.Equal(available.Count, ranked.Count);
+        Assert.Equal(available, ranked.Select(r => r.GetProperty("dishId").GetGuid()).ToHashSet());
+        Assert.Equal(Enumerable.Range(1, ranked.Count), ranked.Select(r => r.GetProperty("rank").GetInt32()));
+        // Группы идут по порядку: спасают → разгружают склад → остальное.
+        var order = new[] { "Saves", "Overstock", "Regular" };
+        var groups = ranked.Select(r => Array.IndexOf(order, r.GetProperty("group").GetString())).ToList();
+        Assert.All(groups, g => Assert.True(g >= 0));
+        Assert.Equal(groups.Order(), groups);
+    }
 }

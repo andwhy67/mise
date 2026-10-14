@@ -40,6 +40,12 @@ export interface WriteOffReport {
 export interface DeficitItem {
   productId: string
   productName: string
+  unit: MeasureUnit
+  /** Отказов в заказах (422) из-за нехватки продукта. */
+  refusals: number
+  /** Сколько не хватило по этим отказам, базовые единицы. */
+  shortageQty: number
+  lastRefusalAt: string | null
   stopEvents: number
   dishesAffected: number
   dishMinutesInStop: number
@@ -95,13 +101,6 @@ export function worstRates(rates: WriteOffRate[], limit: number) {
     .map((item) => ({ name: item.productName, percent: round1(item.rate * 100), item }))
 }
 
-export function stopCauses(items: DeficitItem[], limit: number) {
-  return items
-    .filter((i) => i.stopEvents > 0)
-    .sort((a, b) => b.dishMinutesInStop - a.dishMinutesInStop)
-    .slice(0, limit)
-    .map((item) => ({ name: item.productName, hours: round1(item.dishMinutesInStop / 60), item }))
-}
 
 /** Ряд расхода по суткам: сервер присылает только сутки с данными — пропуски заполняем нулями, иначе линия «перепрыгивает». */
 export function consumptionByDay(points: { bucket: string; qty: number }[], days: string[]) {
@@ -111,4 +110,16 @@ export function consumptionByDay(points: { bucket: string; qty: number }[], days
     byDay.set(day, (byDay.get(day) ?? 0) + point.qty)
   }
   return days.map((date) => ({ date, qty: byDay.get(date) ?? 0 }))
+}
+
+/**
+ * «Чего чаще всего не хватает»: сначала то, из-за чего уже отказали гостю, затем — что ставило блюда в стоп.
+ * Продукты без отказов и без стопов (только «ниже минимума») в график не попадают — это видно в таблице склада.
+ */
+export function deficitRanking(items: DeficitItem[], limit: number) {
+  return items
+    .filter((i) => i.refusals > 0 || i.stopEvents > 0)
+    .sort((a, b) => b.refusals - a.refusals || b.stopEvents - a.stopEvents || b.dishMinutesInStop - a.dishMinutesInStop || a.productName.localeCompare(b.productName))
+    .slice(0, limit)
+    .map((item) => ({ name: item.productName, refusals: item.refusals, stops: item.stopEvents, item }))
 }

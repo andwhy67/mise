@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { consumptionByDay, daysInPeriod, periodRange, stopCauses, worstRates, writeOffDays } from './reportData'
+import { consumptionByDay, daysInPeriod, deficitRanking, periodRange, worstRates, writeOffDays, type DeficitItem } from './reportData'
 
 // Среда, 14 октября 2026, 23:30 по Москве.
 const NOW = new Date('2026-10-14T20:30:00Z')
@@ -44,16 +44,31 @@ describe('что чаще пропадает', () => {
   })
 })
 
-describe('из-за чего блюда попадают в стоп', () => {
-  it('часы блюд в стопе по продукту, только с попаданиями, по убыванию', () => {
+const deficit = (patch: Partial<DeficitItem> & { productId: string; productName: string }): DeficitItem => ({
+  unit: 'Gram',
+  refusals: 0,
+  shortageQty: 0,
+  lastRefusalAt: null,
+  stopEvents: 0,
+  dishesAffected: 0,
+  dishMinutesInStop: 0,
+  minutesBelowMinimum: 0,
+  shareBelowMinimum: 0,
+  ...patch,
+})
+
+describe('чего чаще всего не хватает', () => {
+  it('сначала отказы в заказах, затем попадания в стоп; продукты без того и другого — мимо', () => {
     const items = [
-      { productId: 'a', productName: 'Молоко', stopEvents: 3, dishesAffected: 3, dishMinutesInStop: 8351, minutesBelowMinimum: 34, shareBelowMinimum: 0.003 },
-      { productId: 'b', productName: 'Соль', stopEvents: 0, dishesAffected: 0, dishMinutesInStop: 0, minutesBelowMinimum: 0, shareBelowMinimum: 0 },
-      { productId: 'c', productName: 'Бекон', stopEvents: 1, dishesAffected: 1, dishMinutesInStop: 31, minutesBelowMinimum: 0, shareBelowMinimum: 0 },
+      deficit({ productId: 'a', productName: 'Молоко', stopEvents: 5 }),
+      deficit({ productId: 'b', productName: 'Лимоны', refusals: 3, shortageQty: 12, unit: 'Piece' }),
+      deficit({ productId: 'c', productName: 'Соль', minutesBelowMinimum: 90 }),
+      deficit({ productId: 'd', productName: 'Бекон', refusals: 3, stopEvents: 1 }),
     ]
-    expect(stopCauses(items, 6)).toEqual([
-      { name: 'Молоко', hours: 139.2, item: items[0] },
-      { name: 'Бекон', hours: 0.5, item: items[2] },
+    expect(deficitRanking(items, 5).map((d) => [d.name, d.refusals, d.stops])).toEqual([
+      ['Бекон', 3, 1],
+      ['Лимоны', 3, 0],
+      ['Молоко', 0, 5],
     ])
   })
 })

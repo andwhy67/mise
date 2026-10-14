@@ -80,10 +80,17 @@ public sealed class MiseApiClient(HttpClient http) : IMiseApi
         return await ToOutcomeAsync(response, ct);
     }
 
+    /// <summary>Заказ приготовлен и выдан: два шага, как на раздаче (Готов → Выдан).</summary>
     public async Task<ApiOutcome> CompleteOrderAsync(Guid orderId, CancellationToken ct)
     {
-        using var response = await http.PatchAsJsonAsync($"/api/v1/orders/{orderId}/status", new { status = "Done" }, Json, ct);
-        return await ToOutcomeAsync(response, ct);
+        using (var done = await http.PatchAsJsonAsync($"/api/v1/orders/{orderId}/status", new { status = "Done" }, Json, ct))
+        {
+            var outcome = await ToOutcomeAsync(done, ct);
+            if (outcome.Kind is not (OutcomeKind.Created or OutcomeKind.Replayed))
+                return outcome;
+        }
+        using var served = await http.PatchAsJsonAsync($"/api/v1/orders/{orderId}/status", new { status = "Served" }, Json, ct);
+        return await ToOutcomeAsync(served, ct);
     }
 
     private static async Task<ApiOutcome> ToOutcomeAsync(HttpResponseMessage response, CancellationToken ct)

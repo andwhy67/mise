@@ -6,6 +6,7 @@ import { LinkButton } from '@/components/Button'
 import { Panel } from '@/components/Panel'
 import { EmptyState } from '@/components/StateBlocks'
 import { LanguageSwitcher, ThemeSwitcher } from '@/components/Switchers'
+import { AppSettings } from '@/pwa/AppSettings'
 import styles from './MiscPages.module.scss'
 
 /** Раздел не для этой роли (например, повар открыл ссылку на «Пользователей»). */
@@ -55,6 +56,7 @@ export function MorePage() {
           <LanguageSwitcher />
         </div>
       </Panel>
+      <AppSettings />
       <p className={styles.user}>{userLine(user, t(`roles.${user.role}`))}</p>
       <button type="button" className={styles.logout} onClick={() => void session.logout()}>
         {t('actions.logout')}

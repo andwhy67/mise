@@ -23,6 +23,7 @@ internal sealed class RealtimePublisher(
     RealtimeChangeBuffer buffer,
     IServiceScopeFactory scopes,
     IHubContext<StockHub, IStockClient> hub,
+    PushQueue pushQueue,
     IOptions<RealtimeOptions> options,
     ILogger<RealtimePublisher> logger) : BackgroundService
 {
@@ -71,7 +72,11 @@ internal sealed class RealtimePublisher(
             if (payload.StopList is { } stopList)
                 await clients.StopListChanged(stopList);
             if (payload.Alerts is { } alerts)
+            {
                 await clients.AlertRaised(alerts);
+                // Те же алерты — пушами на телефоны тех, кому нужно действовать (PushAudience).
+                pushQueue.Enqueue(alerts.Alerts);
+            }
             if (payload.HotOffers is { } hotOffers)
                 await clients.HotOffersChanged(hotOffers);
             if (payload.Simulator is { } simulator)

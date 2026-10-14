@@ -1,0 +1,41 @@
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin: var(--space-6) var(--space-10) 0;
+  max-width: 1200px;
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--crit-bar);
+  border-radius: var(--radius-panel);
+  animation: banner-in var(--dur-enter) var(--ease-out);
+
+  @media (max-width: 767px) {
+    margin: var(--space-3) var(--space-4) 0;
+  }
+}
+
+.square {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-top: 7px;
+  background: var(--crit-bar);
+}
+
+.text {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-2);
+
+  strong {
+    color: var(--crit-text);
+  }
+}
+
+@keyframes banner-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}

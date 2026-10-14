@@ -24,6 +24,12 @@ public sealed class HotOfferOptions
     public decimal EnterThreshold { get; set; } = HotOfferParameters.Default.EnterThreshold;
     public decimal ExitThreshold { get; set; } = HotOfferParameters.Default.ExitThreshold;
     public int TopN { get; set; } = HotOfferParameters.Default.TopN;
+    /// <summary>«Разгрузить склад»: запас скоропортящегося от стольких дней обычного спроса.</summary>
+    public decimal OverstockDays { get; set; } = MenuRankingParameters.Default.OverstockDays;
+    /// <summary>Скоропортящийся — норма хранения не больше стольких дней.</summary>
+    public decimal PerishableMaxDays { get; set; } = MenuRankingParameters.Default.PerishableMaxDays;
+
+    public MenuRankingParameters ToMenuParameters() => new(OverstockDays, PerishableMaxDays);
 
     public HotOfferParameters ToParameters() => new HotOfferParameters
     {
@@ -44,6 +50,8 @@ public sealed class HotOfferOptions
         try
         {
             ToParameters();
+            if (OverstockDays <= 0 || PerishableMaxDays <= 0)
+                return false;
         }
         catch (ArgumentException)
         {
@@ -85,3 +93,22 @@ public sealed record HotOfferReasonDto(
     decimal Share,
     decimal Contribution,
     string Text);
+
+/// <summary>Чем блюдо разгружает склад: продукт и на сколько дней обычного спроса его хватит.</summary>
+public sealed record StockCoverDto(Guid ProductId, string ProductName, MeasureUnit Unit, decimal UsableQty, decimal DailyConsumption, decimal CoverDays);
+
+/// <param name="Offer">Для группы Saves — горячее предложение с причинами.</param>
+/// <param name="Cover">Для группы Overstock — какой продукт и насколько его много.</param>
+public sealed record HotMenuItemDto(
+    int Rank,
+    Guid DishId,
+    string DishName,
+    string? Category,
+    decimal Price,
+    int MaxPortions,
+    MenuGroup Group,
+    HotOfferDto? Offer,
+    StockCoverDto? Cover);
+
+/// <summary>Всё доступное меню в порядке «что предлагать»: спасают продукты → разгружают склад → остальное.</summary>
+public sealed record HotMenuDto(DateTimeOffset GeneratedAt, string Scorer, IReadOnlyList<HotMenuItemDto> Items);

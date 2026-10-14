@@ -18,10 +18,16 @@ import { RouterProvider } from 'react-router/dom'
 import { router } from '@/app/router'
 import { Provider } from '@/components/ui/provider'
 import { initI18n } from '@/i18n'
+import { initInstallPrompt } from '@/pwa/install'
+import { initPushLogout } from '@/pwa/push'
+import { initWakeLock } from '@/pwa/wakeLock'
 import { initColorScheme } from '@/theme/colorScheme'
 
 initColorScheme()
 initI18n()
+initInstallPrompt()
+initWakeLock()
+initPushLogout()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

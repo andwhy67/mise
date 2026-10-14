@@ -1,0 +1,31 @@
+.area {
+  min-height: 0;
+  outline: none;
+
+  @media (min-width: 1024px) {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    // Место под полосу прокрутки, чтобы содержимое не прыгало при её появлении.
+    scrollbar-gutter: stable;
+    margin-right: calc(var(--space-3) * -1);
+    padding-right: var(--space-3);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brand-strong);
+    outline-offset: 2px;
+  }
+}
+
+// Высота — под экран: заголовок страницы и панели остаются видны.
+.page {
+  @media (min-width: 1024px) {
+    max-height: calc(100dvh - 300px);
+  }
+}
+
+.half {
+  @media (min-width: 1024px) {
+    max-height: calc(50dvh - 120px);
+  }
+}

@@ -50,6 +50,11 @@ services:
       Expiry__AutoWriteOff: ${EXPIRY_AUTO_WRITE_OFF:-true}
       Demo__Enabled: ${DEMO_ENABLED:-true}
       Auth__SigningKey: ${AUTH_SIGNING_KEY:-dev-only-signing-key-not-for-production-0123456789}
+      # Пуши на телефон (Web Push, VAPID). Ключ по умолчанию — только для локального стека, как и ключ подписи выше.
+      Push__PrivateKey: ${PUSH_PRIVATE_KEY:-vv04sIyZIHhKKq2ParrIW3gAOiGYi_EJDV1na5W1RKc}
+      Push__Subject: ${PUSH_SUBJECT:-mailto:admin@mise.local}
+      # Входов в минуту с одного IP (защита от перебора). Для прогона e2e поднимают: LOGIN_PER_MINUTE=300.
+      RateLimiting__LoginPerMinute: ${LOGIN_PER_MINUTE:-10}
       Auth__DemoUsersPassword: ${DEMO_PASSWORD:-mise-demo}
       Auth__SimulatorPassword: ${SIMULATOR_PASSWORD:-mise-simulator}
       Auth__CookieSecure: ${AUTH_COOKIE_SECURE:-false}

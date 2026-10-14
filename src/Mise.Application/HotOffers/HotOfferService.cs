@@ -72,6 +72,28 @@ public sealed class HotOfferService(
         return new HotOffersDto(now, scorer.Version, selected.Select((o, i) => ToDto(i + 1, o, dishes[o.DishId])).ToList());
     }
 
+    /// <summary>
+    /// Всё доступное меню по порядку «что предлагать» (<see cref="MenuRanking"/>): когда ничего не горит,
+    /// ответ всё равно есть — что разгрузит склад, а дальше — что можно приготовить больше всего.
+    /// </summary>
+    public async Task<HotMenuDto> GetMenuAsync(string? scorerVersion, CancellationToken ct)
+    {
+        var settings = options.Value;
+        var parameters = settings.ToParameters();
+        var scorer = ResolveScorer(scorerVersion ?? settings.Scorer);
+        var now = clock.UtcNow;
+        var (input, dishes) = await LoadInputAsync(now, ct);
+        var ranked = MenuRanking.Rank(input, scorer.Score(input, parameters), parameters, settings.ToMenuParameters());
+        var items = ranked.Select((r, i) =>
+        {
+            var dish = dishes[r.DishId];
+            var cover = r.Cover is { } c ? new StockCoverDto(c.ProductId, c.ProductName, c.Unit, c.UsableQty, c.DailyConsumption, c.CoverDays) : null;
+            return new HotMenuItemDto(i + 1, r.DishId, r.DishName, dish.Category, dish.Price, r.MaxPortions, r.Group,
+                r.Offer is { } offer ? ToDto(i + 1, offer, dish) : null, cover);
+        }).ToList();
+        return new HotMenuDto(now, scorer.Version, items);
+    }
+
     /// <summary>Выдача по умолчанию, если она изменилась с последней публикации (состав, порядок или score на 1+); иначе null.</summary>
     public async Task<HotOffersDto?> GetIfChangedAsync(CancellationToken ct)
     {

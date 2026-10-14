@@ -1,0 +1,61 @@
+// Переключатель: квадратный ход и «ползунок» со скруглением 6 — в духе строгой сетки, без пилюли.
+.switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: var(--control-height);
+  min-height: var(--control-height);
+  justify-content: center;
+  cursor: pointer;
+
+  input {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  input:focus-visible + .track {
+    outline: 2px solid var(--brand-strong);
+    outline-offset: 2px;
+  }
+
+  input:disabled + .track {
+    opacity: 0.5;
+  }
+
+  input:checked + .track {
+    background: var(--brand);
+    border-color: var(--brand);
+
+    .thumb {
+      transform: translateX(18px);
+      background: var(--on-brand-text);
+    }
+  }
+}
+
+.track {
+  display: inline-flex;
+  align-items: center;
+  width: 44px;
+  height: 26px;
+  padding: 2px;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-control);
+  background: var(--bg);
+  transition:
+    background-color var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out);
+}
+
+.thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: var(--muted);
+  transition:
+    transform var(--dur-base) var(--ease-out),
+    background-color var(--dur-base) var(--ease-out);
+}

@@ -18,7 +18,8 @@ describe('продукт: форма ⇄ API', () => {
     expect(productToForm(milk)).toEqual({
       name: 'Молоко 3,2%',
       unit: 'Milliliter',
-      shelfLifeDays: '5',
+      shelfLife: '5',
+      shelfLifeUnit: 'days',
       minStock: '2',
       packSize: '1',
       category: 'Молочные',
@@ -27,7 +28,7 @@ describe('продукт: форма ⇄ API', () => {
   })
 
   it('в API — часы и базовые единицы', () => {
-    expect(productFormToRequest({ ...productToForm(milk), shelfLifeDays: '1,5', minStock: '0,5' })).toEqual({
+    expect(productFormToRequest({ ...productToForm(milk), shelfLife: '1,5', minStock: '0,5' })).toEqual({
       name: 'Молоко 3,2%',
       unit: 'Milliliter',
       defaultShelfLifeHours: 36,
@@ -40,18 +41,30 @@ describe('продукт: форма ⇄ API', () => {
 
   it('штуки — без пересчёта; пустой срок — нормы нет', () => {
     expect(
-      productFormToRequest({ name: 'Яйца', unit: 'Piece', shelfLifeDays: '', minStock: '30', packSize: '10', category: '', storageType: '' }),
+      productFormToRequest({ name: 'Яйца', unit: 'Piece', shelfLife: '', shelfLifeUnit: 'days', minStock: '30', packSize: '10', category: '', storageType: '' }),
     ).toEqual({ name: 'Яйца', unit: 'Piece', defaultShelfLifeHours: null, minStockQty: 30, packSize: 10, category: null, storageType: null })
   })
 
   it('проверка', () => {
-    expect(validateProduct({ name: ' ', unit: 'Gram', shelfLifeDays: '0', minStock: '-1', packSize: '0', category: '', storageType: '' })).toEqual({
+    expect(validateProduct({ name: ' ', unit: 'Gram', shelfLife: '0', shelfLifeUnit: 'days', minStock: '-1', packSize: '0', category: '', storageType: '' })).toEqual({
       name: 'name',
-      shelfLifeDays: 'shelfLife',
+      shelfLife: 'shelfLife',
       minStock: 'minStock',
       packSize: 'packSize',
     })
     expect(validateProduct(productToForm(milk))).toEqual({})
+  })
+})
+
+describe('норма хранения короче суток', () => {
+  it('часы — как есть; короткая норма показывается в часах', () => {
+    const herbs: Product = { ...milk, name: 'Зелень', unit: 'Gram', defaultShelfLifeHours: 12 }
+    expect(productToForm(herbs)).toMatchObject({ shelfLife: '12', shelfLifeUnit: 'hours' })
+    expect(productFormToRequest({ ...productToForm(herbs), shelfLife: '8' }).defaultShelfLifeHours).toBe(8)
+  })
+
+  it('дробные часы — ошибка (сервер хранит целые часы)', () => {
+    expect(validateProduct({ ...productToForm(milk), shelfLife: '1,5', shelfLifeUnit: 'hours' })).toEqual({ shelfLife: 'shelfLife' })
   })
 })
 

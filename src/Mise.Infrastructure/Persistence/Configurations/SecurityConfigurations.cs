@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Mise.Domain.Audit;
+using Mise.Domain.Push;
 using Mise.Domain.Users;
 
 namespace Mise.Infrastructure.Persistence.Configurations;
@@ -53,5 +54,23 @@ internal sealed class AuditEntryConfiguration : IEntityTypeConfiguration<AuditEn
         builder.HasIndex(a => new { a.Action, a.CreatedAt });
         builder.HasIndex(a => a.UserId);
         // Без FK на users: журнал переживает удаление пользователя и хранит попытки входа под несуществующим логином.
+    }
+}
+
+internal sealed class PushSubscriptionConfiguration : IEntityTypeConfiguration<PushSubscription>
+{
+    public void Configure(EntityTypeBuilder<PushSubscription> builder)
+    {
+        builder.ToTable("push_subscriptions");
+        builder.HasKey(s => s.Id);
+        builder.Property(s => s.Id).ValueGeneratedNever();
+        builder.Property(s => s.Endpoint).HasMaxLength(PushSubscription.EndpointMaxLength).IsRequired();
+        builder.Property(s => s.P256dh).HasMaxLength(PushSubscription.KeyMaxLength).IsRequired();
+        builder.Property(s => s.Auth).HasMaxLength(PushSubscription.KeyMaxLength).IsRequired();
+        builder.Property(s => s.Language).HasMaxLength(8).IsRequired();
+        // Одно устройство — одна подписка; рассылка выбирает подписки по пользователю.
+        builder.HasIndex(s => s.Endpoint).IsUnique();
+        builder.HasIndex(s => s.UserId);
+        builder.HasOne<User>().WithMany().HasForeignKey(s => s.UserId).OnDelete(DeleteBehavior.Cascade);
     }
 }

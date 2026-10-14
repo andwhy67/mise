@@ -7,17 +7,22 @@ import { useProducts } from '@/api/queries'
 import type { Product } from '@/api/types'
 import { Button } from '@/components/Button'
 import { Field } from '@/components/Field'
-import { Select, type SelectGroup } from '@/components/Select'
+import { Combobox, type ComboboxOption } from '@/components/Combobox'
+import { Select } from '@/components/Select'
 import { Sheet } from '@/components/Sheet'
 import { ErrorState, LoadingState } from '@/components/StateBlocks'
 import { toast } from '@/lib/toast'
 import { useErrorText } from '@/lib/useErrorText'
 import { useFormat } from '@/lib/useFormat'
+import { productOptions } from '@/lib/productOptions'
 import { uuid } from '@/lib/uuid'
+import { vibrate } from '@/pwa/haptics'
+import { useOnline } from '@/pwa/network'
 import {
   defaultNumber,
   emptyRow,
   previewExpiry,
+  rowFromSuggestion,
   toMoscowInput,
   toRequest,
   unitsFor,
@@ -61,19 +66,16 @@ let rowCounter = 0
 const nextKey = () => `row-${++rowCounter}`
 
 /** Количество из подсказки — в удобной единице: 30000 г → «30» кг. */
-function prefillRow(row: PrefillRow, product: Product | undefined): SupplyRow {
-  const units = unitsFor(product)
-  const big = units[0] === 'Kilogram' || units[0] === 'Liter'
-  return { ...emptyRow(nextKey()), productId: row.productId, unit: units[0]!, quantity: String(big ? row.quantity / 1000 : row.quantity).replace('.', ',') }
-}
 
 function SupplyForm({ products, prefill, onDone }: { products: Product[]; prefill?: PrefillRow[]; onDone: () => void }) {
   const { t } = useTranslation('supplies')
   const errorText = useErrorText()
   const mutation = useCreateSupply()
+  const online = useOnline()
   const [form, setForm] = useState<SupplyFormState>(() => {
     const now = new Date()
-    const rows = prefill?.length ? prefill.map((row) => prefillRow(row, products.find((p) => p.id === row.productId))) : [emptyRow(nextKey())]
+    const prefilled = (prefill ?? []).map((row) => rowFromSuggestion(nextKey(), products.find((p) => p.id === row.productId), row.quantity)).filter((r) => r !== null)
+    const rows = prefilled.length ? prefilled : [emptyRow(nextKey())]
     return { number: defaultNumber(now), supplier: '', createdAt: toMoscowInput(now), rows }
   })
   const [errors, setErrors] = useState<SupplyErrors>({})
@@ -81,13 +83,11 @@ function SupplyForm({ products, prefill, onDone }: { products: Product[]; prefil
   // Один ключ на одно содержимое формы: повтор той же отправки — тот же ключ (CLAUDE.md, правило 5).
   const idempotency = useRef<{ body: string; key: string } | null>(null)
 
-  const groups = useMemo<SelectGroup[]>(() => {
-    const byCategory = new Map<string, Product[]>()
-    for (const p of products) byCategory.set(p.category ?? t('form.noCategory'), [...(byCategory.get(p.category ?? t('form.noCategory')) ?? []), p])
-    return [...byCategory.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([label, items]) => ({ label, options: items.sort((a, b) => a.name.localeCompare(b.name)).map((p) => ({ value: p.id, label: p.name })) }))
-  }, [products, t])
+  const { t: tc } = useTranslation('catalog')
+  const groups = useMemo<ComboboxOption[]>(
+    () => productOptions(products, t('form.noCategory'), (unit) => tc(`units.big.${unit}`)),
+    [products, t, tc],
+  )
 
   const update = (patch: Partial<SupplyFormState>) => setForm((current) => ({ ...current, ...patch }))
   const updateRow = (key: string, patch: Partial<SupplyRow>) =>
@@ -107,10 +107,12 @@ function SupplyForm({ products, prefill, onDone }: { products: Product[]; prefil
       { body, idempotencyKey: idempotency.current.key },
       {
         onSuccess: (supply) => {
+          vibrate('success')
           toast.show(t('form.done', { number: supply.number, count: supply.items.length }))
           onDone()
         },
         onError: (cause) => {
+          vibrate('error')
           if (cause instanceof ApiError && cause.code === 'supply.duplicate_number') setErrors({ number: 'duplicate' })
           else setServerError(serverMessage(cause, form, products, t) ?? errorText(cause))
         },
@@ -163,11 +165,12 @@ function SupplyForm({ products, prefill, onDone }: { products: Product[]; prefil
         </p>
       )}
 
+      {!online && <p className={styles.error}>{t('form.offline')}</p>}
       <div className={styles.actions}>
         <Button variant="secondary" onClick={onDone}>
           {t('form.cancel')}
         </Button>
-        <Button type="submit" disabled={mutation.isPending}>
+        <Button type="submit" disabled={mutation.isPending || !online}>
           {mutation.isPending ? t('form.submitting') : t('form.submit')}
         </Button>
       </div>
@@ -180,7 +183,7 @@ interface RowEditorProps {
   row: SupplyRow
   product: Product | undefined
   createdAt: string
-  groups: SelectGroup[]
+  groups: ComboboxOption[]
   findProduct: (id: string) => Product | undefined
   error: (field: string) => string | undefined
   onChange: (patch: Partial<SupplyRow>) => void
@@ -195,7 +198,9 @@ function SupplyRowEditor({ index, row, product, createdAt, groups, findProduct, 
   const unit = row.unit ?? units[0]!
   const preview = previewExpiry(row, product, createdAt)
   const unitKey = { Gram: 'g', Kilogram: 'kg', Milliliter: 'ml', Liter: 'l', Piece: 'pcs' } as const
-  const defaultDays = product?.defaultShelfLifeHours ? f.number(product.defaultShelfLifeHours / 24) : null
+  // Норма короче двух суток — в часах («12 ч»), иначе в днях («3 дн.»).
+  const normHours = product?.defaultShelfLifeHours
+  const defaultNorm = normHours ? (normHours < 48 ? t('form.normHours', { count: normHours }) : t('form.normDays', { days: f.number(normHours / 24) })) : null
 
   return (
     <li className={styles.row}>
@@ -203,15 +208,15 @@ function SupplyRowEditor({ index, row, product, createdAt, groups, findProduct, 
         {index + 1}
       </span>
       <div className={styles.rowFields}>
-        <Select
+        <Combobox
           className={styles.product}
           label={t('form.product')}
           placeholder={t('form.productPlaceholder')}
-          groups={groups}
+          options={groups}
           value={row.productId}
           error={error('product')}
           // Единица сразу подставляется по продукту: в запрос уходит ровно то, что видно в списке.
-          onChange={(e) => onChange({ productId: e.target.value, unit: unitsFor(findProduct(e.target.value))[0]! })}
+          onChange={(productId) => onChange({ productId, unit: unitsFor(findProduct(productId))[0]! })}
         />
         <div className={styles.quantity}>
           <Field label={t('form.quantity')} inputMode="decimal" autoComplete="off" value={row.quantity} error={error('quantity')} onChange={(e) => onChange({ quantity: e.target.value })} />
@@ -228,7 +233,8 @@ function SupplyRowEditor({ index, row, product, createdAt, groups, findProduct, 
           className={styles.expiryMode}
           label={t('form.expiry')}
           options={[
-            { value: 'default', label: defaultDays ? t('form.expiryDefault', { days: defaultDays }) : t('form.expiryDefaultNone') },
+            { value: 'default', label: defaultNorm ? t('form.expiryDefault', { norm: defaultNorm }) : t('form.expiryDefaultNone') },
+            { value: 'hours', label: t('form.expiryHours') },
             { value: 'days', label: t('form.expiryDays') },
             { value: 'date', label: t('form.expiryDate') },
           ]}
@@ -236,11 +242,26 @@ function SupplyRowEditor({ index, row, product, createdAt, groups, findProduct, 
           error={error('expiry')}
           onChange={(e) => onChange({ expiry: e.target.value as SupplyRow['expiry'] })}
         />
-        {row.expiry === 'days' && (
-          <Field className={styles.expiryValue} label={t('form.days')} inputMode="decimal" value={row.days} error={error('days')} onChange={(e) => onChange({ days: e.target.value })} />
+        {(row.expiry === 'hours' || row.expiry === 'days') && (
+          <Field
+            className={styles.expiryValue}
+            label={t(row.expiry === 'hours' ? 'form.hours' : 'form.days')}
+            inputMode={row.expiry === 'hours' ? 'numeric' : 'decimal'}
+            value={row.amount}
+            error={error('amount')}
+            onChange={(e) => onChange({ amount: e.target.value })}
+          />
         )}
         {row.expiry === 'date' && (
-          <Field className={styles.expiryValue} label={t('form.date')} type="date" value={row.date} error={error('date')} onChange={(e) => onChange({ date: e.target.value })} />
+          <Field
+            className={styles.expiryValue}
+            label={t('form.date')}
+            type="datetime-local"
+            value={row.date}
+            error={error('date')}
+            hint={t('form.dateHint')}
+            onChange={(e) => onChange({ date: e.target.value })}
+          />
         )}
       </div>
       <p className={styles.preview} aria-live="polite">

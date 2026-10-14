@@ -1,0 +1,169 @@
+.field {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.control {
+  position: relative;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.input {
+  width: 100%;
+  height: var(--input-height);
+  padding: 0 38px 0 36px;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  text-overflow: ellipsis;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+
+  &::placeholder {
+    color: var(--muted);
+  }
+
+  &:hover:not(:focus-visible) {
+    border-color: var(--muted);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brand-strong);
+    outline-offset: 0;
+    border-color: transparent;
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--brand) 18%, transparent);
+  }
+
+  &[aria-invalid='true'] {
+    border-color: var(--crit-bar);
+  }
+}
+
+.chevron {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  color: var(--muted);
+  transform: translateY(-50%);
+  pointer-events: none;
+  transition: transform var(--dur-base) var(--ease-out);
+}
+
+.chevronOpen {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+// Список под полем, ограниченной высоты — не до края экрана; без тени, граница как у панелей.
+.list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  max-height: 264px;
+  margin: 0;
+  padding: var(--space-1) 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  animation: list-in var(--dur-fast) var(--ease-out);
+}
+
+.upward {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+.group {
+  display: block;
+  padding: var(--space-2) var(--space-3) var(--space-1);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 40px;
+  padding: 0 var(--space-3);
+  font-size: 15px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.active {
+  background: var(--brand-tint);
+  color: var(--brand-strong);
+}
+
+.optionLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hint {
+  flex: none;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.check {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--brand-strong);
+}
+
+.empty {
+  padding: var(--space-3);
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--crit-text);
+}
+
+@keyframes list-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}

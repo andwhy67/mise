@@ -1,6 +1,6 @@
 import { Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useExpiringBatches, useHotOffers, useKpi, useStopList, useStopListForecast, useSupplySuggestions } from '@/api/queries'
+import { useExpiringBatches, useHotMenu, useHotOffers, useKpi, useStopList, useStopListForecast, useSupplySuggestions } from '@/api/queries'
 import { useSession, type UserRole } from '@/auth/session'
 import { LinkButton } from '@/components/Button'
 import { ExpiryList } from '@/components/ExpiryList'
@@ -122,7 +122,7 @@ function OffersPanel() {
       ) : query.isError ? (
         <ErrorState error={query.error} onRetry={() => void query.refetch()} />
       ) : offers.length === 0 ? (
-        <EmptyState title={t('offers.empty')}>{t('offers.emptyHint')}</EmptyState>
+        <CalmOffers />
       ) : (
         offers.map((offer, index) => (
           <HotOfferRow
@@ -143,6 +143,41 @@ function OffersPanel() {
         ))
       )}
     </Panel>
+  )
+}
+
+/**
+ * Когда ничего не горит, Главная всё равно отвечает «что предлагать»: блюда, которые разгружают склад,
+ * а если таких нет — те, что можно приготовить больше всего (ранжирование /hot-offers/menu).
+ */
+function CalmOffers() {
+  const { t } = useTranslation('dashboard')
+  const { t: to } = useTranslation('offers')
+  const f = useFormat()
+  const menu = useHotMenu()
+  const picks = (menu.data?.items ?? []).filter((i) => i.group !== 'Saves').slice(0, 3)
+  if (picks.length === 0) return <EmptyState title={t('offers.empty')}>{t('offers.emptyHint')}</EmptyState>
+  return (
+    <>
+      <p className={styles.calm}>{t('offers.calm')}</p>
+      <ul className={styles.calmList}>
+        {picks.map((item) => (
+          <li key={item.dishId} className={styles.calmRow}>
+            <h3 className={styles.calmDish}>{item.dishName}</h3>
+            <StatusMark tone={item.group === 'Overstock' ? 'info' : 'fresh'} weight="regular">
+              {item.cover
+                ? to('overstock.reason', {
+                    product: item.cover.productName,
+                    qty: f.qty(item.cover.usableQty, item.cover.unit),
+                    days: f.number(item.cover.coverDays, 0),
+                    portions: f.portionsEnoughFor(item.maxPortions),
+                  })
+                : f.portionsEnoughFor(item.maxPortions)}
+            </StatusMark>
+          </li>
+        ))}
+      </ul>
+    </>
   )
 }
 

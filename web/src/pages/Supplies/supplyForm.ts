@@ -8,7 +8,7 @@ const MOSCOW_OFFSET = '+03:00'
 const HOUR_MS = 3_600_000
 const NUMBER_PATTERN = /^[A-Za-zА-Яа-яЁё0-9][A-Za-zА-Яа-яЁё0-9._/-]*$/
 
-export type ExpiryMode = 'default' | 'days' | 'date'
+export type ExpiryMode = 'default' | 'hours' | 'days' | 'date'
 export type InputUnit = 'Gram' | 'Kilogram' | 'Milliliter' | 'Liter' | 'Piece'
 
 export interface SupplyRow {
@@ -17,9 +17,9 @@ export interface SupplyRow {
   quantity: string
   unit: InputUnit | null
   expiry: ExpiryMode
-  /** «Хранить N дней» — допускается дробное: «1,5». */
-  days: string
-  /** «Годен до» — дата YYYY-MM-DD, годен до конца этого дня. */
+  /** «Хранить N часов» (целое, от 1) или «N дней» (допускается «1,5»). */
+  amount: string
+  /** «Годен до»: YYYY-MM-DDTHH:mm по Москве — ровно этот момент; только дата — до конца этого дня. */
   date: string
 }
 
@@ -31,7 +31,7 @@ export interface SupplyFormState {
   rows: SupplyRow[]
 }
 
-export const emptyRow = (key: string): SupplyRow => ({ key, productId: '', quantity: '', unit: null, expiry: 'default', days: '', date: '' })
+export const emptyRow = (key: string): SupplyRow => ({ key, productId: '', quantity: '', unit: null, expiry: 'default', amount: '', date: '' })
 
 export const fromMoscowInput = (value: string) => new Date(`${value.length === 16 ? `${value}:00` : value}${MOSCOW_OFFSET}`)
 
@@ -49,14 +49,34 @@ export function toMoscowInput(date: Date): string {
   return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`
 }
 
-/** «Годен до 17 октября» — можно использовать весь этот день: до 23:59 по Москве. */
-const endOfDay = (date: string) => fromMoscowInput(`${date}T23:59`)
+/** «Годен до 17 октября» — весь этот день, до 23:59 по Москве; «до 17 октября 18:30» — ровно до этого момента. */
+const expiryMoment = (value: string) => fromMoscowInput(value.length === 10 ? `${value}T23:59` : value)
+
+/** Срок хранения в часах из поля формы: часы — целые от 1, дни — с переводом в часы. */
+function shelfLifeHours(row: SupplyRow): number | null {
+  const amount = parseNumber(row.amount)
+  if (!(amount > 0)) return null
+  const hours = row.expiry === 'hours' ? amount : Math.round(amount * 24)
+  return Number.isInteger(hours) && hours >= 1 ? hours : null
+}
 
 const parseNumber = (value: string) => (value.trim() === '' ? NaN : Number(value.replace(',', '.').replace(/\s/g, '')))
 
 /** Единицы ввода для продукта: на кухне считают и в кг, и в граммах — сервер переведёт в базовую. */
 export const unitsFor = (product: Product | undefined): InputUnit[] =>
   product?.unit === 'Gram' ? ['Kilogram', 'Gram'] : product?.unit === 'Milliliter' ? ['Liter', 'Milliliter'] : ['Piece']
+
+/**
+ * Строка поставки из подсказки «Что заказать»: количество приходит в базовой единице продукта (г, мл, шт).
+ * Вес и объём показываем в кг и л, штуки — штуками. Продукта нет в справочнике — строки нет: угадывать единицу нельзя.
+ */
+export function rowFromSuggestion(key: string, product: Product | undefined, baseQuantity: number): SupplyRow | null {
+  if (!product) return null
+  const unit = unitsFor(product)[0]!
+  const big = unit === 'Kilogram' || unit === 'Liter'
+  const shown = big ? baseQuantity / 1000 : baseQuantity
+  return { ...emptyRow(key), productId: product.id, unit, quantity: String(Math.round(shown * 1000) / 1000).replace('.', ',') }
+}
 
 export interface ExpiryPreview {
   expiresAt: Date | null
@@ -66,11 +86,10 @@ export interface ExpiryPreview {
 /** Срок годности строки по тем же правилам, что на сервере: явная дата → срок хранения → норма продукта. */
 export function previewExpiry(row: SupplyRow, product: Product | undefined, createdAt: string): ExpiryPreview {
   const received = fromMoscowInput(createdAt)
-  if (row.expiry === 'date' && row.date) return { expiresAt: endOfDay(row.date), source: 'explicit' }
-  if (row.expiry === 'days') {
-    const days = parseNumber(row.days)
-    if (days > 0) return { expiresAt: new Date(received.getTime() + Math.round(days * 24) * HOUR_MS), source: 'shelfLife' }
-    return { expiresAt: null, source: null }
+  if (row.expiry === 'date' && row.date) return { expiresAt: expiryMoment(row.date), source: 'explicit' }
+  if (row.expiry === 'hours' || row.expiry === 'days') {
+    const hours = shelfLifeHours(row)
+    return hours ? { expiresAt: new Date(received.getTime() + hours * HOUR_MS), source: 'shelfLife' } : { expiresAt: null, source: null }
   }
   if (product?.defaultShelfLifeHours) return { expiresAt: new Date(received.getTime() + product.defaultShelfLifeHours * HOUR_MS), source: 'default' }
   return { expiresAt: null, source: null }
@@ -91,10 +110,10 @@ export function validateSupply(form: SupplyFormState, products: Product[]): Supp
     if (product && (!row.unit || !unitsFor(product).includes(row.unit))) errors[`${row.key}.unit`] = 'unit'
     const quantity = parseNumber(row.quantity)
     if (!(quantity > 0)) errors[`${row.key}.quantity`] = 'quantity'
-    if (row.expiry === 'days' && !(parseNumber(row.days) > 0)) errors[`${row.key}.days`] = 'days'
+    if ((row.expiry === 'hours' || row.expiry === 'days') && shelfLifeHours(row) === null) errors[`${row.key}.amount`] = row.expiry
     if (row.expiry === 'date') {
       if (!row.date) errors[`${row.key}.date`] = 'date'
-      else if (!errors.createdAt && endOfDay(row.date) <= fromMoscowInput(form.createdAt)) errors[`${row.key}.date`] = 'dateBeforeDelivery'
+      else if (!errors.createdAt && expiryMoment(row.date) <= fromMoscowInput(form.createdAt)) errors[`${row.key}.date`] = 'dateBeforeDelivery'
     }
     if (product && row.expiry === 'default' && !product.defaultShelfLifeHours) errors[`${row.key}.expiry`] = 'noShelfLife'
   }
@@ -116,8 +135,8 @@ export function toRequest(form: SupplyFormState) {
     createdAt: fromMoscowInput(form.createdAt).toISOString(),
     items: form.rows.map((row): SupplyRequestItem => {
       const item: SupplyRequestItem = { productId: row.productId, quantity: parseNumber(row.quantity), unit: row.unit ?? 'Piece' }
-      if (row.expiry === 'days') item.shelfLifeHours = Math.round(parseNumber(row.days) * 24)
-      if (row.expiry === 'date') item.expiresAt = endOfDay(row.date).toISOString()
+      if (row.expiry === 'hours' || row.expiry === 'days') item.shelfLifeHours = shelfLifeHours(row) ?? undefined
+      if (row.expiry === 'date') item.expiresAt = expiryMoment(row.date).toISOString()
       return item
     }),
   }

@@ -2,10 +2,17 @@ import { useSyncExternalStore } from 'react'
 import type { Tone } from './format'
 
 /** Короткие сообщения о результате действия (DESIGN.md §5, Toast). Критичные не скрываются сами. */
+export interface ToastAction {
+  label: string
+  onClick: () => void
+}
+
 export interface Toast {
   id: number
   tone: Tone
   text: string
+  /** Кнопка в сообщении («Обновить»); сообщение с действием не скрывается само. */
+  action?: ToastAction
 }
 
 const AUTO_HIDE_MS = 6_000
@@ -17,11 +24,11 @@ const listeners = new Set<() => void>()
 const emit = () => listeners.forEach((listener) => listener())
 
 export const toast = {
-  show(text: string, tone: Tone = 'fresh') {
-    const item: Toast = { id: nextId++, tone, text }
+  show(text: string, tone: Tone = 'fresh', action?: ToastAction) {
+    const item: Toast = { id: nextId++, tone, text, action }
     toasts = [...toasts, item].slice(-MAX_VISIBLE)
     emit()
-    if (tone !== 'crit' && tone !== 'expired') setTimeout(() => toast.dismiss(item.id), AUTO_HIDE_MS)
+    if (!action && tone !== 'crit' && tone !== 'expired') setTimeout(() => toast.dismiss(item.id), AUTO_HIDE_MS)
     return item.id
   },
   dismiss(id: number) {

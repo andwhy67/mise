@@ -6,6 +6,7 @@ import type { Alert } from '@/api/types'
 import { Button, LinkButton } from '@/components/Button'
 import { Page } from '@/components/Page'
 import { Panel } from '@/components/Panel'
+import { ScrollArea } from '@/components/ScrollArea'
 import { Segmented } from '@/components/Segmented'
 import { EmptyState, ErrorState, LoadingState } from '@/components/StateBlocks'
 import { StatusMark } from '@/components/StatusMark'
@@ -78,11 +79,13 @@ export function AlertsPage() {
           <EmptyState title={t(`empty.${filter}`)}>{t(`empty.${filter}Hint`)}</EmptyState>
         ) : (
           <>
-            <ul className={styles.list}>
-              {items.map((alert) => (
-                <AlertRow key={alert.id} alert={alert} />
-              ))}
-            </ul>
+            <ScrollArea label={t('title')}>
+              <ul className={styles.list}>
+                {items.map((alert) => (
+                  <AlertRow key={alert.id} alert={alert} />
+                ))}
+              </ul>
+            </ScrollArea>
             {query.data && query.data.total > items.length && size < MAX_PAGE && (
               <Button variant="text" className={styles.more} onClick={() => setSize(Math.min(MAX_PAGE, size + PAGE))}>
                 {t('more')}

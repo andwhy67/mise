@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { DishAvailability } from '@/api/types'
 import type { MeasureUnit } from '@/lib/format'
-import { cartShortages, cartTotals } from './cart'
+import { cartShortages, cartTotals, cartUsage } from './cart'
 
 interface Product {
   productId: string
@@ -50,5 +50,22 @@ describe('проверка корзины — суммарно по всем б�
 
   it('итоги: порции и сумма', () => {
     expect(cartTotals(new Map([['Блины', 3], ['Омлет', 2]]), menu)).toEqual({ portions: 5, total: 1520, lines: 2 })
+  })
+})
+
+describe('сколько заказ берёт от остатка — по каждому продукту', () => {
+  it('сумма по всем блюдам, доля от доступного, по убыванию доли', () => {
+    const cart = new Map([
+      ['Блины', 2],
+      ['Омлет', 1],
+    ])
+    expect(cartUsage(cart, menu)).toEqual([
+      { productId: 'eggs', productName: 'Яйца', unit: 'Piece', required: 7, available: 10, share: 0.7 },
+      { productId: 'milk', productName: 'Молоко', unit: 'Milliliter', required: 500, available: 1000, share: 0.5 },
+    ])
+  })
+
+  it('пустая корзина — пусто', () => {
+    expect(cartUsage(new Map(), menu)).toEqual([])
   })
 })

@@ -41,9 +41,15 @@ public sealed record WriteOffReportDto(
 /// <param name="DishMinutesInStop">Сумма минут блюд в стопе из-за продукта (пересечение с периодом).</param>
 /// <param name="MinutesBelowMinimum">Сколько минут продукт был ниже минимального остатка (по алертам LowStock).</param>
 /// <param name="ShareBelowMinimum">Доля периода ниже минимума, 0…1.</param>
+/// <param name="Refusals">Сколько заказов отклонено (422) из-за нехватки продукта.</param>
+/// <param name="ShortageQty">Сколько продукта не хватило суммарно по этим отказам (базовые единицы).</param>
 public sealed record DeficitItemDto(
     Guid ProductId,
     string ProductName,
+    MeasureUnit Unit,
+    int Refusals,
+    decimal ShortageQty,
+    DateTimeOffset? LastRefusalAt,
     int StopEvents,
     int DishesAffected,
     decimal DishMinutesInStop,

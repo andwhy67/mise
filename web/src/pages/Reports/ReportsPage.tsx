@@ -6,14 +6,14 @@ import { api } from '@/api/client'
 import { Page } from '@/components/Page'
 import { Panel } from '@/components/Panel'
 import { Segmented } from '@/components/Segmented'
-import { Select } from '@/components/Select'
+import { Combobox } from '@/components/Combobox'
 import { EmptyState, ErrorState, LoadingState } from '@/components/StateBlocks'
 import { useFormat } from '@/lib/useFormat'
 import {
   consumptionByDay,
   daysInPeriod,
+  deficitRanking,
   periodRange,
-  stopCauses,
   worstRates,
   writeOffDays,
   type ConsumptionReport,
@@ -44,7 +44,7 @@ export function ReportsPage() {
       <Kpi from={range.from} />
       <div className={styles.grid}>
         <WriteOffRates from={range.from} />
-        <StopCauses from={range.from} />
+        <Deficit from={range.from} />
         <WriteOffsByDay from={range.from} />
         <Consumption from={range.from} bucket={range.bucket} />
       </div>
@@ -110,6 +110,7 @@ function ChartPanel({ title, subtitle, state, empty, emptyText, table, action, c
         <EmptyState title={emptyText} />
       ) : (
         <figure className={styles.figure}>
+          {/* График — для глаз; клавиатура и диктор работают с таблицей ниже (accessibilityLayer у графиков выключен). */}
           <div className={styles.chart} aria-hidden="true">
             {children}
           </div>
@@ -181,7 +182,7 @@ function WriteOffRates({ from }: { from: string }) {
       }}
     >
       <ResponsiveContainer width="100%" height={Math.max(160, data.length * 36 + 40)}>
-        <BarChart data={data} layout="vertical" margin={{ top: 4, right: 24, bottom: 4, left: 8 }}>
+        <BarChart accessibilityLayer={false} data={data} layout="vertical" margin={{ top: 4, right: 24, bottom: 4, left: 8 }}>
           <CartesianGrid horizontal={false} stroke={COLOR.grid} />
           <XAxis type="number" unit=" %" {...AXIS} />
           <YAxis type="category" dataKey="name" width={124} {...AXIS} />
@@ -206,36 +207,48 @@ function WriteOffRates({ from }: { from: string }) {
   )
 }
 
-function StopCauses({ from }: { from: string }) {
+/**
+ * «Чего чаще всего не хватает»: сколько раз из-за продукта отказали в заказе и сколько раз он ставил блюда в стоп.
+ * Оба числа — «разы», одна шкала; детали (сколько не хватило, часы в стопе, доля времени ниже минимума) — в таблице.
+ */
+function Deficit({ from }: { from: string }) {
   const { t } = useTranslation('reports')
   const f = useFormat()
   const query = useReport<{ items: DeficitItem[] }>('deficit', from)
-  const data = stopCauses(query.data?.items ?? [], TOP)
+  const data = deficitRanking(query.data?.items ?? [], TOP)
   return (
     <ChartPanel
-      title={t('stop.title')}
-      subtitle={t('stop.subtitle')}
+      title={t('deficit.title')}
+      subtitle={t('deficit.subtitle')}
       state={query}
       empty={data.length === 0}
-      emptyText={t('stop.empty')}
+      emptyText={t('deficit.empty')}
       table={{
-        head: [t('table.product'), t('stop.hours'), t('stop.events'), t('stop.dishes')],
-        rows: data.map((d) => [d.name, f.number(d.hours), d.item.stopEvents, d.item.dishesAffected]),
+        head: [t('table.product'), t('deficit.refusals'), t('deficit.shortage'), t('deficit.stops'), t('deficit.hours'), t('deficit.belowMin')],
+        rows: data.map((d) => [
+          d.name,
+          d.refusals,
+          d.item.shortageQty > 0 ? f.qty(d.item.shortageQty, d.item.unit) : '—',
+          d.stops,
+          f.number(d.item.dishMinutesInStop / 60),
+          `${f.number(d.item.shareBelowMinimum * 100)} %`,
+        ]),
       }}
     >
-      <ResponsiveContainer width="100%" height={Math.max(160, data.length * 36 + 40)}>
-        <BarChart data={data} layout="vertical" margin={{ top: 4, right: 24, bottom: 4, left: 8 }}>
+      <ResponsiveContainer width="100%" height={Math.max(180, data.length * 44 + 60)}>
+        <BarChart accessibilityLayer={false} data={data} layout="vertical" margin={{ top: 4, right: 24, bottom: 4, left: 8 }}>
           <CartesianGrid horizontal={false} stroke={COLOR.grid} />
-          <XAxis type="number" {...AXIS} />
+          <XAxis type="number" allowDecimals={false} {...AXIS} />
           <YAxis type="category" dataKey="name" width={124} {...AXIS} />
           <Tooltip
             cursor={{ fill: 'var(--bg)' }}
-            content={(props) => {
-              const item = data.find((d) => d.name === props.label)?.item
-              return <ChartTooltip active={props.active} payload={props.payload} label={props.label} format={(value) => t('stop.tooltip', { hours: f.number(value), count: item?.stopEvents ?? 0, dishes: item?.dishesAffected ?? 0 })} />
-            }}
+            content={(props) => (
+              <ChartTooltip active={props.active} payload={props.payload} label={props.label} format={(value, name) => `${name}: ${f.number(value, 0)}`} />
+            )}
           />
-          <Bar dataKey="hours" name={t('stop.hours')} fill={COLOR.main} barSize={18} />
+          <Legend iconType="square" iconSize={8} wrapperStyle={{ fontSize: 13, color: 'var(--ink-2)' }} />
+          <Bar dataKey="refusals" name={t('deficit.refusals')} fill={COLOR.expiry} barSize={12} />
+          <Bar dataKey="stops" name={t('deficit.stops')} fill={COLOR.manual} barSize={12} />
         </BarChart>
       </ResponsiveContainer>
     </ChartPanel>
@@ -259,7 +272,7 @@ function WriteOffsByDay({ from }: { from: string }) {
       table={{ head: [t('table.day'), t('writeoffs.expiry'), t('writeoffs.manual')], rows: data.map((d) => [d.label, d.expiry, d.manual]) }}
     >
       <ResponsiveContainer width="100%" height={240}>
-        <BarChart data={data} margin={{ top: 8, right: 32, bottom: 4, left: -16 }}>
+        <BarChart accessibilityLayer={false} data={data} margin={{ top: 8, right: 32, bottom: 4, left: -16 }}>
           <CartesianGrid vertical={false} stroke={COLOR.grid} />
           <XAxis dataKey="label" {...AXIS} interval="preserveStartEnd" minTickGap={16} />
           <YAxis allowDecimals={false} {...AXIS} />
@@ -295,13 +308,13 @@ function Consumption({ from, bucket }: { from: string; bucket: 'Hour' | 'Day' })
       emptyText={t('consumption.empty')}
       action={
         series.length > 1 && (
-          <Select
+          <Combobox
             className={styles.productSelect}
             label={t('table.product')}
             hideLabel
             value={current?.productId ?? ''}
             options={series.map((s) => ({ value: s.productId, label: s.productName }))}
-            onChange={(e) => setChosen(e.target.value)}
+            onChange={setChosen}
           />
         )
       }
@@ -309,7 +322,7 @@ function Consumption({ from, bucket }: { from: string; bucket: 'Hour' | 'Day' })
     >
       {current && (
         <ResponsiveContainer width="100%" height={240}>
-          <LineChart data={data} margin={{ top: 8, right: 32, bottom: 4, left: 0 }}>
+          <LineChart accessibilityLayer={false} data={data} margin={{ top: 8, right: 32, bottom: 4, left: 0 }}>
             <CartesianGrid vertical={false} stroke={COLOR.grid} />
             <XAxis dataKey="label" {...AXIS} interval="preserveStartEnd" minTickGap={16} />
             <YAxis {...AXIS} width={64} tickFormatter={(value: number) => f.qty(value, current.unit)} />

@@ -32,7 +32,8 @@
       "unsold": "≈{{qty}} won't sell at the usual pace",
       "share": "this dish's share of the product's use — {{share}}",
       "formula": "The formula is described in docs/hot-offers.md"
-    }
+    },
+    "calm": "Nothing is urgent right now — offer guests these dishes:"
   },
   "stop": {
     "title": "Can't be ordered",

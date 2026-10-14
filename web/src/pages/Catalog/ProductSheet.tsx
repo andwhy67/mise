@@ -78,14 +78,27 @@ function ProductFormBody({ product, onDone }: { product: Product | null; onDone:
           // Единицу продукта, по которому уже есть движения, сервер менять не даст — подсказываем заранее.
           disabled={product !== null}
         />
-        <Field
-          label={t('products.shelfLifeDays')}
-          inputMode="decimal"
-          value={form.shelfLifeDays}
-          onChange={(e) => set({ shelfLifeDays: e.target.value })}
-          error={err('shelfLifeDays')}
-          hint={t('products.shelfLifeHint')}
-        />
+        {/* Норма короче суток (зелень, заготовки) — в часах; длиннее — в днях. */}
+        <div className={styles.withUnit}>
+          <Field
+            label={t('products.shelfLife')}
+            inputMode={form.shelfLifeUnit === 'hours' ? 'numeric' : 'decimal'}
+            value={form.shelfLife}
+            onChange={(e) => set({ shelfLife: e.target.value })}
+            error={err('shelfLife')}
+            hint={t('products.shelfLifeHint')}
+          />
+          <Select
+            label={t('products.shelfLifeUnit')}
+            hideLabel
+            options={[
+              { value: 'hours', label: t('products.hours') },
+              { value: 'days', label: t('products.days') },
+            ]}
+            value={form.shelfLifeUnit}
+            onChange={(e) => set({ shelfLifeUnit: e.target.value as ProductForm['shelfLifeUnit'] })}
+          />
+        </div>
       </div>
       <div className={styles.pair}>
         <Field

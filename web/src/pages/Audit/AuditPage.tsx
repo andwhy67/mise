@@ -8,6 +8,7 @@ import type { Paged } from '@/api/types'
 import { Button } from '@/components/Button'
 import { Page } from '@/components/Page'
 import { Panel } from '@/components/Panel'
+import { ScrollArea } from '@/components/ScrollArea'
 import { Select } from '@/components/Select'
 import { EmptyState, ErrorState, LoadingState } from '@/components/StateBlocks'
 import { useFormat } from '@/lib/useFormat'
@@ -83,11 +84,13 @@ export function AuditPage() {
           <EmptyState title={t('empty')}>{t('emptyHint')}</EmptyState>
         ) : (
           <>
-            <ul className={styles.list}>
-              {items.map((entry) => (
-                <AuditRow key={entry.id} entry={entry} />
-              ))}
-            </ul>
+            <ScrollArea label={t('title')}>
+              <ul className={styles.list}>
+                {items.map((entry) => (
+                  <AuditRow key={entry.id} entry={entry} />
+                ))}
+              </ul>
+            </ScrollArea>
             {query.data && query.data.total > items.length && size < MAX_PAGE && (
               <Button variant="text" className={styles.more} onClick={() => setSize(Math.min(MAX_PAGE, size + PAGE))}>
                 {t('more')}

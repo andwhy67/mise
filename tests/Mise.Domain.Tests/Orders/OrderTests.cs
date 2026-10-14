@@ -13,6 +13,7 @@ public class OrderTests
     [InlineData(OrderStatus.Created, OrderStatus.Cooking)]
     [InlineData(OrderStatus.Created, OrderStatus.Done)]
     [InlineData(OrderStatus.Cooking, OrderStatus.Done)]
+    [InlineData(OrderStatus.Done, OrderStatus.Served)]
     public void Forward_transitions_are_allowed(OrderStatus from, OrderStatus to)
     {
         var order = NewOrder();
@@ -29,9 +30,15 @@ public class OrderTests
     [InlineData(OrderStatus.Done, OrderStatus.Cooking)]
     [InlineData(OrderStatus.Cooking, OrderStatus.Created)]
     [InlineData(OrderStatus.Done, OrderStatus.Cancelled)]
+    [InlineData(OrderStatus.Cooking, OrderStatus.Served)]
+    [InlineData(OrderStatus.Served, OrderStatus.Done)]
+    [InlineData(OrderStatus.Served, OrderStatus.Cancelled)]
     public void Backward_or_terminal_transitions_are_rejected(OrderStatus from, OrderStatus to)
     {
         var order = NewOrder();
+        // «Выдан» — только после «Готов»: доходим по допустимому пути.
+        if (from == OrderStatus.Served)
+            order.ChangeStatus(OrderStatus.Done, Now);
         order.ChangeStatus(from, Now);
 
         var ex = Assert.Throws<DomainException>(() => order.ChangeStatus(to, Now));

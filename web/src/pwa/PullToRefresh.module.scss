@@ -1,0 +1,38 @@
+// Кружок обновления выезжает из-под шапки; без тени — граница, как у всех панелей.
+.indicator {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 8px);
+  left: 50%;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--brand-strong);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-fast) var(--ease-out);
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.visible {
+  opacity: 1;
+}
+
+.busy svg {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

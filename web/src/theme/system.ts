@@ -1,9 +1,10 @@
-import { createSystem, defaultConfig, defineConfig } from '@chakra-ui/react'
+import { createSystem, defaultBaseConfig, defineConfig } from '@chakra-ui/react'
 
 /**
- * Chakra используется только для сложных доступных примитивов (диалоги, меню, тосты, поповеры).
- * Её семантические токены ссылаются на CSS-переменные из tokens.css — светлая и «Графит» переключаются там,
- * поэтому значения одинаковы для _light и _dark. Свои компоненты — SCSS-модули на тех же переменных.
+ * Chakra — провайдер и токены (preflight, шрифты, семантические цвета). Компоненты интерфейса — свои, на SCSS-модулях
+ * и нативных элементах (<dialog>, <select>), поэтому берётся базовая конфигурация без рецептов всех компонентов
+ * (defaultBaseConfig): основной чанк легче на ~140 кБ. Понадобится компонент Chakra — подключить его рецепт явно.
+ * Семантические токены ссылаются на CSS-переменные из tokens.css — светлая и «Графит» переключаются там.
  */
 const cssVar = (name: string) => ({ value: { _light: `var(--${name})`, _dark: `var(--${name})` } })
 
@@ -49,4 +50,4 @@ const config = defineConfig({
   },
 })
 
-export const system = createSystem(defaultConfig, config)
+export const system = createSystem(defaultBaseConfig, config)

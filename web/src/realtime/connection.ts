@@ -10,10 +10,13 @@ const HUB_PATH = '/hubs/stock'
 const RETRY_DELAYS = [0, 2_000, 5_000, 10_000, 30_000]
 const OFFLINE_RETRY_MS = 15_000
 
+/** «Что продавать» по всему меню зависит от остатков и доступности — перечитывается по их событиям. */
+const HOT_MENU: QueryKey = [...queryKeys.hotOffers, 'menu']
+
 /** Какие данные устарели после события хаба (PLAN §7). REST — источник истины: события только инвалидируют кэш. */
 const EVENT_KEYS: Record<string, QueryKey[]> = {
-  StockChanged: [queryKeys.stock, queryKeys.batches, queryKeys.supplySuggestions, queryKeys.stopListForecast],
-  AvailabilityChanged: [queryKeys.menu],
+  StockChanged: [queryKeys.stock, queryKeys.batches, queryKeys.supplySuggestions, queryKeys.stopListForecast, HOT_MENU],
+  AvailabilityChanged: [queryKeys.menu, HOT_MENU],
   StopListChanged: [queryKeys.stopList, queryKeys.menu, queryKeys.kpi],
   AlertRaised: [queryKeys.alerts],
   BatchStatusChanged: [queryKeys.batches, queryKeys.stock],
@@ -79,6 +82,7 @@ function createRealtime() {
       // Обработчик ничего не возвращает: значение SignalR принял бы за ответ серверу («server is not expecting a result»).
       hub.on('HotOffersChanged', (payload: unknown) => {
         client.setQueryData([...queryKeys.hotOffers, 'default'], payload)
+        void client.invalidateQueries({ queryKey: HOT_MENU })
       })
 
       hub.onreconnecting(() => setStatus('reconnecting'))

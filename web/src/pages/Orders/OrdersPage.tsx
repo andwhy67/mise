@@ -1,4 +1,4 @@
-import { Search, ShoppingBag } from 'lucide-react'
+import { ChevronDown, Search, ShoppingBag } from 'lucide-react'
 import { useId, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ApiError } from '@/api/errors'
@@ -6,7 +6,9 @@ import { useCreateOrder } from '@/api/mutations'
 import { useMenu } from '@/api/queries'
 import type { DishAvailability, MissingIngredient } from '@/api/types'
 import { Button } from '@/components/Button'
+import { Meter } from '@/components/Meter'
 import { Page } from '@/components/Page'
+import { ScrollArea } from '@/components/ScrollArea'
 import { Panel } from '@/components/Panel'
 import { Sheet } from '@/components/Sheet'
 import { EmptyState, ErrorState, LoadingState } from '@/components/StateBlocks'
@@ -16,7 +18,9 @@ import { toast } from '@/lib/toast'
 import { useErrorText } from '@/lib/useErrorText'
 import { useFormat } from '@/lib/useFormat'
 import { uuid } from '@/lib/uuid'
-import { cartShortages, cartTotals, type Cart } from './cart'
+import { vibrate } from '@/pwa/haptics'
+import { useOnline } from '@/pwa/network'
+import { cartShortages, cartTotals, cartUsage, type Cart } from './cart'
 import { RecentOrders } from './RecentOrders'
 import styles from './OrdersPage.module.scss'
 
@@ -25,7 +29,10 @@ const MAX_PER_LINE = 100
 /** «Осталось мало» — подсвечиваем янтарным, когда порций не больше этого. */
 const FEW_PORTIONS = 5
 
-/** Заказы (DESIGN.md §6.3): меню с тем, сколько можно приготовить, корзина с проверкой «на всё вместе», последние заказы. */
+/**
+ * Заказы (DESIGN.md §6.3): слева меню (сколько можно приготовить и из чего), справа корзина с проверкой
+ * «на всё вместе» и заказы в работе — от «Принят» до «Выдан».
+ */
 export function OrdersPage() {
   const { t } = useTranslation('orders')
   const menu = useMenu()
@@ -58,14 +65,14 @@ export function OrdersPage() {
           )}
         </Panel>
 
-        <div className={styles.cartColumn}>
-          <Panel title={t('cart.title')} titleId="orders-cart">
+        {/* Справа — всё про заказы: собрать новый и вести принятые до выдачи. */}
+        <div className={styles.side}>
+          <Panel title={t('cart.title')} titleId="orders-cart" className={styles.cartPanel}>
             <CartContent cart={cart} dishes={dishes} onChange={setQuantity} onDone={() => setCart(new Map())} />
           </Panel>
+          <RecentOrders />
         </div>
       </div>
-
-      <RecentOrders />
 
       {/* Телефон: корзина — полоса над нижней навигацией, открывает лист (DESIGN.md §3). */}
       {totals.portions > 0 && <div className={styles.barSpacer} aria-hidden="true" />}
@@ -129,16 +136,18 @@ function MenuList({ dishes, cart, onChange }: { dishes: DishAvailability[]; cart
       {groups.length === 0 ? (
         <EmptyState title={t('menu.notFound')} />
       ) : (
-        groups.map((group) => (
-          <section key={group.category} className={styles.category} aria-label={group.category || t('menu.other')}>
-            <h3 className={styles.categoryTitle}>{group.category || t('menu.other')}</h3>
-            <ul className={styles.dishes}>
-              {group.items.map((dish) => (
-                <DishRow key={dish.dishId} dish={dish} quantity={cart.get(dish.dishId) ?? 0} onChange={(q) => onChange(dish.dishId, q)} />
-              ))}
-            </ul>
-          </section>
-        ))
+        <ScrollArea label={t('menu.title')}>
+          {groups.map((group) => (
+            <section key={group.category} className={styles.category} aria-label={group.category || t('menu.other')}>
+              <h3 className={styles.categoryTitle}>{group.category || t('menu.other')}</h3>
+              <ul className={styles.dishes}>
+                {group.items.map((dish) => (
+                  <DishRow key={dish.dishId} dish={dish} quantity={cart.get(dish.dishId) ?? 0} onChange={(q) => onChange(dish.dishId, q)} />
+                ))}
+              </ul>
+            </section>
+          ))}
+        </ScrollArea>
       )}
     </>
   )
@@ -148,6 +157,8 @@ function DishRow({ dish, quantity, onChange }: { dish: DishAvailability; quantit
   const { t } = useTranslation('orders')
   const f = useFormat()
   const stopped = dish.inStopList || dish.maxPortions <= 0
+  const [open, setOpen] = useState(false)
+  const compositionId = useId()
 
   let status
   if (dish.status === 'StopManual' || !dish.isActive) status = <StatusMark tone="crit" weight="regular">{t('menu.manual')}</StatusMark>
@@ -172,6 +183,10 @@ function DishRow({ dish, quantity, onChange }: { dish: DishAvailability; quantit
           <span className={styles.price}>{f.money(dish.price)}</span>
           {status}
         </span>
+        <button type="button" className={styles.compositionToggle} aria-expanded={open} aria-controls={compositionId} onClick={() => setOpen(!open)}>
+          {open ? t('menu.hideComposition') : t('menu.composition')}
+          <ChevronDown aria-hidden="true" strokeWidth={1.8} />
+        </button>
       </div>
       {stopped ? (
         <span className={styles.stopNote}>{t('menu.stop')}</span>
@@ -182,7 +197,53 @@ function DishRow({ dish, quantity, onChange }: { dish: DishAvailability; quantit
       ) : (
         <Stepper value={quantity} label={dish.dishName} max={Math.min(MAX_PER_LINE, dish.maxPortions)} onChange={onChange} />
       )}
+      {open && (
+        <div id={compositionId} className={styles.composition}>
+          <Composition dish={dish} />
+        </div>
+      )}
     </li>
+  )
+}
+
+/**
+ * «Из чего»: каждый продукт блюда — сколько нужно на порцию, сколько есть и на сколько порций хватит.
+ * Продукт, на котором блюдо упирается, выделен: видно, чего докупить, без перехода на склад.
+ */
+function Composition({ dish }: { dish: DishAvailability }) {
+  const { t } = useTranslation('orders')
+  const f = useFormat()
+  const limiting = dish.limitingProduct?.productId
+  return (
+    <table className={styles.compositionTable}>
+      <thead>
+        <tr>
+          <th scope="col">{t('composition.product')}</th>
+          <th scope="col">{t('composition.perPortion')}</th>
+          <th scope="col">{t('composition.inStock')}</th>
+          <th scope="col">{t('composition.enough')}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {[...dish.ingredients]
+          .sort((a, b) => a.portions - b.portions)
+          .map((ingredient) => {
+            const tone = ingredient.portions <= 0 ? 'crit' : ingredient.portions <= FEW_PORTIONS ? 'warn' : 'fresh'
+            return (
+              <tr key={ingredient.productId} className={ingredient.productId === limiting ? styles.limiting : undefined}>
+                <th scope="row">{ingredient.productName}</th>
+                <td>{f.qty(ingredient.qtyPerPortion, ingredient.unit)}</td>
+                <td>{f.qty(ingredient.usable, ingredient.unit)}</td>
+                <td>
+                  <StatusMark tone={tone} weight={ingredient.productId === limiting ? 'strong' : 'regular'}>
+                    {t('composition.portions', { count: ingredient.portions })}
+                  </StatusMark>
+                </td>
+              </tr>
+            )
+          })}
+      </tbody>
+    </table>
   )
 }
 
@@ -201,6 +262,7 @@ function CartContent({
   const f = useFormat()
   const errorText = useErrorText()
   const mutation = useCreateOrder()
+  const online = useOnline()
   // Отказ сервера относится к конкретному составу корзины: поменяли состав — подсказка уходит.
   const [refusal, setRefusal] = useState<{ cart: Cart; missing: MissingIngredient[] } | null>(null)
   const refused = refusal?.cart === cart ? refusal.missing : null
@@ -210,6 +272,7 @@ function CartContent({
   const lines = [...cart.entries()].map(([dishId, quantity]) => ({ dish: dishes.find((d) => d.dishId === dishId), quantity })).filter((l) => l.dish)
   const totals = cartTotals(cart, dishes)
   const shortages = cartShortages(cart, dishes)
+  const usage = cartUsage(cart, dishes)
   const missing = refused ?? (shortages.length ? shortages : null)
 
   if (lines.length === 0) return <EmptyState title={t('cart.empty')}>{t('cart.emptyHint')}</EmptyState>
@@ -220,10 +283,12 @@ function CartContent({
       { items: lines.map((l) => ({ dishId: l.dish!.dishId, quantity: l.quantity })), idempotencyKey: idempotency.current.key },
       {
         onSuccess: (order) => {
+          vibrate('success')
           toast.show(t('cart.done', { number: order.number, total: f.money(order.total) }))
           onDone()
         },
         onError: (cause) => {
+          vibrate('error')
           const fromServer = cause instanceof ApiError ? (cause.problem?.missing as MissingIngredient[] | undefined) : undefined
           if (fromServer?.length) setRefusal({ cart, missing: fromServer })
           else toast.show(errorText(cause), 'crit')
@@ -243,6 +308,22 @@ function CartContent({
           </li>
         ))}
       </ul>
+
+      {/* Хватит ли продуктов: какую часть остатка заберёт заказ — запас виден до отправки, а не только «хватит/нет». */}
+      <section className={styles.usage} aria-labelledby="cart-usage">
+        <h3 id="cart-usage" className={styles.usageTitle}>
+          {t('usage.title')}
+        </h3>
+        {usage.map((u) => (
+          <Meter
+            key={u.productId}
+            label={u.productName}
+            value={t('usage.value', { need: f.qty(u.required, u.unit), have: f.qty(Math.max(0, u.available), u.unit) })}
+            fraction={u.share}
+            tone={u.share > 1 ? 'crit' : u.share >= 0.7 ? 'warn' : 'fresh'}
+          />
+        ))}
+      </section>
 
       <p className={styles.total}>
         <span>{t('cart.total', { count: totals.portions })}</span>
@@ -268,7 +349,8 @@ function CartContent({
         </div>
       )}
 
-      <Button size="lg" block disabled={mutation.isPending} onClick={submit}>
+      {!online && <p className={styles.offlineNote}>{t('cart.offline')}</p>}
+      <Button size="lg" block disabled={mutation.isPending || !online} onClick={submit}>
         {mutation.isPending ? t('cart.submitting') : t('cart.submit')}
       </Button>
     </div>

@@ -1,7 +1,15 @@
 using Mise.Api.Infrastructure;
 using Mise.Application;
 using Mise.Infrastructure;
+using Mise.Infrastructure.Push;
 using Serilog;
+
+// Служебная команда: пара ключей VAPID для пушей — напечатать и выйти (сервер не запускается).
+if (args.Contains("--generate-vapid-keys"))
+{
+    Console.Write(VapidKeyGenerator.Describe());
+    return;
+}
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()

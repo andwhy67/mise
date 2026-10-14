@@ -66,3 +66,38 @@
   font-size: 14px;
   color: var(--ink-2);
 }
+
+.calm {
+  margin: var(--space-4) 0 0;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.calmList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.calmRow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: var(--space-4) 0;
+
+  & + & {
+    border-top: 1px solid var(--hairline);
+  }
+
+  &:last-child {
+    padding-bottom: 0;
+  }
+}
+
+.calmDish {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+}

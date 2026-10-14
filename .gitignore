@@ -33,3 +33,8 @@ appsettings.*.local.json
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Playwright
+web/test-results/
+web/playwright-report/
+web/blob-report/

@@ -8,7 +8,8 @@ import type { i18n as I18n } from 'i18next'
 export const DISPLAY_TIME_ZONE = 'Europe/Moscow'
 
 export type ShelfStatus = 'Fresh' | 'Warning' | 'Critical' | 'Expired'
-export type Tone = 'fresh' | 'warn' | 'crit' | 'expired' | 'info'
+/** muted — нейтральное «завершено» (заказ выдан), без тревоги. */
+export type Tone = 'fresh' | 'warn' | 'crit' | 'expired' | 'info' | 'muted'
 export type MeasureUnit = 'Gram' | 'Milliliter' | 'Piece'
 export type OfferVerdict = 'sellFirst' | 'recommend' | 'canOffer'
 

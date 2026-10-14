@@ -47,10 +47,10 @@
     "quantity": "Сколько",
     "unit": "Единица",
     "expiry": "Срок годности",
-    "expiryDefault": "По норме продукта ({{days}} дн.)",
+    "expiryDefault": "По норме продукта ({{norm}})",
     "expiryDefaultNone": "По норме продукта (не задана)",
     "expiryDays": "Хранить N дней",
-    "expiryDate": "Годен до даты",
+    "expiryDate": "Годен до (дата и время)",
     "days": "Сколько дней",
     "date": "Годен до",
     "preview": "Испортится: {{when}} · {{source}}",
@@ -86,7 +86,17 @@
         "not_after_receipt": "Срок годности должен быть позже даты поставки.",
         "unresolvable": "Для одного из продуктов не указан срок, а нормы нет.",
         "invalid_shelf_life": "Срок хранения указан неверно."
-      }
-    }
+      },
+      "hours": "Целое число часов, от 1."
+    },
+    "offline": "Нет связи — принять поставку получится, когда она вернётся. Введённое не пропадёт.",
+    "normHours_one": "{{count}} ч",
+    "normHours_few": "{{count}} ч",
+    "normHours_many": "{{count}} ч",
+    "normHours_other": "{{count}} ч",
+    "normDays": "{{days}} дн.",
+    "expiryHours": "Хранить N часов",
+    "hours": "Сколько часов",
+    "dateHint": "Время по Москве."
   }
 }

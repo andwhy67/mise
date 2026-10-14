@@ -27,3 +27,11 @@
     }
   }
 }
+
+.muted {
+  color: var(--ink-2);
+
+  .square {
+    background: var(--muted);
+  }
+}

@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.OpenApi.Models;
 using Mise.Api.Auth;
 using Mise.Api.Endpoints;
+using Mise.Application.Push;
+using Mise.Infrastructure.Push;
 using Mise.Api.Realtime;
 using Mise.Application.Expiry;
 using Mise.Application.Forecasting;
@@ -124,6 +126,15 @@ internal static class ApiServiceCollectionExtensions
         services.AddSingleton<IRealtimeNotifier>(sp => sp.GetRequiredService<RealtimeChangeBuffer>());
         services.AddHostedService<RealtimePublisher>();
         services.AddHostedService<SimulatorStatusRelay>();
+
+        // Пуши на телефон: новые алерты из RealtimePublisher → очередь → рассылка (Web Push, VAPID из env).
+        services.AddOptions<PushOptions>()
+            .Bind(configuration.GetSection(PushOptions.SectionName))
+            .Validate(o => o.IsValid(), "Push: Subject — mailto: или https:, AllowedHosts не пуст, MaxPerDevice в [1;20].")
+            .ValidateOnStart();
+        services.AddHttpClient<IPushSender, WebPushSender>(client => client.Timeout = TimeSpan.FromSeconds(10));
+        services.AddSingleton<PushQueue>();
+        services.AddHostedService<PushWorker>();
     }
 
     public static WebApplication UseApiPipeline(this WebApplication app)
@@ -169,6 +180,7 @@ internal static class ApiServiceCollectionExtensions
         v1.MapOrderEndpoints();
         v1.MapMenuEndpoints();
         v1.MapAlertEndpoints();
+        v1.MapPushEndpoints();
         v1.MapHotOfferEndpoints();
         v1.MapForecastEndpoints();
         v1.MapAnalyticsEndpoints();

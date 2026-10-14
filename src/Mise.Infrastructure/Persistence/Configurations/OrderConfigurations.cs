@@ -75,3 +75,20 @@ internal sealed class StockMovementOrderConfiguration : IEntityTypeConfiguration
         builder.HasOne<Order>().WithMany().HasForeignKey(m => m.OrderId).OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+internal sealed class OrderShortageConfiguration : IEntityTypeConfiguration<OrderShortage>
+{
+    public void Configure(EntityTypeBuilder<OrderShortage> builder)
+    {
+        builder.ToTable("order_shortages");
+        builder.HasKey(s => s.Id);
+        builder.Property(s => s.Id).ValueGeneratedNever();
+        builder.Property(s => s.Required).HasPrecision(14, 3);
+        builder.Property(s => s.Available).HasPrecision(14, 3);
+        builder.Property(s => s.Shortage).HasPrecision(14, 3);
+        // Отчёт берёт отказы за период по продукту.
+        builder.HasIndex(s => new { s.ProductId, s.CreatedAt });
+        builder.HasIndex(s => s.CreatedAt);
+        builder.HasOne<Product>().WithMany().HasForeignKey(s => s.ProductId).OnDelete(DeleteBehavior.Cascade);
+    }
+}

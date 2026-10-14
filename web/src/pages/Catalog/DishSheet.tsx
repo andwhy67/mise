@@ -4,11 +4,12 @@ import { useTranslation } from 'react-i18next'
 import { ApiError } from '@/api/errors'
 import { useDeleteDish, useSaveDish } from '@/api/mutations'
 import { useDishes, useProducts } from '@/api/queries'
-import type { Dish, Product } from '@/api/types'
+import type { Dish } from '@/api/types'
 import { Button } from '@/components/Button'
 import { Field } from '@/components/Field'
-import { Select, type SelectGroup } from '@/components/Select'
+import { Combobox, type ComboboxOption } from '@/components/Combobox'
 import { Sheet } from '@/components/Sheet'
+import { productOptions } from '@/lib/productOptions'
 import { toast } from '@/lib/toast'
 import { useErrorText } from '@/lib/useErrorText'
 import { dishFormToRequest, emptyDishForm, validateDish, type DishForm, type IngredientRow } from './catalogForm'
@@ -54,13 +55,7 @@ function DishFormBody({ dish, onDone }: { dish: Dish | null; onDone: () => void 
   const [serverError, setServerError] = useState<string | null>(null)
   const categories = [...new Set(dishes.map((d) => d.category).filter(Boolean))] as string[]
 
-  const groups = useMemo<SelectGroup[]>(() => {
-    const by = new Map<string, Product[]>()
-    for (const p of products) by.set(p.category ?? t('noCategory'), [...(by.get(p.category ?? t('noCategory')) ?? []), p])
-    return [...by.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([label, items]) => ({ label, options: items.sort((a, b) => a.name.localeCompare(b.name)).map((p) => ({ value: p.id, label: p.name })) }))
-  }, [products, t])
+  const groups = useMemo<ComboboxOption[]>(() => productOptions(products, t('noCategory'), (unit) => t(`units.big.${unit}`)), [products, t])
 
   const set = (patch: Partial<DishForm>) => setForm((current) => ({ ...current, ...patch }))
   const setRow = (key: string, patch: Partial<IngredientRow>) =>
@@ -118,14 +113,14 @@ function DishFormBody({ dish, onDone }: { dish: Dish | null; onDone: () => void 
             const product = products.find((p) => p.id === row.productId)
             return (
               <li key={row.key} className={styles.ingredient}>
-                <Select
+                <Combobox
                   label={t('dishes.product')}
                   hideLabel={index > 0}
                   placeholder={t('dishes.productPlaceholder')}
-                  groups={groups}
+                  options={groups}
                   value={row.productId}
                   error={err(`${row.key}.product`)}
-                  onChange={(e) => setRow(row.key, { productId: e.target.value })}
+                  onChange={(productId) => setRow(row.key, { productId })}
                 />
                 <Field
                   label={t('dishes.perPortion')}

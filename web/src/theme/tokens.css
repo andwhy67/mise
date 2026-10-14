@@ -86,7 +86,7 @@
   --fresh-bar: #4fb585;
   --warn-text: #e9b656;
   --warn-bar: #e0a23a;
-  --crit-text: #f2867d;
+  --crit-text: #f4968e; /* ≥ 4,5:1 и на подсветке активного пункта (--brand-tint), не только на панели */
   --crit-bar: #e0665c;
   --expired-text: #e7a39c;
   --expired-bar: #b8584f;

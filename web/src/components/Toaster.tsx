@@ -13,6 +13,18 @@ export function Toaster() {
         <div key={item.id} className={styles.toast}>
           <span className={`${styles.square} ${styles[item.tone]}`} aria-hidden="true" />
           <p className={styles.text}>{item.text}</p>
+          {item.action && (
+            <button
+              type="button"
+              className={styles.action}
+              onClick={() => {
+                item.action!.onClick()
+                toast.dismiss(item.id)
+              }}
+            >
+              {item.action.label}
+            </button>
+          )}
           <button type="button" className={styles.close} aria-label={t('actions.close')} onClick={() => toast.dismiss(item.id)}>
             <X aria-hidden="true" strokeWidth={1.8} />
           </button>

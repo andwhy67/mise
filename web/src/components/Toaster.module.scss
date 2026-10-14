@@ -47,6 +47,22 @@
   color: var(--ink);
 }
 
+.action {
+  flex: none;
+  min-height: 32px;
+  margin: -6px 0;
+  padding: 0 var(--space-2);
+  border: 0;
+  background: none;
+  color: var(--brand-strong);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
 .close {
   flex: none;
   display: inline-flex;

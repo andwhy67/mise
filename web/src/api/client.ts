@@ -13,13 +13,14 @@ const baseUrl = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
 
 /**
  * Запрос к API: JSON, Bearer-токен из памяти. На 401 один раз обновляет сессию по refresh-cookie
- * и повторяет запрос; если обновить не удалось — сессия завершается (экран входа).
+ * и повторяет запрос; если сервер отказал в обновлении — сессия завершается (экран входа), если не ответил — нет.
  */
 export async function apiFetch<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
   const response = await send(path, options)
   if (response.status === 401 && !options.anonymous && session.isSignedIn()) {
     if (await session.refresh()) return parse<T>(await send(path, options))
-    session.clear('expired')
+    // Сеть пропала посреди обновления — это не конец сессии: не выбрасываем на экран входа.
+    if (!session.offline()) session.clear('expired')
   }
   return parse<T>(response)
 }

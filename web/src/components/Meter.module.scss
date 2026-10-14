@@ -1,0 +1,53 @@
+.meter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: 13px;
+}
+
+.label {
+  color: var(--ink-2);
+}
+
+.value {
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+// Шкала: трек hairline, заливка цветом статуса, без скругления (DESIGN.md §5).
+.track {
+  height: 4px;
+  background: var(--hairline);
+}
+
+.fill {
+  height: 100%;
+  transition: width var(--dur-base) var(--ease-out);
+}
+
+@each $tone in fresh, warn, crit, expired, info {
+  .#{$tone} {
+    color: var(--#{$tone}-text);
+  }
+
+  .bar-#{$tone} {
+    background: var(--#{$tone}-bar);
+  }
+}
+
+.muted {
+  color: var(--ink-2);
+}
+
+.bar-muted {
+  background: var(--muted);
+}

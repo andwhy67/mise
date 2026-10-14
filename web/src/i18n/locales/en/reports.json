@@ -35,16 +35,6 @@
     "tooltip": "{{percent}} % — {{qty}}",
     "empty": "Nothing was written off in this period"
   },
-  "stop": {
-    "title": "Why dishes go into the stop list",
-    "subtitle": "How many hours dishes were unavailable because a product ran out.",
-    "hours": "Hours in stop",
-    "events": "Times",
-    "dishes": "Dishes",
-    "tooltip_one": "{{hours}} h · {{count}} time, dishes: {{dishes}}",
-    "tooltip_other": "{{hours}} h · {{count}} times, dishes: {{dishes}}",
-    "empty": "No dish went into the stop list"
-  },
   "writeoffs": {
     "title": "Write-offs by day",
     "subtitle": "How many times products were written off: spoiled or by hand (damage, stock-take).",
@@ -57,5 +47,15 @@
     "subtitle": "How much went into orders — by hour or by day.",
     "qty": "Used",
     "empty": "No orders in this period"
+  },
+  "deficit": {
+    "title": "What runs out most often",
+    "subtitle": "How many orders were refused because of the product and how many times it put dishes on the stop list.",
+    "empty": "There was enough of everything in this period",
+    "refusals": "Orders refused",
+    "shortage": "Short by",
+    "stops": "Put dishes on stop",
+    "hours": "Dish-hours on stop",
+    "belowMin": "Time below minimum"
   }
 }

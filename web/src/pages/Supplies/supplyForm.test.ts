@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Product } from '@/api/types'
-import { emptyRow, fromMoscowInput, previewExpiry, toMoscowInput, toRequest, validateSupply, type SupplyFormState } from './supplyForm'
+import { emptyRow, fromMoscowInput, previewExpiry, rowFromSuggestion, toMoscowInput, toRequest, validateSupply, type SupplyFormState } from './supplyForm'
 
 const spinach: Product = {
   id: 'spinach',
@@ -37,7 +37,7 @@ describe('предпросмотр срока — тот же приоритет
   })
 
   it('«хранить N дней» — от даты поставки', () => {
-    const row = { ...emptyRow('r'), productId: 'spinach', quantity: '2', expiry: 'days' as const, days: '2' }
+    const row = { ...emptyRow('r'), productId: 'spinach', quantity: '2', expiry: 'days' as const, amount: '2' }
     expect(previewExpiry(row, spinach, created)).toEqual({ expiresAt: new Date('2026-10-16T07:00:00Z'), source: 'shelfLife' })
   })
 
@@ -46,6 +46,16 @@ describe('предпросмотр срока — тот же приоритет
       expiresAt: new Date('2026-10-17T07:00:00Z'),
       source: 'default',
     })
+  })
+
+  it('«хранить N часов» — для продуктов короче суток', () => {
+    const row = { ...emptyRow('r'), productId: 'spinach', quantity: '2', expiry: 'hours' as const, amount: '6' }
+    expect(previewExpiry(row, spinach, created)).toEqual({ expiresAt: new Date('2026-10-14T13:00:00Z'), source: 'shelfLife' })
+  })
+
+  it('«годен до» с временем — ровно этот момент по Москве', () => {
+    const row = { ...emptyRow('r'), productId: 'spinach', quantity: '2', expiry: 'date' as const, date: '2026-10-14T18:30' }
+    expect(previewExpiry(row, spinach, created)).toEqual({ expiresAt: new Date('2026-10-14T15:30:00Z'), source: 'explicit' })
   })
 
   it('нормы нет и срок не указан — сказать нечего', () => {
@@ -65,8 +75,10 @@ describe('проверка формы', () => {
         { ...emptyRow('b'), productId: 'spinach', quantity: '0', unit: 'Gram' },
         { ...emptyRow('c'), productId: 'salt', quantity: '1', unit: 'Gram' },
         { ...emptyRow('d'), productId: 'spinach', quantity: '1', unit: 'Gram', expiry: 'date', date: '2026-10-13' },
-        { ...emptyRow('e'), productId: 'spinach', quantity: '1', unit: 'Gram', expiry: 'days', days: '0' },
+        { ...emptyRow('e'), productId: 'spinach', quantity: '1', unit: 'Gram', expiry: 'days', amount: '0' },
         { ...emptyRow('f'), productId: 'spinach', quantity: '1', unit: 'Liter' },
+        { ...emptyRow('g'), productId: 'spinach', quantity: '1', unit: 'Gram', expiry: 'hours', amount: '0,5' },
+        { ...emptyRow('h'), productId: 'spinach', quantity: '1', unit: 'Gram', expiry: 'date', date: '2026-10-14T09:30' },
       ]),
       products,
     )
@@ -75,8 +87,10 @@ describe('проверка формы', () => {
       'b.quantity': 'quantity',
       'c.expiry': 'noShelfLife',
       'd.date': 'dateBeforeDelivery',
-      'e.days': 'days',
+      'e.amount': 'days',
       'f.unit': 'unit',
+      'g.amount': 'hours',
+      'h.date': 'dateBeforeDelivery',
     })
   })
 
@@ -94,8 +108,10 @@ describe('запрос к API', () => {
     const request = toRequest(
       form([
         { ...emptyRow('a'), productId: 'spinach', quantity: '2,5', unit: 'Kilogram' },
-        { ...emptyRow('b'), productId: 'spinach', quantity: '300', unit: 'Gram', expiry: 'days', days: '1,5' },
+        { ...emptyRow('b'), productId: 'spinach', quantity: '300', unit: 'Gram', expiry: 'days', amount: '1,5' },
         { ...emptyRow('c'), productId: 'spinach', quantity: '1', unit: 'Kilogram', expiry: 'date', date: '2026-10-17' },
+        { ...emptyRow('d'), productId: 'spinach', quantity: '1', unit: 'Kilogram', expiry: 'hours', amount: '8' },
+        { ...emptyRow('e'), productId: 'spinach', quantity: '1', unit: 'Kilogram', expiry: 'date', date: '2026-10-14T21:15' },
       ]),
     )
     expect(request).toEqual({
@@ -106,7 +122,26 @@ describe('запрос к API', () => {
         { productId: 'spinach', quantity: 2.5, unit: 'Kilogram' },
         { productId: 'spinach', quantity: 300, unit: 'Gram', shelfLifeHours: 36 },
         { productId: 'spinach', quantity: 1, unit: 'Kilogram', expiresAt: '2026-10-17T20:59:00.000Z' },
+        { productId: 'spinach', quantity: 1, unit: 'Kilogram', shelfLifeHours: 8 },
+        { productId: 'spinach', quantity: 1, unit: 'Kilogram', expiresAt: '2026-10-14T18:15:00.000Z' },
       ],
     })
+  })
+})
+
+describe('подсказка «что заказать» → строка поставки: единицы не путаются', () => {
+  const lemons: Product = { ...spinach, id: 'lemons', name: 'Лимоны', unit: 'Piece' }
+
+  it('штучный продукт остаётся в штуках', () => {
+    expect(rowFromSuggestion('r', lemons, 80)).toMatchObject({ productId: 'lemons', unit: 'Piece', quantity: '80' })
+  })
+
+  it('граммы — в килограммах', () => {
+    expect(rowFromSuggestion('r', spinach, 30000)).toMatchObject({ unit: 'Kilogram', quantity: '30' })
+    expect(rowFromSuggestion('r', spinach, 1500)).toMatchObject({ unit: 'Kilogram', quantity: '1,5' })
+  })
+
+  it('продукта нет в справочнике — строки нет (единицу не угадываем)', () => {
+    expect(rowFromSuggestion('r', undefined, 80)).toBeNull()
   })
 })

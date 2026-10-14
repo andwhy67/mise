@@ -176,7 +176,7 @@ export interface StopListHistoryItem {
   durationMinutes: number | null
 }
 
-export type OrderStatus = 'Created' | 'Cooking' | 'Done' | 'Cancelled'
+export type OrderStatus = 'Created' | 'Cooking' | 'Done' | 'Served' | 'Cancelled'
 
 export interface OrderListItem {
   id: string
@@ -300,4 +300,33 @@ export interface User {
   isActive: boolean
   createdAt: string
   lastLoginAt: string | null
+}
+
+export type MenuGroup = 'Saves' | 'Overstock' | 'Regular'
+
+export interface StockCover {
+  productId: string
+  productName: string
+  unit: MeasureUnit
+  usableQty: number
+  dailyConsumption: number
+  coverDays: number
+}
+
+export interface HotMenuItem {
+  rank: number
+  dishId: string
+  dishName: string
+  category: string | null
+  price: number
+  maxPortions: number
+  group: MenuGroup
+  offer: HotOffer | null
+  cover: StockCover | null
+}
+
+export interface HotMenu {
+  generatedAt: string
+  scorer: string
+  items: HotMenuItem[]
 }

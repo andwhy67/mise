@@ -7,7 +7,7 @@ import { HotOfferRow } from '@/components/HotOfferRow'
 import { LiveIndicator } from '@/components/LiveIndicator'
 import { MiseWordmark } from '@/components/MiseWordmark'
 import { Panel } from '@/components/Panel'
-import { ShelfLifeBar } from '@/components/ShelfLifeBar'
+import { Meter } from '@/components/Meter'
 import { EmptyState, ErrorState, LoadingState } from '@/components/StateBlocks'
 import { StatusMark } from '@/components/StatusMark'
 import { StopListRow } from '@/components/StopListRow'
@@ -131,8 +131,13 @@ export function UiPage() {
             <StatusMark tone="warn">{f.when(inHours(20), 'Warning').text}</StatusMark>
             <StatusMark tone="crit">{f.when(inHours(3), 'Critical').text}</StatusMark>
             <StatusMark tone="expired">{f.when(inHours(-1), 'Expired').text}</StatusMark>
-            <ShelfLifeBar remainingFraction={0.18} when={f.when(inHours(5), 'Critical')} />
-            <ShelfLifeBar remainingFraction={0.72} when={f.when(inHours(120), 'Fresh')} />
+            <Meter label={t('stock:details.expiry')} value={f.when(inHours(5), 'Critical').text} fraction={0.18} tone="crit" />
+            <Meter
+              label={t('stock:details.remaining')}
+              value={t('stock:details.left', { left: f.qty(420, 'Gram'), of: f.qty(600, 'Gram') })}
+              fraction={0.7}
+              tone="info"
+            />
           </div>
         </Panel>
         <Panel title={t('sections.live')}>

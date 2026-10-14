@@ -120,6 +120,21 @@ describe('сессия и 401', () => {
     expect(session.snapshot()).toMatchObject({ status: 'signedOut', reason: 'expired' })
   })
 
+  it('обрыв сети при обновлении — не выход: сессия остаётся (офлайн-режим)', async () => {
+    const fn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(login('old'))
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+    vi.stubGlobal('fetch', fn)
+    await session.login('chef', 'pass-1234')
+
+    await expect(apiFetch('/api/v1/stock')).rejects.toBeInstanceOf(ApiError)
+
+    expect(session.snapshot()).toMatchObject({ status: 'signedIn' })
+    expect(session.offline()).toBe(true)
+  })
+
   it('ошибка входа приходит как ApiError с кодом', async () => {
     vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockResolvedValue(
       new Response(JSON.stringify({ status: 401, code: 'auth.invalid_credentials', detail: 'x' }), {

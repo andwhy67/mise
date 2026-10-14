@@ -8,6 +8,7 @@ import type {
   Batch,
   Dish,
   DishAvailability,
+  HotMenu,
   HotOffers,
   Kpi,
   Order,
@@ -143,3 +144,7 @@ export const useDishes = () =>
   useQuery({ queryKey: ['dishes'], queryFn: ({ signal }) => api.get<Dish[]>('/api/v1/dishes', { signal }) })
 
 export const useUsers = () => useQuery({ queryKey: ['users'], queryFn: ({ signal }) => api.get<User[]>('/api/v1/users', { signal }) })
+
+/** Всё доступное меню по порядку «что предлагать»; ключ под hot-offers — обновляется вместе с ними. */
+export const useHotMenu = () =>
+  useQuery({ queryKey: [...queryKeys.hotOffers, 'menu'], queryFn: ({ signal }) => api.get<HotMenu>('/api/v1/hot-offers/menu', { signal }) })

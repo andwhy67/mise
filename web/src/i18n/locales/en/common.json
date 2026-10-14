@@ -116,10 +116,48 @@
     "user": {
       "duplicate_login": "This login already exists.",
       "last_manager": "You can't deactivate or demote the last manager — appoint another one first."
+    },
+    "push": {
+      "disabled": "Notifications are not configured on the server.",
+      "endpoint_not_allowed": "This browser sent an unsupported notification address."
     }
   },
   "stepper": {
     "less": "{{name}}: one portion less",
     "more": "{{name}}: one portion more"
+  },
+  "pwa": {
+    "title": "App",
+    "subtitle": "Install on the phone and notifications. Settings apply to this device.",
+    "updateReady": "A new version of Mise is available.",
+    "update": "Update",
+    "offlineTitle": "No connection —",
+    "offlineText": "showing saved data. Orders, deliveries and write-offs can't be sent until the connection is back.",
+    "refreshing": "Refreshing…",
+    "releaseToRefresh": "Release to refresh",
+    "install": "Install on the home screen",
+    "installText": "Mise opens like an app: no address bar, with an icon and notifications.",
+    "installAction": "Install",
+    "installDone": "Mise is installed on this device",
+    "installIos": "In Safari tap “Share” → “Add to Home Screen”. On iPhone notifications work only for the installed app.",
+    "installed": "Installed as an app",
+    "installedText": "Mise runs from the home screen. Updates arrive on their own.",
+    "pushTitle": "Phone notifications",
+    "pushText": "Spoiled products, dishes in the stop list, low stock — only what needs action in your role.",
+    "pushTest": "Send a test one",
+    "pushTestSent": "Test notification sent",
+    "push": {
+      "unsupported": "This browser can't receive site notifications (or this is a development build).",
+      "needsInstall": "On iPhone notifications work only for the app on the home screen: “Share” → “Add to Home Screen”.",
+      "serverOff": "Notifications are not configured on the server.",
+      "denied": "Notifications are blocked in the browser settings — allow them for this site and come back."
+    },
+    "keepAwake": "Keep the screen on",
+    "keepAwakeText": "For a kitchen tablet: while Mise is open, the screen doesn't sleep.",
+    "pushTestFailed": "Couldn't deliver. Turn notifications off and on again.",
+    "settingsShort": "App"
+  },
+  "combobox": {
+    "nothing": "Nothing found"
   }
 }

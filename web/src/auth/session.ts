@@ -26,6 +26,26 @@ interface State {
 }
 
 const AUTH = '/api/v1/auth'
+/** Кто входил на этом устройстве — только имя и роль, без токенов: чтобы без сети не выбрасывать на экран входа. */
+const LAST_USER_KEY = 'mise.lastUser'
+
+function rememberUser(user: SessionUser | null) {
+  try {
+    if (user) localStorage.setItem(LAST_USER_KEY, JSON.stringify(user))
+    else localStorage.removeItem(LAST_USER_KEY)
+  } catch {
+    // Приватный режим — без сети просто откроется экран входа.
+  }
+}
+
+function rememberedUser(): SessionUser | null {
+  try {
+    const raw = localStorage.getItem(LAST_USER_KEY)
+    return raw ? (JSON.parse(raw) as SessionUser) : null
+  } catch {
+    return null
+  }
+}
 const baseUrl = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
 
 /**
@@ -37,6 +57,9 @@ function createSession() {
   let tokenExpiresAt = 0
   let state: State = { status: 'unknown', user: null, reason: null }
   let refreshing: Promise<boolean> | null = null
+  /** Последнее обновление не дошло до сервера (нет сети) — это не выход из системы. */
+  let refreshFailedOffline = false
+  const logoutTasks = new Set<() => Promise<void>>()
   const listeners = new Set<() => void>()
 
   const set = (next: State) => {
@@ -47,6 +70,7 @@ function createSession() {
   const accept = (response: LoginResponse) => {
     token = response.accessToken
     tokenExpiresAt = Date.parse(response.expiresAt)
+    rememberUser(response.user)
     set({ status: 'signedIn', user: response.user, reason: null })
   }
 
@@ -90,10 +114,12 @@ function createSession() {
       refreshing ??= (async () => {
         try {
           const response = await post('/refresh')
+          refreshFailedOffline = false
           if (!response.ok) return false
           accept((await response.json()) as LoginResponse)
           return true
         } catch {
+          refreshFailedOffline = true
           return false
         }
       })().finally(() => {
@@ -105,10 +131,30 @@ function createSession() {
     /** Старт приложения: есть ли живая сессия в cookie. */
     async restore(): Promise<void> {
       if (state.status !== 'unknown') return
-      if (!(await this.refresh())) set({ status: 'signedOut', user: null, reason: null })
+      if (await this.refresh()) return
+      // Без сети, но на устройстве уже работали: открываем приложение с сохранёнными данными (баннер «Нет связи»).
+      // Токена нет — сервер ничего не отдаст, пока сессия не обновится; при появлении сети это произойдёт само.
+      const remembered = refreshFailedOffline ? rememberedUser() : null
+      if (remembered) {
+        set({ status: 'signedIn', user: remembered, reason: null })
+        window.addEventListener('online', () => void this.refresh(), { once: true })
+        return
+      }
+      set({ status: 'signedOut', user: null, reason: null })
+    },
+
+    /** Обновление сессии не удалось из-за сети, а не из-за отказа сервера. */
+    offline: () => refreshFailedOffline,
+
+    /** Действия перед выходом, пока токен ещё жив (например, отписать устройство от пушей). */
+    beforeLogout(task: () => Promise<void>) {
+      logoutTasks.add(task)
+      return () => logoutTasks.delete(task)
     },
 
     async logout(): Promise<void> {
+      // Ошибка задачи не мешает выйти: выход важнее.
+      await Promise.allSettled([...logoutTasks].map((task) => task()))
       try {
         await post('/logout')
       } finally {
@@ -119,6 +165,9 @@ function createSession() {
     clear(reason: SignOutReason) {
       token = null
       tokenExpiresAt = 0
+      // Ответы API, сохранённые service worker'ом для оффлайна, — данные прежнего пользователя: стираем.
+      navigator.serviceWorker?.controller?.postMessage({ type: 'CLEAR_API_CACHE' })
+      rememberUser(null)
       set({ status: 'signedOut', user: null, reason })
     },
   }

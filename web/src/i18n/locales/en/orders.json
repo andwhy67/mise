@@ -17,7 +17,9 @@
     "manual": "Taken off the menu",
     "stop": "Stop",
     "add": "Add",
-    "addLabel": "Add “{{dish}}” to the order"
+    "addLabel": "Add “{{dish}}” to the order",
+    "composition": "What's in it",
+    "hideComposition": "Hide recipe"
   },
   "cart": {
     "title": "Order",
@@ -34,24 +36,32 @@
     "notEnough": "Not enough for the whole order",
     "refused": "Order not taken: products are missing",
     "missingLine": "{{product}}: need {{need}}, have {{have}} (for: {{dishes}})",
-    "missingHint": "Reduce portions or remove a dish. Nothing was taken from stock."
+    "missingHint": "Reduce portions or remove a dish. Nothing was taken from stock.",
+    "offline": "No connection — the order can be sent once it is back. The cart stays."
   },
   "recent": {
-    "title": "Recent orders",
-    "subtitle": "Newest first. Tap an order to see what was taken from stock.",
+    "title": "Orders in progress",
+    "subtitle": "From taking to serving. Tap an order to see its contents and what was taken from stock.",
     "empty": "No orders yet",
     "emptyHint": "The first order appears here as soon as it is sent.",
-    "more": "Show more"
+    "more": "Show more",
+    "view": "Show",
+    "active": "In progress",
+    "all": "All",
+    "emptyActive": "No orders in progress",
+    "reserved": "Products are already set aside for the order — cancelling before cooking returns them to stock."
   },
   "status": {
     "Created": "Taken",
     "Cooking": "Cooking",
-    "Done": "Ready",
-    "Cancelled": "Cancelled"
+    "Done": "Ready — serve",
+    "Cancelled": "Cancelled",
+    "Served": "Served"
   },
   "next": {
     "Cooking": "Start cooking",
-    "Done": "Ready"
+    "Done": "Ready",
+    "Served": "Serve"
   },
   "details": {
     "items": "Contents",
@@ -69,5 +79,17 @@
     "confirm": "Cancel the order",
     "done": "Order cancelled, products are back in stock",
     "doneLost": "Order cancelled. Some products had already spoiled and were not returned."
+  },
+  "composition": {
+    "product": "Product",
+    "perPortion": "Per portion",
+    "inStock": "In stock",
+    "enough": "Enough for",
+    "portions_one": "{{count}} portion",
+    "portions_other": "{{count}} portions"
+  },
+  "usage": {
+    "title": "Are there enough products",
+    "value": "order takes {{need}} of {{have}}"
   }
 }

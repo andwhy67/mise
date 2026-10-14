@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Mise.Domain.Alerts;
 using Mise.Domain.Audit;
+using Mise.Domain.Push;
 using Mise.Domain.Users;
 using Mise.Domain.Catalog;
 using Mise.Domain.Menu;
@@ -32,6 +33,8 @@ public interface IMiseDbContext
     DbSet<User> Users { get; }
     DbSet<RefreshToken> RefreshTokens { get; }
     DbSet<AuditEntry> Audit { get; }
+    DbSet<PushSubscription> PushSubscriptions { get; }
+    DbSet<OrderShortage> OrderShortages { get; }
 
     ChangeTracker ChangeTracker { get; }
 

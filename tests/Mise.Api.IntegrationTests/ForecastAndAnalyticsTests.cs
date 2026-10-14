@@ -143,6 +143,29 @@ public sealed class ForecastAndAnalyticsTests(MiseApiFactory factory)
     }
 
     [Fact]
+    public async Task Deficit_report_counts_orders_refused_because_of_the_product()
+    {
+        var from = factory.Clock.UtcNow;
+        var scarce = await _client.CreateProductAsync();
+        var plenty = await _client.CreateProductAsync();
+        await _client.ReceiveAsync(scarce, 100m, shelfLifeHours: 200);
+        await _client.ReceiveAsync(plenty, 5000m, shelfLifeHours: 200);
+        var dish = await _client.CreateDishAsync((scarce, 60m), (plenty, 10m));
+
+        // 2 порции × 60 г при остатке 100 г — отказ 422 дважды; со склада ничего не списано.
+        await (await _client.PostOrderAsync(null, (dish, 2))).EnsureStatusAsync(HttpStatusCode.UnprocessableEntity);
+        await (await _client.PostOrderAsync(null, (dish, 3))).EnsureStatusAsync(HttpStatusCode.UnprocessableEntity);
+        Assert.Equal(100m, await _client.UsableAsync(scarce));
+
+        var report = await GetAsync("/api/v1/analytics/deficit", from, factory.Clock.UtcNow.AddMinutes(1));
+        var items = report.GetProperty("items").EnumerateArray().ToList();
+        var item = items.Single(i => i.GetProperty("productId").GetGuid() == scarce);
+        Assert.Equal(2, item.GetProperty("refusals").GetInt32());
+        Assert.Equal(100m, item.GetProperty("shortageQty").GetDecimal()); // (120 − 100) + (180 − 100)
+        Assert.DoesNotContain(items, i => i.GetProperty("productId").GetGuid() == plenty);
+    }
+
+    [Fact]
     public async Task Consumption_report_and_kpi()
     {
         var from = factory.Clock.UtcNow;

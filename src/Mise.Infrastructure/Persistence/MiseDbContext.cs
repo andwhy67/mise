@@ -3,6 +3,7 @@ using Mise.Application.Abstractions;
 using Mise.Application.Common;
 using Mise.Domain.Alerts;
 using Mise.Domain.Audit;
+using Mise.Domain.Push;
 using Mise.Domain.Users;
 using Mise.Domain.Catalog;
 using Mise.Domain.Menu;
@@ -31,6 +32,8 @@ public sealed class MiseDbContext(DbContextOptions<MiseDbContext> options) : DbC
     public DbSet<User> Users => Set<User>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<AuditEntry> Audit => Set<AuditEntry>();
+    public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();
+    public DbSet<OrderShortage> OrderShortages => Set<OrderShortage>();
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {

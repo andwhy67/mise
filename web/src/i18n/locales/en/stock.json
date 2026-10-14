@@ -26,11 +26,13 @@
   "details": {
     "order": "Deliveries in the order they will be used.",
     "supply": "Delivery of {{date}}",
-    "left": "{{left}} of {{of}} left",
+    "left": "{{left}} of {{of}}",
     "first": "used first",
     "queue": "number {{rank}} in line",
     "notUsable": "won't be used",
-    "empty": "Nothing left from deliveries."
+    "empty": "Nothing left from deliveries.",
+    "remaining": "Left",
+    "expiry": "Expiry"
   },
   "writeOff": {
     "action": "Write off",
@@ -55,6 +57,7 @@
       "quantity": "Enter a quantity above zero.",
       "tooMuch": "Not that much: {{left}} left.",
       "reason": "Describe the reason — it goes into the log."
-    }
+    },
+    "offline": "No connection — can't write off now"
   }
 }

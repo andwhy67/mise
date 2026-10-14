@@ -1,11 +1,13 @@
 import { ChevronDown, Plus } from 'lucide-react'
 import { useId, useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { useSupplies, useSupply, useSupplySuggestions } from '@/api/queries'
 import type { SupplyListItem, SupplySuggestion } from '@/api/types'
 import { Button } from '@/components/Button'
 import { Page } from '@/components/Page'
 import { Panel } from '@/components/Panel'
+import { ScrollArea } from '@/components/ScrollArea'
 import { EmptyState, ErrorState, LoadingState } from '@/components/StateBlocks'
 import { StatusMark } from '@/components/StatusMark'
 import { supplyLine } from '@/lib/texts'
@@ -20,8 +22,14 @@ const URGENCY_TONE = { Critical: 'crit', High: 'warn', Normal: 'info' } as const
 /** Поставки (DESIGN.md §6.3): приём поставки, что заказать, история приёмок. */
 export function SuppliesPage() {
   const { t } = useTranslation('supplies')
-  const [form, setForm] = useState<{ prefill?: PrefillRow[] } | null>(null)
+  const [params, setParams] = useSearchParams()
+  // Ярлык на иконке приложения «Принять поставку» ведёт сюда с ?receive=1 — форма открыта сразу.
+  const [form, setForm] = useState<{ prefill?: PrefillRow[] } | null>(() => (params.get('receive') ? {} : null))
   const open = (prefill?: PrefillRow[]) => setForm({ prefill })
+  const close = () => {
+    setForm(null)
+    if (params.has('receive')) setParams({}, { replace: true })
+  }
 
   return (
     <Page
@@ -38,7 +46,7 @@ export function SuppliesPage() {
         <SuggestionsPanel onAdd={open} />
       </div>
       {/* key: каждое открытие — свежая форма со своим номером и временем. */}
-      <SupplyFormSheet key={form ? 'open' : 'closed'} open={form !== null} prefill={form?.prefill} onClose={() => setForm(null)} />
+      <SupplyFormSheet key={form ? 'open' : 'closed'} open={form !== null} prefill={form?.prefill} onClose={close} />
     </Page>
   )
 }
@@ -107,11 +115,13 @@ function SuppliesList() {
         <EmptyState title={t('list.empty')}>{t('list.emptyHint')}</EmptyState>
       ) : (
         <>
-          <ul className={styles.list}>
-            {items.map((supply) => (
-              <SupplyRow key={supply.id} supply={supply} />
-            ))}
-          </ul>
+          <ScrollArea label={t('list.title')}>
+            <ul className={styles.list}>
+              {items.map((supply) => (
+                <SupplyRow key={supply.id} supply={supply} />
+              ))}
+            </ul>
+          </ScrollArea>
           {query.data && query.data.total > items.length && size < MAX_PAGE && (
             <Button variant="text" className={styles.more} onClick={() => setSize(Math.min(MAX_PAGE, size + PAGE))}>
               {t('list.more')}

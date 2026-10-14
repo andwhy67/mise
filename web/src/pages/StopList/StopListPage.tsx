@@ -7,6 +7,7 @@ import { useSession } from '@/auth/session'
 import { Button } from '@/components/Button'
 import { Page } from '@/components/Page'
 import { Panel } from '@/components/Panel'
+import { ScrollArea } from '@/components/ScrollArea'
 import { Sheet } from '@/components/Sheet'
 import { EmptyState, ErrorState, LoadingState } from '@/components/StateBlocks'
 import { StatusMark } from '@/components/StatusMark'
@@ -180,26 +181,28 @@ function HistoryPanel() {
       ) : items.length === 0 ? (
         <EmptyState title={t('history.empty')} />
       ) : (
-        <ul className={styles.history}>
-          {items.map((item) => (
-            <li key={item.id} className={styles.historyRow}>
-              <span className={styles.historyDish}>{item.dishName}</span>
-              <span className={styles.historyReason}>
-                {item.reason === 'Manual' ? t('history.manual') : t('history.shortage', { product: item.limitingProductName ?? '—' })}
-              </span>
-              <span className={styles.historyWhen}>
-                {item.endedAt
-                  ? t('history.period', {
-                      from: f.moment(item.startedAt),
-                      // Тот же день — достаточно времени; иначе конец тоже с датой, чтобы «до 17:57» не путало.
-                      to: f.date(item.startedAt) === f.date(item.endedAt) ? f.time(item.endedAt) : f.moment(item.endedAt),
-                      duration: f.duration(item.durationMinutes ?? 0),
-                    })
-                  : t('history.ongoing', { from: f.moment(item.startedAt) })}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <ScrollArea label={t('history.title')}>
+          <ul className={styles.history}>
+            {items.map((item) => (
+              <li key={item.id} className={styles.historyRow}>
+                <span className={styles.historyDish}>{item.dishName}</span>
+                <span className={styles.historyReason}>
+                  {item.reason === 'Manual' ? t('history.manual') : t('history.shortage', { product: item.limitingProductName ?? '—' })}
+                </span>
+                <span className={styles.historyWhen}>
+                  {item.endedAt
+                    ? t('history.period', {
+                        from: f.moment(item.startedAt),
+                        // Тот же день — достаточно времени; иначе конец тоже с датой, чтобы «до 17:57» не путало.
+                        to: f.date(item.startedAt) === f.date(item.endedAt) ? f.time(item.endedAt) : f.moment(item.endedAt),
+                        duration: f.duration(item.durationMinutes ?? 0),
+                      })
+                    : t('history.ongoing', { from: f.moment(item.startedAt) })}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </ScrollArea>
       )}
     </Panel>
   )

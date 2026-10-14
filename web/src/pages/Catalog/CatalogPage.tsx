@@ -7,6 +7,7 @@ import type { Dish, Product } from '@/api/types'
 import { Button } from '@/components/Button'
 import { Page } from '@/components/Page'
 import { Panel } from '@/components/Panel'
+import { ScrollArea } from '@/components/ScrollArea'
 import { Segmented } from '@/components/Segmented'
 import { EmptyState, ErrorState, LoadingState } from '@/components/StateBlocks'
 import { StatusMark } from '@/components/StatusMark'
@@ -86,22 +87,24 @@ function ProductsList({ onOpen }: { onOpen: (product: Product) => void }) {
       ) : items.length === 0 ? (
         <EmptyState title={t(needle ? 'notFound' : 'products.empty')} />
       ) : (
-        <ul className={styles.list}>
-          {items.map((p) => (
-            <li key={p.id}>
-              <button type="button" className={styles.row} onClick={() => onOpen(p)}>
-                <span className={styles.name}>
-                  <span className={styles.title}>{p.name}</span>
-                  <span className={styles.meta}>{[p.category, p.storageType].filter(Boolean).join(' · ') || t('noCategory')}</span>
-                </span>
-                <span className={styles.cell}>
-                  {p.defaultShelfLifeHours ? t('products.shelfLife', { days: f.number(p.defaultShelfLifeHours / 24) }) : t('products.noShelfLife')}
-                </span>
-                <span className={styles.cell}>{t('products.minStock', { qty: f.qty(p.minStockQty, p.unit) })}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
+        <ScrollArea label={t('title')}>
+          <ul className={styles.list}>
+            {items.map((p) => (
+              <li key={p.id}>
+                <button type="button" className={styles.row} onClick={() => onOpen(p)}>
+                  <span className={styles.name}>
+                    <span className={styles.title}>{p.name}</span>
+                    <span className={styles.meta}>{[p.category, p.storageType].filter(Boolean).join(' · ') || t('noCategory')}</span>
+                  </span>
+                  <span className={styles.cell}>
+                    {p.defaultShelfLifeHours ? t('products.shelfLife', { days: f.number(p.defaultShelfLifeHours / 24) }) : t('products.noShelfLife')}
+                  </span>
+                  <span className={styles.cell}>{t('products.minStock', { qty: f.qty(p.minStockQty, p.unit) })}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </ScrollArea>
       )}
     </Panel>
   )
@@ -127,27 +130,29 @@ function DishesList({ onOpen }: { onOpen: (dish: Dish) => void }) {
       ) : items.length === 0 ? (
         <EmptyState title={t(needle ? 'notFound' : 'dishes.empty')} />
       ) : (
-        <ul className={styles.list}>
-          {items.map((d) => (
-            <li key={d.id}>
-              <button type="button" className={styles.row} onClick={() => onOpen(d)}>
-                <span className={styles.name}>
-                  <span className={styles.title}>{d.name}</span>
-                  <span className={styles.meta}>{d.category || t('noCategory')}</span>
-                </span>
-                <span className={styles.cell}>{t('dishes.ingredients', { count: d.ingredients.length })}</span>
-                <span className={styles.cell}>
-                  <span className={styles.price}>{f.money(d.price)}</span>
-                  {!d.isActive && (
-                    <StatusMark tone="crit" weight="regular">
-                      {t('dishes.offMenu')}
-                    </StatusMark>
-                  )}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
+        <ScrollArea label={t('title')}>
+          <ul className={styles.list}>
+            {items.map((d) => (
+              <li key={d.id}>
+                <button type="button" className={styles.row} onClick={() => onOpen(d)}>
+                  <span className={styles.name}>
+                    <span className={styles.title}>{d.name}</span>
+                    <span className={styles.meta}>{d.category || t('noCategory')}</span>
+                  </span>
+                  <span className={styles.cell}>{t('dishes.ingredients', { count: d.ingredients.length })}</span>
+                  <span className={styles.cell}>
+                    <span className={styles.price}>{f.money(d.price)}</span>
+                    {!d.isActive && (
+                      <StatusMark tone="crit" weight="regular">
+                        {t('dishes.offMenu')}
+                      </StatusMark>
+                    )}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </ScrollArea>
       )}
     </Panel>
   )

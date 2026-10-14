@@ -10,7 +10,8 @@ import { Button } from '@/components/Button'
 import { Page } from '@/components/Page'
 import { Panel } from '@/components/Panel'
 import { Segmented } from '@/components/Segmented'
-import { ShelfLifeBar } from '@/components/ShelfLifeBar'
+import { Meter } from '@/components/Meter'
+import { ScrollArea } from '@/components/ScrollArea'
 import { EmptyState, ErrorState, LoadingState } from '@/components/StateBlocks'
 import { StatusMark } from '@/components/StatusMark'
 import type { Formatter } from '@/lib/format'
@@ -84,11 +85,13 @@ export function StockPage() {
         ) : items.length === 0 ? (
           <EmptyState title={t(needle ? 'empty.search' : `empty.${filter}`)}>{t('empty.hint')}</EmptyState>
         ) : (
-          <ul className={styles.list} aria-label={t('title')}>
-            {items.map((item) => (
-              <StockRow key={item.productId} item={item} />
-            ))}
-          </ul>
+          <ScrollArea label={t('title')}>
+            <ul className={styles.list} aria-label={t('title')}>
+              {items.map((item) => (
+                <StockRow key={item.productId} item={item} />
+              ))}
+            </ul>
+          </ScrollArea>
         )}
       </Panel>
     </Page>
@@ -157,15 +160,15 @@ function ProductDetails({ item }: { item: StockItem }) {
               <span className={styles.batchTitle}>{t('details.supply', { date: f.date(batch.receivedAt) })}</span>
               <span className={styles.batchMeta}>{batch.supplyNumber}</span>
             </div>
-            <p className={styles.batchQty}>
-              {t('details.left', { left: f.qty(batch.remainingQty, batch.unit), of: f.qty(batch.initialQty, batch.unit) })}
-              {' · '}
-              {queueText(batch, f, t)}
-            </p>
-            <ShelfLifeBar
-              remainingFraction={batch.isUsable ? batch.shelfLife.remainingFraction : 0}
-              when={f.when(batch.expiresAt, batch.isUsable ? batch.shelfLife.status : 'Expired')}
+            <p className={styles.batchQty}>{queueText(batch, f, t)}</p>
+            {/* Две подписанные шкалы: сколько осталось от поставки и сколько осталось от срока. Цифры — рядом. */}
+            <Meter
+              label={t('details.remaining')}
+              value={t('details.left', { left: f.qty(batch.remainingQty, batch.unit), of: f.qty(batch.initialQty, batch.unit) })}
+              fraction={batch.initialQty > 0 ? batch.remainingQty / batch.initialQty : 0}
+              tone="info"
             />
+            <ExpiryMeter batch={batch} />
             {canWriteOff && (
               <Button variant="text" className={styles.batchAction} onClick={() => setWriteOff(batch)}>
                 {t('writeOff.action')}
@@ -177,6 +180,14 @@ function ProductDetails({ item }: { item: StockItem }) {
       <WriteOffSheet batch={writeOff} onClose={() => setWriteOff(null)} />
     </>
   )
+}
+
+/** Шкала срока: сколько осталось от полного срока годности; подпись — словами («Завтра в 03:30»). */
+function ExpiryMeter({ batch }: { batch: Batch }) {
+  const { t } = useTranslation('stock')
+  const f = useFormat()
+  const when = f.when(batch.expiresAt, batch.isUsable ? batch.shelfLife.status : 'Expired')
+  return <Meter label={t('details.expiry')} value={when.text} fraction={batch.isUsable ? batch.shelfLife.remainingFraction : 0} tone={when.tone} />
 }
 
 function queueText(batch: Batch, f: Formatter, t: TFunction<'stock'>) {

@@ -9,9 +9,11 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Mise.Application.Auth;
 using Mise.Application.Expiry;
+using Mise.Application.Push;
 using Mise.Domain.Abstractions;
 using Mise.Domain.Users;
 using Mise.Infrastructure.Persistence;
+using Mise.Infrastructure.Push;
 using Mise.Infrastructure.Seed;
 using Mise.Infrastructure.Time;
 using Testcontainers.PostgreSql;
@@ -47,6 +49,9 @@ public sealed class MiseApiFactory : WebApplicationFactory<Program>, IAsyncLifet
     private UserRole? _nextClientRole = UserRole.Manager;
 
     public FakeClock Clock { get; } = new(StartTime);
+
+    /// <summary>Пуши в тестах не уходят в сеть: подставной отправитель их записывает.</summary>
+    public PushRecorder Push { get; } = new(WebPushCrypto.GenerateVapidKeys());
 
     public string PostgresConnectionString => _postgres.GetConnectionString();
 
@@ -122,7 +127,12 @@ public sealed class MiseApiFactory : WebApplicationFactory<Program>, IAsyncLifet
         builder.UseSetting("ForwardedHeaders:TrustAllProxies", "true");
         // Все клиенты тестов — один Manager: общий лимит на пользователя поднят; лимит входа (по IP) остаётся боевым.
         builder.UseSetting("RateLimiting:GlobalPerMinute", "1000000");
-        builder.ConfigureTestServices(services => services.Replace(ServiceDescriptor.Singleton<IClock>(Clock)));
+        builder.UseSetting("Push:PrivateKey", Push.Keys.PrivateKey);
+        builder.ConfigureTestServices(services =>
+        {
+            services.Replace(ServiceDescriptor.Singleton<IClock>(Clock));
+            services.Replace(ServiceDescriptor.Singleton<IPushSender>(Push));
+        });
     }
 
     async Task IAsyncLifetime.DisposeAsync()
@@ -136,4 +146,22 @@ public sealed class MiseApiFactory : WebApplicationFactory<Program>, IAsyncLifet
 public sealed class ApiCollection : ICollectionFixture<MiseApiFactory>
 {
     public const string Name = "api";
+}
+
+/// <summary>Отправитель пушей для тестов: запоминает, кому и что ушло; адреса с «gone» — «подписки больше нет».</summary>
+public sealed class PushRecorder(VapidKeys keys) : IPushSender
+{
+    public VapidKeys Keys { get; } = keys;
+    public ConcurrentQueue<(string Endpoint, PushMessage Message)> Sent { get; } = new();
+
+    public bool IsConfigured => true;
+    public string? PublicKey => Keys.PublicKey;
+
+    public Task<PushSendResult> SendAsync(PushEndpoint target, PushMessage message, CancellationToken ct)
+    {
+        if (target.Endpoint.Contains("gone", StringComparison.Ordinal))
+            return Task.FromResult(PushSendResult.Gone);
+        Sent.Enqueue((target.Endpoint, message));
+        return Task.FromResult(PushSendResult.Sent);
+    }
 }

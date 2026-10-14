@@ -78,23 +78,37 @@ public sealed class AnalyticsService(IMiseDbContext db, IClock clock, IConsumpti
             .Select(a => new { ProductId = a.ProductId!.Value, a.CreatedAt, a.ResolvedAt })
             .ToListAsync(ct);
 
-        var productIds = stops.Select(s => s.ProductId).Concat(lows.Select(l => l.ProductId)).Distinct().ToList();
-        var names = await db.Products.AsNoTracking().Where(p => productIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id, p => p.Name, ct);
+        // Отказы в заказах из-за продукта (422): упущенные продажи — самый прямой признак дефицита.
+        var refusals = await db.OrderShortages.AsNoTracking()
+            .Where(r => r.CreatedAt >= period.From && r.CreatedAt < period.To)
+            .GroupBy(r => r.ProductId)
+            .Select(g => new { ProductId = g.Key, Count = g.Count(), Qty = g.Sum(r => r.Shortage), Last = g.Max(r => r.CreatedAt) })
+            .ToDictionaryAsync(r => r.ProductId, ct);
+
+        var productIds = stops.Select(s => s.ProductId).Concat(lows.Select(l => l.ProductId)).Concat(refusals.Keys).Distinct().ToList();
+        var products = await db.Products.AsNoTracking().Where(p => productIds.Contains(p.Id))
+            .ToDictionaryAsync(p => p.Id, p => new { p.Name, p.Unit }, ct);
 
         var items = productIds
-            .Where(names.ContainsKey)
+            .Where(products.ContainsKey)
             .Select(id =>
             {
                 var productStops = stops.Where(s => s.ProductId == id).ToList();
                 var minutesBelow = lows.Where(l => l.ProductId == id).Sum(l => Overlap(period, l.CreatedAt, l.ResolvedAt ?? now));
-                return new DeficitItemDto(id, names[id],
+                var refused = refusals.GetValueOrDefault(id);
+                return new DeficitItemDto(id, products[id].Name, products[id].Unit,
+                    refused?.Count ?? 0,
+                    refused?.Qty ?? 0m,
+                    refused?.Last,
                     productStops.Count(s => s.StartedAt >= period.From),
                     productStops.Select(s => s.DishId).Distinct().Count(),
                     decimal.Round(productStops.Sum(s => Overlap(period, s.StartedAt, s.EndedAt ?? now)), 1),
                     decimal.Round(minutesBelow, 1),
                     decimal.Round(Math.Min(1m, minutesBelow / period.Minutes), 4));
             })
-            .OrderByDescending(i => i.DishMinutesInStop).ThenByDescending(i => i.StopEvents).ThenByDescending(i => i.MinutesBelowMinimum)
+            // Сначала то, из-за чего уже теряли заказы, затем — сколько держало блюда в стопе.
+            .OrderByDescending(i => i.Refusals).ThenByDescending(i => i.DishMinutesInStop).ThenByDescending(i => i.StopEvents)
+            .ThenByDescending(i => i.MinutesBelowMinimum)
             .ThenBy(i => i.ProductName)
             .ToList();
 

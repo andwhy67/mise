@@ -10,6 +10,9 @@ import { MiseWordmark } from '@/components/MiseWordmark'
 import { LanguageSwitcher, ThemeSwitcher } from '@/components/Switchers'
 import { Toaster } from '@/components/Toaster'
 import { NoAccessPage } from '@/pages/Misc/MiscPages'
+import { OfflineBanner, PwaUpdater } from '@/pwa/PwaStatus'
+import { PullToRefresh } from '@/pwa/PullToRefresh'
+import { syncPushSubscription } from '@/pwa/push'
 import { realtime } from '@/realtime/connection'
 import styles from './AppLayout.module.scss'
 
@@ -32,9 +35,20 @@ export function AppLayout() {
     return () => void realtime.stop()
   }, [state.status, queryClient])
 
+  // Подписка устройства на пуши — вошедшему сотруднику и на языке интерфейса.
+  const { i18n } = useTranslation()
+  const language = i18n.resolvedLanguage ?? i18n.language
+  useEffect(() => {
+    if (state.status === 'signedIn') void syncPushSubscription(language)
+  }, [state.status, state.user?.id, language])
+
+  // После выхода кэш запросов — данные прежнего пользователя: следующий не должен увидеть их даже на миг.
+  useEffect(() => {
+    if (state.status === 'signedOut') queryClient.clear()
+  }, [state.status, queryClient])
+
   if (state.status === 'unknown') return <div className={styles.splash} aria-busy="true" />
-  if (state.status === 'signedOut' || !state.user)
-    return <Navigate to="/login" replace state={{ from: location.pathname, reason: state.reason }} />
+  if (state.status === 'signedOut' || !state.user) return <Navigate to="/login" replace state={{ from: location.pathname, reason: state.reason }} />
 
   return <Shell user={state.user} />
 }
@@ -45,6 +59,14 @@ function Shell({ user }: { user: SessionUser }) {
   const items = navFor(user.role)
   const stopCount = useStopList().data?.length ?? 0
   const alerts = useAlertSummary().data
+  const attention = alerts?.total ?? 0
+
+  // Число на иконке установленного приложения — сколько уведомлений ждут внимания (Badging API, где есть).
+  useEffect(() => {
+    if (typeof navigator.setAppBadge !== 'function') return
+    const update = attention > 0 ? navigator.setAppBadge(attention) : navigator.clearAppBadge()
+    update.catch(() => undefined)
+  }, [attention])
   // Счётчики — числом текстом, без плашек (DESIGN.md §5, NavItem): стоп-лист красным, уведомления — красным только при критичных.
   const counter = (id: string) => {
     if (id === 'stoplist' && stopCount > 0)
@@ -95,9 +117,15 @@ function Shell({ user }: { user: SessionUser }) {
             <ThemeSwitcher />
             <LanguageSwitcher />
           </div>
-          <button type="button" className={styles.logout} onClick={() => void session.logout()}>
-            {t('actions.logout')}
-          </button>
+          {/* Одной строкой: на ноутбуке 1440×900 у менеджера «Выйти» не должен уезжать за край. */}
+          <div className={styles.footerRow}>
+            <NavLink to="/more" className={styles.footerLink}>
+              {t('pwa.settingsShort')}
+            </NavLink>
+            <button type="button" className={styles.logout} onClick={() => void session.logout()}>
+              {t('actions.logout')}
+            </button>
+          </div>
         </footer>
       </aside>
 
@@ -118,11 +146,14 @@ function Shell({ user }: { user: SessionUser }) {
       </header>
 
       <main id="content" className={styles.main} tabIndex={-1}>
+        <OfflineBanner />
         {/* key по пути: при переходе экран мягко появляется заново. */}
-        <div key={pathname} className={styles.page}>
-          {/* Раздел чужой роли — понятный экран вместо ошибки 403 от API. Неизвестный путь — 404 из роутера. */}
-          {isSection(pathname) && !canAccess(user.role, pathname) ? <NoAccessPage /> : <Outlet />}
-        </div>
+        <PullToRefresh>
+          <div key={pathname} className={styles.page}>
+            {/* Раздел чужой роли — понятный экран вместо ошибки 403 от API. Неизвестный путь — 404 из роутера. */}
+            {isSection(pathname) && !canAccess(user.role, pathname) ? <NoAccessPage /> : <Outlet />}
+          </div>
+        </PullToRefresh>
       </main>
 
       <nav aria-label={t('nav.main')} className={styles.bottomNav}>
@@ -135,6 +166,7 @@ function Shell({ user }: { user: SessionUser }) {
       </nav>
 
       <Toaster />
+      <PwaUpdater />
     </div>
   )
 }

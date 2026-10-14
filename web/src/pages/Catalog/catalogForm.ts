@@ -11,20 +11,35 @@ const factor = (unit: MeasureUnit) => (unit === 'Piece' ? 1 : 1000)
 export interface ProductForm {
   name: string
   unit: MeasureUnit
-  /** Норма хранения в днях; пусто — нормы нет (срок указывают в каждой поставке). */
-  shelfLifeDays: string
+  /** Норма хранения; пусто — нормы нет (срок указывают в каждой поставке). */
+  shelfLife: string
+  /** В чём указана норма: часы — для продуктов короче суток (зелень, выпечка, заготовки). */
+  shelfLifeUnit: 'hours' | 'days'
   minStock: string
   packSize: string
   category: string
   storageType: string
 }
 
-export const emptyProductForm = (): ProductForm => ({ name: '', unit: 'Gram', shelfLifeDays: '', minStock: '0', packSize: '1', category: '', storageType: '' })
+export const emptyProductForm = (): ProductForm => ({
+  name: '',
+  unit: 'Gram',
+  shelfLife: '',
+  shelfLifeUnit: 'days',
+  minStock: '0',
+  packSize: '1',
+  category: '',
+  storageType: '',
+})
+
+/** Норма в часах показывается часами, если она короче двух суток или не делится на целые дни. */
+const inHours = (hours: number) => hours < 48 || hours % 24 !== 0
 
 export const productToForm = (p: Product): ProductForm => ({
   name: p.name,
   unit: p.unit,
-  shelfLifeDays: p.defaultShelfLifeHours ? show(p.defaultShelfLifeHours / 24) : '',
+  shelfLife: p.defaultShelfLifeHours ? show(inHours(p.defaultShelfLifeHours) ? p.defaultShelfLifeHours : p.defaultShelfLifeHours / 24) : '',
+  shelfLifeUnit: p.defaultShelfLifeHours && inHours(p.defaultShelfLifeHours) ? 'hours' : 'days',
   minStock: show(p.minStockQty / factor(p.unit)),
   packSize: show(p.packSize / factor(p.unit)),
   category: p.category ?? '',
@@ -32,11 +47,11 @@ export const productToForm = (p: Product): ProductForm => ({
 })
 
 export function productFormToRequest(form: ProductForm) {
-  const days = parse(form.shelfLifeDays)
+  const value = parse(form.shelfLife)
   return {
     name: form.name.trim(),
     unit: form.unit,
-    defaultShelfLifeHours: Number.isNaN(days) ? null : Math.round(days * 24),
+    defaultShelfLifeHours: Number.isNaN(value) ? null : Math.round(form.shelfLifeUnit === 'hours' ? value : value * 24),
     minStockQty: Math.round(parse(form.minStock) * factor(form.unit) * 1000) / 1000,
     packSize: Math.round(parse(form.packSize) * factor(form.unit) * 1000) / 1000,
     category: form.category.trim() || null,
@@ -47,7 +62,12 @@ export function productFormToRequest(form: ProductForm) {
 export function validateProduct(form: ProductForm): Record<string, string> {
   const errors: Record<string, string> = {}
   if (!form.name.trim()) errors.name = 'name'
-  if (form.shelfLifeDays.trim() && !(parse(form.shelfLifeDays) * 24 >= 1)) errors.shelfLifeDays = 'shelfLife'
+  if (form.shelfLife.trim()) {
+    const value = parse(form.shelfLife)
+    const hours = form.shelfLifeUnit === 'hours' ? value : value * 24
+    // Часы — целые: сервер хранит норму в целых часах.
+    if (!(hours >= 1) || (form.shelfLifeUnit === 'hours' && !Number.isInteger(value))) errors.shelfLife = 'shelfLife'
+  }
   if (!(parse(form.minStock) >= 0)) errors.minStock = 'minStock'
   if (!(parse(form.packSize) > 0)) errors.packSize = 'packSize'
   return errors

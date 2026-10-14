@@ -17,6 +17,9 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB:-mise};Username=${POSTGRES_USER:-mise};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       Auth__SigningKey: ${AUTH_SIGNING_KEY:?AUTH_SIGNING_KEY is required (openssl rand -base64 48)}
+      # Пуши: без ключа выключены (приложение работает, просто без уведомлений на телефон).
+      Push__PrivateKey: ${PUSH_PRIVATE_KEY:-}
+      Push__Subject: ${PUSH_SUBJECT:-mailto:admin@mise.local}
       Auth__DemoUsersPassword: ${DEMO_PASSWORD:?DEMO_PASSWORD is required}
       Auth__SimulatorPassword: ${SIMULATOR_PASSWORD:?SIMULATOR_PASSWORD is required}
       Auth__CookieSecure: ${AUTH_COOKIE_SECURE:-true}

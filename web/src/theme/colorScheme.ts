@@ -6,6 +6,8 @@ import { useSyncExternalStore } from 'react'
  */
 export type ThemeChoice = 'light' | 'dark' | 'system'
 export const THEME_STORAGE_KEY = 'mise.theme'
+/** Фон приложения (--bg) в каждой теме — для meta theme-color. */
+export const THEME_COLORS = { light: '#f2f7fb', dark: '#2b2e33' } as const
 
 const media = () => window.matchMedia('(prefers-color-scheme: dark)')
 
@@ -27,6 +29,10 @@ function apply() {
   root.classList.toggle('dark', dark)
   root.classList.toggle('light', !dark)
   root.dataset.theme = dark ? 'dark' : 'light'
+  // Строка состояния телефона и заголовок окна PWA — цвета фона выбранной темы, а не системной.
+  document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]').forEach((meta) => {
+    meta.content = dark ? THEME_COLORS.dark : THEME_COLORS.light
+  })
 }
 
 export function initColorScheme() {

@@ -11,6 +11,7 @@ using Mise.Application.Forecasting;
 using Mise.Application.HotOffers;
 using Mise.Application.Menu;
 using Mise.Application.Orders;
+using Mise.Application.Push;
 using Mise.Application.Realtime;
 using Mise.Application.Simulator;
 using Mise.Application.Stock;
@@ -50,6 +51,8 @@ public static class DependencyInjection
         services.AddScoped<AuthService>();
         services.AddScoped<UserService>();
         services.AddScoped<AuditService>();
+        services.AddScoped<PushService>();
+        services.AddScoped<PushDispatcher>();
         services.AddOptions<AuthOptions>();
         services.AddSingleton<HotOfferState>();
         services.AddSingleton<IHotOfferScorer, HotOfferScorerV1>();

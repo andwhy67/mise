@@ -7,6 +7,8 @@ public enum OrderStatus
     Created,
     Cooking,
     Done,
+    /// <summary>Выдан гостю/официанту — заказ закрыт.</summary>
+    Served,
     Cancelled,
 }
 
@@ -49,7 +51,7 @@ public sealed class Order
     public void AddItem(Guid dishId, string dishName, int quantity, decimal price) =>
         _items.Add(new OrderItem(Id, _items.Count + 1, dishId, dishName, quantity, price));
 
-    /// <summary>Только вперёд: Created → Cooking → Done (или сразу Done). Повтор текущего статуса — no-op.</summary>
+    /// <summary>Только вперёд: Created → Cooking → Done → Served (Done можно и сразу из Created). Повтор текущего статуса — no-op.</summary>
     public void ChangeStatus(OrderStatus target, DateTimeOffset now)
     {
         if (target == Status)
@@ -60,6 +62,7 @@ public sealed class Order
             (OrderStatus.Created, OrderStatus.Cooking) => true,
             (OrderStatus.Created, OrderStatus.Done) => true,
             (OrderStatus.Cooking, OrderStatus.Done) => true,
+            (OrderStatus.Done, OrderStatus.Served) => true,
             _ => false,
         };
         if (!allowed)

@@ -43,10 +43,10 @@
     "quantity": "Quantity",
     "unit": "Unit",
     "expiry": "Expiry",
-    "expiryDefault": "Product standard ({{days}} d)",
+    "expiryDefault": "Product standard ({{norm}})",
     "expiryDefaultNone": "Product standard (not set)",
     "expiryDays": "Keep for N days",
-    "expiryDate": "Good until a date",
+    "expiryDate": "Good until (date and time)",
     "days": "Days",
     "date": "Good until",
     "preview": "Spoils: {{when}} · {{source}}",
@@ -80,7 +80,15 @@
         "not_after_receipt": "The expiry must be after the delivery date.",
         "unresolvable": "One product has no expiry and no standard shelf life.",
         "invalid_shelf_life": "The shelf life is not valid."
-      }
-    }
+      },
+      "hours": "Whole hours, 1 or more."
+    },
+    "offline": "No connection — the delivery can be received once it is back. What you entered stays.",
+    "normHours_one": "{{count}} h",
+    "normHours_other": "{{count}} h",
+    "normDays": "{{days}} d",
+    "expiryHours": "Keep for N hours",
+    "hours": "Hours",
+    "dateHint": "Moscow time."
   }
 }

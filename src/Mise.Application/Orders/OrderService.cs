@@ -1,6 +1,7 @@
 using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Mise.Application.Abstractions;
 using Mise.Application.Common;
 using Mise.Application.Menu;
@@ -23,7 +24,8 @@ public sealed class OrderService(
     StopListService stopList,
     IRealtimeNotifier notifier,
     IValidator<CreateOrderRequest> createValidator,
-    IValidator<ChangeOrderStatusRequest> statusValidator)
+    IValidator<ChangeOrderStatusRequest> statusValidator,
+    ILogger<OrderService> logger)
 {
     public static class Errors
     {
@@ -83,7 +85,13 @@ public sealed class OrderService(
         var plan = demand.ToDictionary(d => d.Key, d => FefoAllocator.Allocate(d.Value, batches[d.Key], now));
         var shortages = plan.Where(p => !p.Value.IsSatisfied).ToList();
         if (shortages.Count > 0)
-            throw await InsufficientStockAsync(request, dishes, demand, shortages.Select(s => (s.Key, s.Value)), ct);
+        {
+            var refusal = await InsufficientStockAsync(request, dishes, demand, shortages.Select(s => (s.Key, s.Value)), ct);
+            // Ничего не списываем (правило 4), блокировки снимаем сразу; факт отказа — для отчёта «чего не хватает».
+            await transaction.RollbackAsync(ct);
+            await RecordShortagesAsync(shortages.Select(s => (s.Key, demand[s.Key], s.Value.Available)), now, ct);
+            throw refusal;
+        }
 
         var number = await locks.NextOrderNumberAsync(ct);
         var order = new Order(Guid.CreateVersion7(now), $"ORD-{number:D6}", now) { IdempotencyKey = key, RequestHash = hash };
@@ -254,6 +262,22 @@ public sealed class OrderService(
             throw new BusinessRuleException(Errors.DishUnavailable,
                 $"Блюда выключены из меню вручную: {string.Join(", ", off)}.",
                 new Dictionary<string, object?> { ["dishes"] = off });
+    }
+
+    /// <summary>Запись отказа не должна подменять ответ 422: при сбое — только лог (через исключение выше не пробрасываем).</summary>
+    private async Task RecordShortagesAsync(IEnumerable<(Guid ProductId, decimal Required, decimal Available)> shortages, DateTimeOffset now, CancellationToken ct)
+    {
+        try
+        {
+            db.ChangeTracker.Clear();
+            foreach (var (productId, required, available) in shortages)
+                db.OrderShortages.Add(new OrderShortage(Guid.CreateVersion7(now), productId, required, available, now));
+            await db.SaveChangesAsync(ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Не удалось записать отказ заказа для аналитики дефицита");
+        }
     }
 
     private async Task<BusinessRuleException> InsufficientStockAsync(

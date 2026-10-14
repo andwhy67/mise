@@ -39,7 +39,9 @@
     "simulator.start": "Started the simulator",
     "simulator.stop": "Stopped the simulator",
     "simulator.scenario": "Changed the simulator scenario",
-    "simulator.speed": "Changed the simulator speed"
+    "simulator.speed": "Changed the simulator speed",
+    "push.subscribe": "Turned on device notifications",
+    "push.unsubscribe": "Turned off device notifications"
   },
   "system": "System",
   "empty": "No entries",

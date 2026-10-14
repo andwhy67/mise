@@ -9,6 +9,7 @@ import type { MeasureUnit } from '@/lib/format'
 import { toast } from '@/lib/toast'
 import { useErrorText } from '@/lib/useErrorText'
 import { useFormat } from '@/lib/useFormat'
+import { useOnline } from '@/pwa/network'
 import styles from './WriteOffSheet.module.scss'
 
 const REASONS = ['spoiled', 'damaged', 'inventory', 'other'] as const
@@ -43,6 +44,7 @@ function WriteOffForm({ batch, onDone }: { batch: Batch; onDone: () => void }) {
   const f = useFormat()
   const errorText = useErrorText()
   const mutation = useWriteOff()
+  const online = useOnline()
   const units = INPUT_UNITS[batch.unit]
   const [unit, setUnit] = useState(units[0]!.value)
   const [quantity, setQuantity] = useState('')
@@ -140,7 +142,7 @@ function WriteOffForm({ batch, onDone }: { batch: Batch; onDone: () => void }) {
         <Button variant="secondary" onClick={onDone}>
           {t('writeOff.cancel')}
         </Button>
-        <Button type="submit" disabled={mutation.isPending}>
+        <Button type="submit" disabled={mutation.isPending || !online} title={online ? undefined : t('writeOff.offline')}>
           {mutation.isPending ? t('writeOff.submitting') : t('writeOff.submit')}
         </Button>
       </div>
