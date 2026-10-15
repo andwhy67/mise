@@ -27,4 +27,16 @@ public interface IStockClient
 public sealed class StockHub : Hub<IStockClient>
 {
     public const string Path = "/hubs/stock";
+
+    /// <summary>События ресторана уходят только его сотрудникам — группе по claim <c>rid</c>.</summary>
+    public static string GroupOf(Guid restaurantId) => $"r:{restaurantId:N}";
+
+    public override async Task OnConnectedAsync()
+    {
+        if (Guid.TryParse(Context.User?.FindFirst(Auth.MiseClaims.RestaurantId)?.Value, out var restaurantId))
+            await Groups.AddToGroupAsync(Context.ConnectionId, GroupOf(restaurantId));
+        else
+            Context.Abort();
+        await base.OnConnectedAsync();
+    }
 }

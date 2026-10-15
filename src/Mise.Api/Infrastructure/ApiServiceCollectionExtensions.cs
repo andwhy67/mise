@@ -52,6 +52,7 @@ internal static class ApiServiceCollectionExtensions
             .Bind(configuration.GetSection(ExpiryOptions.SectionName))
             .Validate(o => o.IsValid(), "Expiry: IntervalSeconds должен быть в [1;3600], BatchSize — в [1;10000].")
             .ValidateOnStart();
+        services.AddSingleton<RestaurantRunner>();
         services.AddHostedService<ExpiryWorker>();
 
         services.AddOptions<HotOfferOptions>()
@@ -157,6 +158,7 @@ internal static class ApiServiceCollectionExtensions
 
         app.UseCors(CorsPolicy);
         app.UseAuthentication();
+        app.UseMiddleware<TenantMiddleware>();
         app.UseRateLimiter();
         app.UseAuthorization();
         return app;
@@ -173,6 +175,7 @@ internal static class ApiServiceCollectionExtensions
         v1.MapSystemEndpoints();
         v1.MapAuthEndpoints();
         v1.MapUserEndpoints();
+        v1.MapInviteEndpoints();
         v1.MapAuditEndpoints();
         v1.MapCatalogEndpoints();
         v1.MapSupplyEndpoints();

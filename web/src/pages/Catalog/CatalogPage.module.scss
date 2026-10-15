@@ -54,7 +54,7 @@
 // Строка-кнопка открывает карточку: название · норма/состав · минимум/цена.
 .row {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 1fr));
   align-items: center;
   gap: var(--space-4);
   width: calc(100% + var(--space-6));
@@ -80,7 +80,8 @@
   @media (max-width: 767px) {
     grid-template-columns: minmax(0, 1fr) auto;
 
-    .cell:first-of-type {
+    // На телефоне — название и главное число справа (цена продукта, цена блюда).
+    .cell:not(:last-child) {
       display: none;
     }
   }
@@ -116,4 +117,8 @@
   font-weight: 500;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
+}
+
+.meta[data-tone='crit'] {
+  color: var(--crit-text);
 }

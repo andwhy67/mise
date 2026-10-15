@@ -25,6 +25,7 @@ public static class DependencyInjection
 
         services.AddSingleton<IClock, SystemClock>();
 
+        services.AddSingleton<ITenant, Tenancy.AmbientTenant>();
         services.AddDbContext<MiseDbContext>(options => options
             .UseNpgsql(postgres, npgsql => npgsql.MigrationsHistoryTable("__ef_migrations_history"))
             .UseSnakeCaseNamingConvention());
@@ -32,6 +33,7 @@ public static class DependencyInjection
         services.AddScoped<IStockLocks, PostgresStockLocks>();
         services.AddScoped<IConsumptionAggregator, PostgresConsumptionAggregator>();
         services.AddScoped<DatabaseSeeder>();
+        services.AddSingleton<Mise.Application.Restaurants.ICatalogTemplate, DemoCatalogTemplate>();
         services.AddScoped<DemoStockSeeder>();
         services.AddScoped<UserSeeder>();
         services.AddScoped<ReadOnlyRoleProvisioner>();

@@ -19,7 +19,8 @@
       "ExplicitDate": "date from the supplier",
       "SupplyItemShelfLife": "shelf life from the delivery",
       "ProductDefault": "product standard shelf life"
-    }
+    },
+    "total": "Total: {{sum}}"
   },
   "suggestions": {
     "title": "What to order",
@@ -81,7 +82,8 @@
         "unresolvable": "One product has no expiry and no standard shelf life.",
         "invalid_shelf_life": "The shelf life is not valid."
       },
-      "hours": "Whole hours, 1 or more."
+      "hours": "Whole hours, 1 or more.",
+      "price": "Price must be a number from 0."
     },
     "offline": "No connection — the delivery can be received once it is back. What you entered stays.",
     "normHours_one": "{{count}} h",
@@ -89,6 +91,52 @@
     "normDays": "{{days}} d",
     "expiryHours": "Keep for N hours",
     "hours": "Hours",
-    "dateHint": "Moscow time."
+    "dateHint": "Moscow time.",
+    "priceKg": "Price, ₽ per kg",
+    "priceLiter": "Price, ₽ per l",
+    "pricePiece": "Price, ₽ per pc",
+    "lineCost": "Line total: {{sum}}",
+    "lineCostReference": "≈ {{sum}} at reference price",
+    "total": "Supply total: {{sum}}",
+    "totalUnpriced_one": " · {{count}} line without price",
+    "totalUnpriced_other": " · {{count}} lines without price"
+  },
+  "request": {
+    "open": "Supplier requests",
+    "title": "Supplier requests",
+    "subtitle": "From “What to order”, grouped by supplier. Adjust quantities and send: copy the text or print.",
+    "noSupplier": "No supplier set",
+    "number": "Request {{number}}",
+    "qtyLabel": "How much to order: {{product}}",
+    "estimate": "Estimated: {{sum}}",
+    "noEstimate": "No prices set — the supplier will quote",
+    "unpriced_one": "(excluding {{count}} line without a price)",
+    "unpriced_other": "(excluding {{count}} lines without a price)",
+    "copy": "Copy text",
+    "print": "Print / PDF",
+    "copied": "Request {{number}} copied — paste it into a message or email",
+    "copyFailed": "Could not copy request {{number}} — select the text manually",
+    "errors": {
+      "quantity": "Quantities in checked lines must be above zero."
+    },
+    "text": {
+      "title": "Supply request {{number}}",
+      "supplier": "Supplier: {{name}}",
+      "noSupplier": "Supplier: not set",
+      "date": "Date: {{date}}",
+      "line": "{{index}}. {{product}} — {{qty}}",
+      "estimate": "Estimated: {{sum}} (reference prices)",
+      "estimatePartial_one": "Estimated: {{sum}} (reference prices, excluding {{count}} item)",
+      "estimatePartial_other": "Estimated: {{sum}} (reference prices, excluding {{count}} items)"
+    },
+    "sheet": {
+      "product": "Product",
+      "qty": "Quantity",
+      "price": "Reference price",
+      "sum": "Sum",
+      "footer": "Prepared in Mise. Prices are estimates; final prices per the supplier's invoice.",
+      "heading": "Supply request",
+      "number": "No. {{number}}"
+    }
   }
 }

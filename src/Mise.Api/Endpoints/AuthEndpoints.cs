@@ -4,11 +4,12 @@ using Mise.Api.Auth;
 using Mise.Application.Audit;
 using Mise.Application.Auth;
 using Mise.Application.Common;
+using Mise.Application.Restaurants;
 
 namespace Mise.Api.Endpoints;
 
 /// <summary>Ответ входа: access-токен в теле, refresh — только в httpOnly-cookie.</summary>
-public sealed record LoginResponse(string AccessToken, DateTimeOffset ExpiresAt, UserDto User);
+public sealed record LoginResponse(string AccessToken, DateTimeOffset ExpiresAt, UserDto User, RestaurantDto Restaurant);
 
 internal static class AuthEndpoints
 {
@@ -23,7 +24,7 @@ internal static class AuthEndpoints
             {
                 var session = await service.LoginAsync(request, ct);
                 SetRefreshCookie(http, session, options.Value);
-                return TypedResults.Ok(new LoginResponse(session.AccessToken, session.AccessTokenExpiresAt, session.User));
+                return TypedResults.Ok(new LoginResponse(session.AccessToken, session.AccessTokenExpiresAt, session.User, session.Restaurant));
             })
             .AllowAnonymous()
             .RequireRateLimiting(RateLimitingOptions.LoginPolicy)
@@ -45,11 +46,40 @@ internal static class AuthEndpoints
                     return Results.NotFound();
                 var session = await service.DemoLoginAsync(request, ct);
                 SetRefreshCookie(http, session, options.Value);
-                return Results.Ok(new LoginResponse(session.AccessToken, session.AccessTokenExpiresAt, session.User));
+                return Results.Ok(new LoginResponse(session.AccessToken, session.AccessTokenExpiresAt, session.User, session.Restaurant));
             })
             .AllowAnonymous()
             .RequireRateLimiting(RateLimitingOptions.LoginPolicy)
             .WithSummary("Демо-вход по роли без пароля (только при Demo:Enabled)");
+
+        auth.MapPost("/register", async (RegisterRestaurantRequest request, OnboardingService service, HttpContext http,
+                IOptions<AuthOptions> options, CancellationToken ct) =>
+            {
+                var session = await service.RegisterAsync(request, ct);
+                SetRefreshCookie(http, session, options.Value);
+                return TypedResults.Ok(new LoginResponse(session.AccessToken, session.AccessTokenExpiresAt, session.User, session.Restaurant));
+            })
+            .AllowAnonymous()
+            .RequireRateLimiting(RateLimitingOptions.LoginPolicy)
+            .WithSummary("Создать ресторан: регистрирующийся становится его менеджером и сразу входит")
+            .WithDescription("Каждый ресторан — отдельная организация: свои продукты, склад, заказы и сотрудники. " +
+                             "fillDemoCatalog — сразу заполнить справочник стартовыми продуктами и блюдами. Логин уникален во всей системе.");
+
+        auth.MapGet("/invites/{code}", (string code, OnboardingService service, CancellationToken ct) => service.PreviewAsync(code, ct))
+            .AllowAnonymous()
+            .RequireRateLimiting(RateLimitingOptions.LoginPolicy)
+            .WithSummary("Куда ведёт приглашение: ресторан и роль (до регистрации)");
+
+        auth.MapPost("/join", async (JoinRestaurantRequest request, OnboardingService service, HttpContext http,
+                IOptions<AuthOptions> options, CancellationToken ct) =>
+            {
+                var session = await service.JoinAsync(request, ct);
+                SetRefreshCookie(http, session, options.Value);
+                return TypedResults.Ok(new LoginResponse(session.AccessToken, session.AccessTokenExpiresAt, session.User, session.Restaurant));
+            })
+            .AllowAnonymous()
+            .RequireRateLimiting(RateLimitingOptions.LoginPolicy)
+            .WithSummary("Регистрация по приглашению: сотрудник попадает в ресторан приглашения с его ролью");
 
         auth.MapPost("/refresh", async (AuthService service, HttpContext http, IOptions<AuthOptions> options, CancellationToken ct) =>
             {
@@ -57,7 +87,7 @@ internal static class AuthEndpoints
                 {
                     var session = await service.RefreshAsync(http.Request.Cookies[RefreshCookie], ct);
                     SetRefreshCookie(http, session, options.Value);
-                    return TypedResults.Ok(new LoginResponse(session.AccessToken, session.AccessTokenExpiresAt, session.User));
+                    return TypedResults.Ok(new LoginResponse(session.AccessToken, session.AccessTokenExpiresAt, session.User, session.Restaurant));
                 }
                 catch (UnauthorizedException ex) when (ex.Code != AuthService.Errors.RefreshRace)
                 {
@@ -80,7 +110,7 @@ internal static class AuthEndpoints
 
         auth.MapGet("/me", (ClaimsPrincipal user, AuthService service, CancellationToken ct) =>
                 service.MeAsync(Guid.Parse(user.FindFirstValue(MiseClaims.UserId)!), ct))
-            .WithSummary("Текущий пользователь");
+            .WithSummary("Текущий пользователь и его ресторан");
 
         return api;
     }
@@ -94,7 +124,7 @@ internal static class AuthEndpoints
         users.MapPost("/", async (CreateUserRequest request, UserService service, CancellationToken ct) =>
                 TypedResults.Created($"/api/v1/users", await service.CreateAsync(request, ct)))
             .Audited("user.create", "User")
-            .WithSummary("Создать пользователя (роль: Warehouse, Chef, Manager, Simulator)");
+            .WithSummary("Создать пользователя своего ресторана (роль: Warehouse, Chef, Manager)");
         users.MapPut("/{id:guid}", (Guid id, UpdateUserRequest request, UserService service, CancellationToken ct) =>
                 service.UpdateAsync(id, request, ct))
             .Audited("user.update", "User")
@@ -107,6 +137,21 @@ internal static class AuthEndpoints
             .Audited("user.reset_password", "User")
             .WithSummary("Сбросить пароль (сессии пользователя завершаются)");
 
+        return api;
+    }
+
+    public static RouteGroupBuilder MapInviteEndpoints(this RouteGroupBuilder api)
+    {
+        var invites = api.MapGroup("/invites").WithTags("Пользователи").RequireAuthorization(AuthPolicies.Manager);
+        invites.MapGet("/", (InviteService service, CancellationToken ct) => service.ListAsync(ct))
+            .WithSummary("Приглашения ресторана за 30 дней: активные, принятые, отозванные, истёкшие");
+        invites.MapPost("/", async (CreateInviteRequest request, InviteService service, CancellationToken ct) =>
+                TypedResults.Created("/api/v1/invites", await service.CreateAsync(request, ct)))
+            .Audited("invite.create", "Invite")
+            .WithSummary("Пригласить сотрудника: роль Manager, Warehouse или Chef; код одноразовый, живёт 7 дней");
+        invites.MapDelete("/{id:guid}", (Guid id, InviteService service, CancellationToken ct) => service.RevokeAsync(id, ct))
+            .Audited("invite.revoke", "Invite")
+            .WithSummary("Отозвать приглашение");
         return api;
     }
 

@@ -15,6 +15,9 @@ const page = (load: () => Promise<{ default: RouteObject['Component'] }>): Pick<
 /** Маршруты совпадают с NAV (app/navigation.ts); доступ по роли проверяет AppLayout. */
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
+  { path: '/register', element: <LoginPage mode="register" /> },
+  // Ссылка-приглашение от менеджера: /join/K7Q2-PXM4 — код уже в поле.
+  { path: '/join/:code?', element: <LoginPage mode="join" /> },
   // Демо компонентов (DESIGN.md §12): без входа, для проверки тем, языков и вёрстки.
   { path: '/ui', ...page(() => import('@/pages/Ui/UiPage').then((m) => ({ default: m.UiPage }))) },
   {

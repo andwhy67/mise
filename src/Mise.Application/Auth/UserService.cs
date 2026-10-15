@@ -29,7 +29,8 @@ public sealed class UserService(
     {
         await createValidator.EnsureValidAsync(request, ct);
         var login = User.NormalizeLogin(request.Login);
-        if (await db.Users.AnyAsync(u => u.Login == login, ct))
+        // Логин уникален во всей системе — занятый в другом ресторане тоже занят.
+        if (await db.Users.IgnoreQueryFilters().AnyAsync(u => u.Login == login, ct))
             throw new ConflictException(Errors.DuplicateLogin, $"Логин «{login}» уже занят.");
 
         var user = User.Create(Guid.CreateVersion7(clock.UtcNow), login, request.DisplayName, request.Role, hasher.Hash(request.Password), clock.UtcNow);

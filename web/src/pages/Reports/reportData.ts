@@ -53,6 +53,36 @@ export interface DeficitItem {
   shareBelowMinimum: number
 }
 
+/** Деньги за период (₽): суммы — по цене партии в момент операции. */
+export interface MoneyReport {
+  from: string
+  to: string
+  revenue: number
+  purchases: number
+  costOfSales: number
+  grossMargin: number
+  losses: number
+  expiryLosses: number
+  manualLosses: number
+  /** Продано из партий на грани срока — иначе ушло бы в списание. */
+  rescued: number
+  /** Доля движений с известной ценой (0…1). */
+  costCoverage: number
+  products: MoneyProduct[]
+}
+
+export interface MoneyProduct {
+  productId: string
+  productName: string
+  unit: MeasureUnit
+  purchased: number
+  costOfSales: number
+  losses: number
+  expiryLosses: number
+  rescued: number
+  rescuedQty: number
+}
+
 export interface ConsumptionReport {
   from: string
   to: string
@@ -122,4 +152,61 @@ export function deficitRanking(items: DeficitItem[], limit: number) {
     .sort((a, b) => b.refusals - a.refusals || b.stopEvents - a.stopEvents || b.dishMinutesInStop - a.dishMinutesInStop || a.productName.localeCompare(b.productName))
     .slice(0, limit)
     .map((item) => ({ name: item.productName, refusals: item.refusals, stops: item.stopEvents, item }))
+}
+
+/** Доля валовой маржи в выручке, 0…1; без выручки — null (делить не на что). */
+export const marginShare = (money: Pick<MoneyReport, 'revenue' | 'grossMargin'>) => (money.revenue > 0 ? money.grossMargin / money.revenue : null)
+
+/**
+ * «Где теряем и что спасли»: продукты с потерями или спасёнными деньгами, сначала самые дорогие по потерям.
+ * Рубли округлены до целых — на графике копейки только шумят.
+ */
+export function moneyRanking(products: MoneyProduct[], limit: number) {
+  return products
+    .filter((p) => p.losses > 0 || p.rescued > 0)
+    .sort((a, b) => b.losses - a.losses || b.rescued - a.rescued || a.productName.localeCompare(b.productName))
+    .slice(0, limit)
+    .map((item) => ({ name: item.productName, losses: Math.round(item.losses), rescued: Math.round(item.rescued), item }))
+}
+
+/**
+ * Прошлый период для сравнения — той же длины и до того же момента: «эта неделя до сейчас» против
+ * «прошлой недели до того же часа», а «сегодня до 14:00» — против «вчера до 14:00». Иначе неполный день проигрывает полному.
+ */
+export function previousRange(period: ReportPeriod, from: string, now: Date): { from: string; to: string } {
+  const shift = PERIOD_DAYS[period] * DAY_MS
+  return { from: new Date(new Date(from).getTime() - shift).toISOString(), to: new Date(now.getTime() - shift).toISOString() }
+}
+
+/** Какое изменение хорошее: выручка — рост, потери — снижение; нейтральное — просто факт. */
+export type Better = 'up' | 'down' | 'neutral'
+
+export interface Comparison {
+  direction: 'up' | 'down' | 'flat'
+  /** Изменение в процентах от прошлого значения; null — прошлого не было (0), сравнивать не с чем. */
+  percent: number | null
+  tone: 'good' | 'bad' | 'neutral'
+}
+
+/** Меньше 1 % — «без изменений»: шум не должен краситься в красный. */
+const FLAT_PERCENT = 1
+
+const toneOf = (direction: Comparison['direction'], better: Better): Comparison['tone'] =>
+  direction === 'flat' || better === 'neutral' ? 'neutral' : direction === better ? 'good' : 'bad'
+
+export function compare(current: number, previous: number, better: Better): Comparison {
+  if (previous === 0) {
+    const direction = current > 0 ? 'up' : current < 0 ? 'down' : 'flat'
+    return { direction, percent: null, tone: toneOf(direction, better) }
+  }
+  const percent = Math.round(((current - previous) / Math.abs(previous)) * 1000) / 10
+  const direction = Math.abs(percent) < FLAT_PERCENT ? 'flat' : percent > 0 ? 'up' : 'down'
+  return { direction, percent, tone: toneOf(direction, better) }
+}
+
+/** Доли (списание 3 % → 5 %) сравниваем в процентных пунктах, а не «+66 %». */
+export function comparePoints(current: number, previous: number, better: Better): Comparison & { points: number } {
+  const points = Math.round((current - previous) * 1000) / 10
+  const direction = Math.abs(points) < 0.1 ? 'flat' : points > 0 ? 'up' : 'down'
+  return { direction, percent: null, tone: toneOf(direction, better), points }
 }

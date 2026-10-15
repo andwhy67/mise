@@ -22,8 +22,6 @@ namespace Mise.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.HasSequence("order_number_seq");
-
             modelBuilder.Entity("Mise.Domain.Alerts.Alert", b =>
                 {
                     b.Property<Guid>("Id")
@@ -83,6 +81,10 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("resolved_at");
 
+                    b.Property<Guid>("RestaurantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("restaurant_id");
+
                     b.Property<string>("Severity")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -114,6 +116,9 @@ namespace Mise.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("ProductId")
                         .HasDatabaseName("ix_alerts_product_id");
+
+                    b.HasIndex("RestaurantId")
+                        .HasDatabaseName("ix_alerts_restaurant_id");
 
                     b.HasIndex("Severity")
                         .HasDatabaseName("ix_alerts_attention")
@@ -162,6 +167,10 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(64)")
                         .HasColumnName("login");
 
+                    b.Property<Guid?>("RestaurantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("restaurant_id");
+
                     b.Property<Guid?>("UserId")
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");
@@ -171,6 +180,9 @@ namespace Mise.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CreatedAt")
                         .HasDatabaseName("ix_audit_log_created_at");
+
+                    b.HasIndex("RestaurantId")
+                        .HasDatabaseName("ix_audit_log_restaurant_id");
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("ix_audit_log_user_id");
@@ -207,12 +219,19 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .HasColumnType("numeric(12,2)")
                         .HasColumnName("price");
 
+                    b.Property<Guid>("RestaurantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("restaurant_id");
+
                     b.HasKey("Id")
                         .HasName("pk_dishes");
 
-                    b.HasIndex("Name")
+                    b.HasIndex("RestaurantId")
+                        .HasDatabaseName("ix_dishes_restaurant_id");
+
+                    b.HasIndex("RestaurantId", "Name")
                         .IsUnique()
-                        .HasDatabaseName("ix_dishes_name");
+                        .HasDatabaseName("ix_dishes_restaurant_id_name");
 
                     b.ToTable("dishes", (string)null);
                 });
@@ -275,10 +294,24 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .HasColumnType("numeric(14,3)")
                         .HasColumnName("pack_size");
 
+                    b.Property<decimal?>("ReferenceUnitCost")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)")
+                        .HasColumnName("reference_unit_cost");
+
+                    b.Property<Guid>("RestaurantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("restaurant_id");
+
                     b.Property<string>("StorageType")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
                         .HasColumnName("storage_type");
+
+                    b.Property<string>("Supplier")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("supplier");
 
                     b.Property<string>("Unit")
                         .IsRequired()
@@ -289,9 +322,12 @@ namespace Mise.Infrastructure.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_products");
 
-                    b.HasIndex("Name")
+                    b.HasIndex("RestaurantId")
+                        .HasDatabaseName("ix_products_restaurant_id");
+
+                    b.HasIndex("RestaurantId", "Name")
                         .IsUnique()
-                        .HasDatabaseName("ix_products_name");
+                        .HasDatabaseName("ix_products_restaurant_id_name");
 
                     b.ToTable("products", null, t =>
                         {
@@ -300,6 +336,35 @@ namespace Mise.Infrastructure.Persistence.Migrations
                             t.HasCheckConstraint("ck_products_min_stock_non_negative", "min_stock_qty >= 0");
 
                             t.HasCheckConstraint("ck_products_pack_size_positive", "pack_size > 0");
+                        });
+                });
+
+            modelBuilder.Entity("Mise.Domain.Catalog.ProductSubstitute", b =>
+                {
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("product_id");
+
+                    b.Property<Guid>("SubstituteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("substitute_id");
+
+                    b.Property<decimal>("Ratio")
+                        .HasPrecision(8, 4)
+                        .HasColumnType("numeric(8,4)")
+                        .HasColumnName("ratio");
+
+                    b.HasKey("ProductId", "SubstituteId")
+                        .HasName("pk_product_substitutes");
+
+                    b.HasIndex("SubstituteId")
+                        .HasDatabaseName("ix_product_substitutes_substitute_id");
+
+                    b.ToTable("product_substitutes", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_product_substitutes_not_self", "product_id <> substitute_id");
+
+                            t.HasCheckConstraint("ck_product_substitutes_ratio_positive", "ratio > 0");
                         });
                 });
 
@@ -327,6 +392,10 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(16)")
                         .HasColumnName("reason");
 
+                    b.Property<Guid>("RestaurantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("restaurant_id");
+
                     b.Property<DateTimeOffset>("StartedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("started_at");
@@ -341,6 +410,9 @@ namespace Mise.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("LimitingProductId")
                         .HasDatabaseName("ix_stoplist_history_limiting_product_id");
+
+                    b.HasIndex("RestaurantId")
+                        .HasDatabaseName("ix_stoplist_history_restaurant_id");
 
                     b.HasIndex("DishId", "StartedAt")
                         .HasDatabaseName("ix_stoplist_history_dish_id_started_at");
@@ -381,6 +453,10 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(64)")
                         .HasColumnName("request_hash");
 
+                    b.Property<Guid>("RestaurantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("restaurant_id");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -397,14 +473,17 @@ namespace Mise.Infrastructure.Persistence.Migrations
                     b.HasIndex("CreatedAt")
                         .HasDatabaseName("ix_orders_created_at");
 
-                    b.HasIndex("IdempotencyKey")
+                    b.HasIndex("RestaurantId")
+                        .HasDatabaseName("ix_orders_restaurant_id");
+
+                    b.HasIndex("RestaurantId", "IdempotencyKey")
                         .IsUnique()
-                        .HasDatabaseName("ix_orders_idempotency_key")
+                        .HasDatabaseName("ix_orders_restaurant_id_idempotency_key")
                         .HasFilter("idempotency_key IS NOT NULL");
 
-                    b.HasIndex("Number")
+                    b.HasIndex("RestaurantId", "Number")
                         .IsUnique()
-                        .HasDatabaseName("ix_orders_number");
+                        .HasDatabaseName("ix_orders_restaurant_id_number");
 
                     b.HasIndex("Status", "CreatedAt")
                         .HasDatabaseName("ix_orders_status_created_at");
@@ -479,6 +558,10 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .HasColumnType("numeric(14,3)")
                         .HasColumnName("required");
 
+                    b.Property<Guid>("RestaurantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("restaurant_id");
+
                     b.Property<decimal>("Shortage")
                         .HasPrecision(14, 3)
                         .HasColumnType("numeric(14,3)")
@@ -490,10 +573,47 @@ namespace Mise.Infrastructure.Persistence.Migrations
                     b.HasIndex("CreatedAt")
                         .HasDatabaseName("ix_order_shortages_created_at");
 
+                    b.HasIndex("RestaurantId")
+                        .HasDatabaseName("ix_order_shortages_restaurant_id");
+
                     b.HasIndex("ProductId", "CreatedAt")
                         .HasDatabaseName("ix_order_shortages_product_id_created_at");
 
                     b.ToTable("order_shortages", (string)null);
+                });
+
+            modelBuilder.Entity("Mise.Domain.Orders.OrderSubstitution", b =>
+                {
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("order_id");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("product_id");
+
+                    b.Property<decimal>("Ratio")
+                        .HasPrecision(8, 4)
+                        .HasColumnType("numeric(8,4)")
+                        .HasColumnName("ratio");
+
+                    b.Property<Guid>("SubstituteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("substitute_id");
+
+                    b.HasKey("OrderId", "ProductId")
+                        .HasName("pk_order_substitutions");
+
+                    b.HasIndex("ProductId")
+                        .HasDatabaseName("ix_order_substitutions_product_id");
+
+                    b.HasIndex("SubstituteId")
+                        .HasDatabaseName("ix_order_substitutions_substitute_id");
+
+                    b.ToTable("order_substitutions", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_order_substitutions_ratio_positive", "ratio > 0");
+                        });
                 });
 
             modelBuilder.Entity("Mise.Domain.Push.PushSubscription", b =>
@@ -538,6 +658,10 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("p256dh");
 
+                    b.Property<Guid>("RestaurantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("restaurant_id");
+
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -553,10 +677,105 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_push_subscriptions_endpoint");
 
+                    b.HasIndex("RestaurantId")
+                        .HasDatabaseName("ix_push_subscriptions_restaurant_id");
+
                     b.HasIndex("UserId")
                         .HasDatabaseName("ix_push_subscriptions_user_id");
 
                     b.ToTable("push_subscriptions", (string)null);
+                });
+
+            modelBuilder.Entity("Mise.Domain.Restaurants.Invite", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("AcceptedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("accepted_at");
+
+                    b.Property<Guid?>("AcceptedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("accepted_by");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<Guid>("RestaurantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("restaurant_id");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("role");
+
+                    b.HasKey("Id")
+                        .HasName("pk_invites");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_invites_code");
+
+                    b.HasIndex("RestaurantId")
+                        .HasDatabaseName("ix_invites_restaurant_id");
+
+                    b.ToTable("invites", (string)null);
+                });
+
+            modelBuilder.Entity("Mise.Domain.Restaurants.Restaurant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsDemo")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_demo");
+
+                    b.Property<long>("LastOrderNumber")
+                        .HasColumnType("bigint")
+                        .HasColumnName("last_order_number");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("name");
+
+                    b.HasKey("Id")
+                        .HasName("pk_restaurants");
+
+                    b.ToTable("restaurants", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_restaurants_last_order_number", "last_order_number >= 0");
+                        });
                 });
 
             modelBuilder.Entity("Mise.Domain.Stock.Batch", b =>
@@ -593,6 +812,10 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .HasColumnType("numeric(14,3)")
                         .HasColumnName("remaining_qty");
 
+                    b.Property<Guid>("RestaurantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("restaurant_id");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -603,12 +826,20 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("supply_item_id");
 
+                    b.Property<decimal?>("UnitCost")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)")
+                        .HasColumnName("unit_cost");
+
                     b.HasKey("Id")
                         .HasName("pk_batches");
 
                     b.HasIndex("ExpiresAt")
                         .HasDatabaseName("ix_batches_expires_at_active")
                         .HasFilter("status = 'Active'");
+
+                    b.HasIndex("RestaurantId")
+                        .HasDatabaseName("ix_batches_restaurant_id");
 
                     b.HasIndex("SupplyItemId")
                         .IsUnique()
@@ -642,11 +873,18 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .HasColumnType("numeric(14,3)")
                         .HasColumnName("qty_consumed");
 
+                    b.Property<Guid>("RestaurantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("restaurant_id");
+
                     b.HasKey("ProductId", "HourBucket")
                         .HasName("pk_consumption_hourly");
 
                     b.HasIndex("HourBucket")
                         .HasDatabaseName("ix_consumption_hourly_hour_bucket");
+
+                    b.HasIndex("RestaurantId")
+                        .HasDatabaseName("ix_consumption_hourly_restaurant_id");
 
                     b.ToTable("consumption_hourly", (string)null);
                 });
@@ -660,6 +898,11 @@ namespace Mise.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("BatchId")
                         .HasColumnType("uuid")
                         .HasColumnName("batch_id");
+
+                    b.Property<decimal?>("Cost")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("numeric(14,2)")
+                        .HasColumnName("cost");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -683,6 +926,14 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(500)")
                         .HasColumnName("reason");
 
+                    b.Property<bool>("Rescued")
+                        .HasColumnType("boolean")
+                        .HasColumnName("rescued");
+
+                    b.Property<Guid>("RestaurantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("restaurant_id");
+
                     b.Property<Guid?>("SupplyId")
                         .HasColumnType("uuid")
                         .HasColumnName("supply_id");
@@ -704,6 +955,9 @@ namespace Mise.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("OrderId")
                         .HasDatabaseName("ix_stock_movements_order_id");
+
+                    b.HasIndex("RestaurantId")
+                        .HasDatabaseName("ix_stock_movements_restaurant_id");
 
                     b.HasIndex("SupplyId")
                         .HasDatabaseName("ix_stock_movements_supply_id");
@@ -747,6 +1001,10 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(64)")
                         .HasColumnName("request_hash");
 
+                    b.Property<Guid>("RestaurantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("restaurant_id");
+
                     b.Property<string>("SupplierName")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
@@ -758,14 +1016,17 @@ namespace Mise.Infrastructure.Persistence.Migrations
                     b.HasIndex("CreatedAt")
                         .HasDatabaseName("ix_supplies_created_at");
 
-                    b.HasIndex("IdempotencyKey")
+                    b.HasIndex("RestaurantId")
+                        .HasDatabaseName("ix_supplies_restaurant_id");
+
+                    b.HasIndex("RestaurantId", "IdempotencyKey")
                         .IsUnique()
-                        .HasDatabaseName("ix_supplies_idempotency_key")
+                        .HasDatabaseName("ix_supplies_restaurant_id_idempotency_key")
                         .HasFilter("idempotency_key IS NOT NULL");
 
-                    b.HasIndex("Number")
+                    b.HasIndex("RestaurantId", "Number")
                         .IsUnique()
-                        .HasDatabaseName("ix_supplies_number");
+                        .HasDatabaseName("ix_supplies_restaurant_id_number");
 
                     b.ToTable("supplies", (string)null);
                 });
@@ -806,6 +1067,11 @@ namespace Mise.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("SupplyId")
                         .HasColumnType("uuid")
                         .HasColumnName("supply_id");
+
+                    b.Property<decimal?>("UnitCost")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)")
+                        .HasColumnName("unit_cost");
 
                     b.HasKey("Id")
                         .HasName("pk_supply_items");
@@ -926,6 +1192,10 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("password_hash");
 
+                    b.Property<Guid>("RestaurantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("restaurant_id");
+
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -938,6 +1208,9 @@ namespace Mise.Infrastructure.Persistence.Migrations
                     b.HasIndex("Login")
                         .IsUnique()
                         .HasDatabaseName("ix_users_login");
+
+                    b.HasIndex("RestaurantId")
+                        .HasDatabaseName("ix_users_restaurant_id");
 
                     b.ToTable("users", (string)null);
                 });
@@ -961,6 +1234,32 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .HasConstraintName("fk_alerts_products_product_id");
+
+                    b.HasOne("Mise.Domain.Restaurants.Restaurant", null)
+                        .WithMany()
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_alerts_restaurants_restaurant_id");
+                });
+
+            modelBuilder.Entity("Mise.Domain.Audit.AuditEntry", b =>
+                {
+                    b.HasOne("Mise.Domain.Restaurants.Restaurant", null)
+                        .WithMany()
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_audit_log_restaurants_restaurant_id");
+                });
+
+            modelBuilder.Entity("Mise.Domain.Catalog.Dish", b =>
+                {
+                    b.HasOne("Mise.Domain.Restaurants.Restaurant", null)
+                        .WithMany()
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_dishes_restaurants_restaurant_id");
                 });
 
             modelBuilder.Entity("Mise.Domain.Catalog.DishIngredient", b =>
@@ -980,6 +1279,33 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_dish_ingredients_products_product_id");
                 });
 
+            modelBuilder.Entity("Mise.Domain.Catalog.Product", b =>
+                {
+                    b.HasOne("Mise.Domain.Restaurants.Restaurant", null)
+                        .WithMany()
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_products_restaurants_restaurant_id");
+                });
+
+            modelBuilder.Entity("Mise.Domain.Catalog.ProductSubstitute", b =>
+                {
+                    b.HasOne("Mise.Domain.Catalog.Product", null)
+                        .WithMany("Substitutes")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_product_substitutes_products_product_id");
+
+                    b.HasOne("Mise.Domain.Catalog.Product", null)
+                        .WithMany()
+                        .HasForeignKey("SubstituteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_product_substitutes_products_substitute_id");
+                });
+
             modelBuilder.Entity("Mise.Domain.Menu.StopListEntry", b =>
                 {
                     b.HasOne("Mise.Domain.Catalog.Dish", null)
@@ -994,6 +1320,23 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .HasForeignKey("LimitingProductId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_stoplist_history_products_limiting_product_id");
+
+                    b.HasOne("Mise.Domain.Restaurants.Restaurant", null)
+                        .WithMany()
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_stoplist_history_restaurants_restaurant_id");
+                });
+
+            modelBuilder.Entity("Mise.Domain.Orders.Order", b =>
+                {
+                    b.HasOne("Mise.Domain.Restaurants.Restaurant", null)
+                        .WithMany()
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_orders_restaurants_restaurant_id");
                 });
 
             modelBuilder.Entity("Mise.Domain.Orders.OrderItem", b =>
@@ -1021,16 +1364,64 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_order_shortages_products_product_id");
+
+                    b.HasOne("Mise.Domain.Restaurants.Restaurant", null)
+                        .WithMany()
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_order_shortages_restaurants_restaurant_id");
+                });
+
+            modelBuilder.Entity("Mise.Domain.Orders.OrderSubstitution", b =>
+                {
+                    b.HasOne("Mise.Domain.Orders.Order", null)
+                        .WithMany("Substitutions")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_order_substitutions_orders_order_id");
+
+                    b.HasOne("Mise.Domain.Catalog.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_order_substitutions_products_product_id");
+
+                    b.HasOne("Mise.Domain.Catalog.Product", null)
+                        .WithMany()
+                        .HasForeignKey("SubstituteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_order_substitutions_products_substitute_id");
                 });
 
             modelBuilder.Entity("Mise.Domain.Push.PushSubscription", b =>
                 {
+                    b.HasOne("Mise.Domain.Restaurants.Restaurant", null)
+                        .WithMany()
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_push_subscriptions_restaurants_restaurant_id");
+
                     b.HasOne("Mise.Domain.Users.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_push_subscriptions_users_user_id");
+                });
+
+            modelBuilder.Entity("Mise.Domain.Restaurants.Invite", b =>
+                {
+                    b.HasOne("Mise.Domain.Restaurants.Restaurant", null)
+                        .WithMany()
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_invites_restaurants_restaurant_id");
                 });
 
             modelBuilder.Entity("Mise.Domain.Stock.Batch", b =>
@@ -1041,6 +1432,13 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_batches_products_product_id");
+
+                    b.HasOne("Mise.Domain.Restaurants.Restaurant", null)
+                        .WithMany()
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_batches_restaurants_restaurant_id");
 
                     b.HasOne("Mise.Domain.Supplies.SupplyItem", null)
                         .WithMany()
@@ -1058,6 +1456,13 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_consumption_hourly_products_product_id");
+
+                    b.HasOne("Mise.Domain.Restaurants.Restaurant", null)
+                        .WithMany()
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_consumption_hourly_restaurants_restaurant_id");
                 });
 
             modelBuilder.Entity("Mise.Domain.Stock.StockMovement", b =>
@@ -1082,11 +1487,28 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_stock_movements_products_product_id");
 
+                    b.HasOne("Mise.Domain.Restaurants.Restaurant", null)
+                        .WithMany()
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_stock_movements_restaurants_restaurant_id");
+
                     b.HasOne("Mise.Domain.Supplies.Supply", null)
                         .WithMany()
                         .HasForeignKey("SupplyId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_stock_movements_supplies_supply_id");
+                });
+
+            modelBuilder.Entity("Mise.Domain.Supplies.Supply", b =>
+                {
+                    b.HasOne("Mise.Domain.Restaurants.Restaurant", null)
+                        .WithMany()
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_supplies_restaurants_restaurant_id");
                 });
 
             modelBuilder.Entity("Mise.Domain.Supplies.SupplyItem", b =>
@@ -1116,14 +1538,31 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_refresh_tokens_users_user_id");
                 });
 
+            modelBuilder.Entity("Mise.Domain.Users.User", b =>
+                {
+                    b.HasOne("Mise.Domain.Restaurants.Restaurant", null)
+                        .WithMany()
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_users_restaurants_restaurant_id");
+                });
+
             modelBuilder.Entity("Mise.Domain.Catalog.Dish", b =>
                 {
                     b.Navigation("Ingredients");
                 });
 
+            modelBuilder.Entity("Mise.Domain.Catalog.Product", b =>
+                {
+                    b.Navigation("Substitutes");
+                });
+
             modelBuilder.Entity("Mise.Domain.Orders.Order", b =>
                 {
                     b.Navigation("Items");
+
+                    b.Navigation("Substitutions");
                 });
 
             modelBuilder.Entity("Mise.Domain.Supplies.Supply", b =>

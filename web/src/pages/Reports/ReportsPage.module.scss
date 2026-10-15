@@ -163,3 +163,128 @@
 .productSelect {
   min-width: 200px;
 }
+
+// ---------- Деньги ----------
+
+.money {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.moneyTitle {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 26px;
+  color: var(--ink);
+}
+
+.moneyCells {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+
+  @media (max-width: 1279px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  @media (max-width: 767px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  overflow: hidden;
+
+  .kpiCell {
+    // Колонок 5 / 3 / 2 — линии справа и снизу у каждой ячейки; крайние обрезает overflow панели.
+    border-left: 0;
+    border-top: 0;
+    border-right: 1px solid var(--hairline);
+    border-bottom: 1px solid var(--hairline);
+    margin: 0 -1px -1px 0;
+  }
+
+  .kpiValue {
+    font-size: 32px;
+
+    @media (max-width: 767px) {
+      font-size: 26px;
+    }
+  }
+
+  [data-tone='crit'] .kpiValue {
+    color: var(--crit-text);
+  }
+
+  [data-tone='fresh'] .kpiValue {
+    color: var(--fresh-text);
+  }
+}
+
+.moneyNote {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+// ---------- Сравнение с прошлым периодом ----------
+
+.delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: var(--space-1);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+
+  svg {
+    width: 16px;
+    height: 16px;
+    flex: none;
+  }
+
+  &[data-tone='good'] {
+    color: var(--fresh-text);
+  }
+
+  &[data-tone='bad'] {
+    color: var(--crit-text);
+  }
+}
+
+// ---------- Экспорт и печать ----------
+
+.exportActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.printPeriod {
+  display: none;
+}
+
+@media print {
+  .printPeriod {
+    display: block;
+    margin: 0;
+    font-size: 14px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  // Панель не рвётся между страницами; таблицы под графиками на бумаге не нужны — графики уже есть.
+  .grid > *,
+  .money,
+  .kpi {
+    break-inside: avoid;
+  }
+
+  .table {
+    display: none;
+  }
+}

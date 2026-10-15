@@ -29,6 +29,14 @@ internal static class SupplyEndpoints
         supplies.MapGet("/{id:guid}", (Guid id, SupplyService service, CancellationToken ct) => service.GetAsync(id, ct))
             .WithName("GetSupply").WithSummary("Поставка с позициями и партиями");
 
+        api.MapPost("/supply-requests", (CreateSupplyRequestRequest request, SupplyRequestService service, CancellationToken ct) =>
+                service.CreateAsync(request, ct))
+            .WithTags("Поставки")
+            .WithSummary("Заявка поставщику: номер, строки с ориентировочной суммой, запись в журнал действий")
+            .WithDescription("Количества — в базовых единицах. Отправляет заявку человек (копирует текст или печатает); " +
+                             "статусов и ожидаемой даты нет — это решение заказчика.")
+            .RequireAuthorization(AuthPolicies.Warehouse);
+
         return api;
     }
 

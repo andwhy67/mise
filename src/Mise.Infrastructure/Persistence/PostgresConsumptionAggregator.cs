@@ -14,12 +14,12 @@ internal sealed class PostgresConsumptionAggregator(MiseDbContext db) : IConsump
 
     // Константа без пользовательских данных.
     private const string RefreshSql = """
-        INSERT INTO consumption_hourly (product_id, hour_bucket, qty_consumed)
-        SELECT m.product_id, date_trunc('hour', m.created_at, 'UTC'), -SUM(m.qty_delta)
+        INSERT INTO consumption_hourly (product_id, hour_bucket, qty_consumed, restaurant_id)
+        SELECT m.product_id, date_trunc('hour', m.created_at, 'UTC'), -SUM(m.qty_delta), m.restaurant_id
         FROM stock_movements m
         WHERE m.type IN ('OrderConsumption', 'OrderCancelReturn')
           AND m.created_at >= COALESCE((SELECT MAX(hour_bucket) FROM consumption_hourly) - interval '1 hour', '-infinity'::timestamptz)
-        GROUP BY 1, 2
+        GROUP BY m.product_id, date_trunc('hour', m.created_at, 'UTC'), m.restaurant_id
         ON CONFLICT (product_id, hour_bucket) DO UPDATE SET qty_consumed = EXCLUDED.qty_consumed
         """;
 

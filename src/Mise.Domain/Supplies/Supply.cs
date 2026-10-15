@@ -35,6 +35,9 @@ public sealed class SupplyItem
 {
     private SupplyItem() { }
 
+    /// <summary>Цена закупки за базовую единицу (₽ за г / мл / шт) — та же, что у партии.</summary>
+    public decimal? UnitCost { get; set; }
+
     public SupplyItem(Guid id, Guid supplyId, int lineNo, Guid productId, string productName, decimal quantity)
     {
         Id = id;

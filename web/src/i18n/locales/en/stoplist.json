@@ -37,5 +37,25 @@
     "removed": "“{{dish}}” is off the menu",
     "return": "Back on the menu",
     "returned": "“{{dish}}” is back on the menu"
+  },
+  "restock": {
+    "title": "What to buy to bring dishes back",
+    "subtitle": "Enough for {{hours}} h of sales, at least {{portions}} portions per dish — otherwise it goes straight back to stop.",
+    "all_one": "Add {{count}} product to supply",
+    "all_other": "Add {{count}} products to supply",
+    "empty": "Nothing to buy",
+    "emptyHint": "Dishes in the stop list are switched off manually, or there is no stop list.",
+    "buy": "What to buy",
+    "returns_one": "Brings back: {{dishes}}",
+    "returns_other": "Brings back: {{dishes}}",
+    "packed": "{{missing}} short, rounded up to a pack",
+    "one": "Add to supply",
+    "oneLabel": "Add {{product}} to supply",
+    "byDish": "What each dish is missing",
+    "targetDemand_one": "Target {{count}} portion: a day of sales",
+    "targetDemand_other": "Target {{count}} portions: a day of sales",
+    "targetMin_one": "Target {{count}} portion: minimum to stay off the stop list",
+    "targetMin_other": "Target {{count}} portions: minimum to stay off the stop list",
+    "line": "{{product}}: {{missing}} short (have {{usable}})"
   }
 }

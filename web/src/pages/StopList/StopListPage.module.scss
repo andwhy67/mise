@@ -145,3 +145,65 @@
     accent-color: var(--brand);
   }
 }
+
+// ---------- Что докупить ----------
+
+.restock {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.restockRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-4) 0;
+
+  & + & {
+    border-top: 1px solid var(--hairline);
+  }
+
+  .action {
+    margin-top: 0;
+  }
+
+  @media (max-width: 767px) {
+    grid-template-columns: minmax(0, 1fr) auto;
+
+    .action {
+      grid-column: 1 / -1;
+      justify-self: start;
+    }
+  }
+}
+
+.restockMain {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.restockQty {
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--brand-strong);
+  font-variant-numeric: var(--numerals-serif);
+  white-space: nowrap;
+}
+
+.restockDetails {
+  border-top: 1px solid var(--hairline);
+  padding-top: var(--space-3);
+
+  summary {
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--brand-strong);
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+}

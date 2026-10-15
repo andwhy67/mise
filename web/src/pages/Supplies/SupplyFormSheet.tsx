@@ -21,7 +21,9 @@ import { useOnline } from '@/pwa/network'
 import {
   defaultNumber,
   emptyRow,
+  lineCost,
   previewExpiry,
+  rowPrice,
   rowFromSuggestion,
   toMoscowInput,
   toRequest,
@@ -154,6 +156,7 @@ function SupplyForm({ products, prefill, onDone }: { products: Product[]; prefil
         ))}
       </ol>
       {errors.rows && <p className={styles.error}>{t('form.errors.empty')}</p>}
+      <SupplyTotal rows={form.rows} products={products} />
 
       <Button variant="text" icon={<Plus />} onClick={() => update({ rows: [...form.rows, emptyRow(nextKey())] })}>
         {t('form.addRow')}
@@ -197,6 +200,8 @@ function SupplyRowEditor({ index, row, product, createdAt, groups, findProduct, 
   const units = unitsFor(product)
   const unit = row.unit ?? units[0]!
   const preview = previewExpiry(row, product, createdAt)
+  const price = rowPrice(row, product)
+  const cost = lineCost(row, product)
   const unitKey = { Gram: 'g', Kilogram: 'kg', Milliliter: 'ml', Liter: 'l', Piece: 'pcs' } as const
   // Норма короче двух суток — в часах («12 ч»), иначе в днях («3 дн.»).
   const normHours = product?.defaultShelfLifeHours
@@ -242,6 +247,16 @@ function SupplyRowEditor({ index, row, product, createdAt, groups, findProduct, 
           error={error('expiry')}
           onChange={(e) => onChange({ expiry: e.target.value as SupplyRow['expiry'] })}
         />
+        <Field
+          className={styles.price}
+          label={t(product?.unit === 'Piece' ? 'form.pricePiece' : product?.unit === 'Milliliter' ? 'form.priceLiter' : 'form.priceKg')}
+          inputMode="decimal"
+          autoComplete="off"
+          value={row.price}
+          placeholder={product?.referencePrice != null ? f.number(product.referencePrice) : undefined}
+          error={error('price')}
+          onChange={(e) => onChange({ price: e.target.value })}
+        />
         {(row.expiry === 'hours' || row.expiry === 'days') && (
           <Field
             className={styles.expiryValue}
@@ -266,6 +281,7 @@ function SupplyRowEditor({ index, row, product, createdAt, groups, findProduct, 
       </div>
       <p className={styles.preview} aria-live="polite">
         {preview.expiresAt ? t('form.preview', { when: f.moment(preview.expiresAt), source: t(`form.source.${preview.source}`) }) : product ? t('form.previewUnknown') : ''}
+        {cost != null && <span className={styles.lineCost}>{t(price?.reference ? 'form.lineCostReference' : 'form.lineCost', { sum: f.money(cost) })}</span>}
       </p>
       {onRemove && (
         <button type="button" className={styles.remove} aria-label={t('form.removeRow', { index: index + 1 })} onClick={onRemove}>
@@ -273,6 +289,22 @@ function SupplyRowEditor({ index, row, product, createdAt, groups, findProduct, 
         </button>
       )}
     </li>
+  )
+}
+
+/** Итог поставки: сумма строк с известной ценой и сколько строк без цены. */
+function SupplyTotal({ rows, products }: { rows: SupplyRow[]; products: Product[] }) {
+  const { t } = useTranslation('supplies')
+  const f = useFormat()
+  const costs = rows.filter((r) => r.productId).map((r) => lineCost(r, products.find((p) => p.id === r.productId)))
+  if (costs.length === 0) return null
+  const total = costs.reduce<number>((sum, c) => sum + (c ?? 0), 0)
+  const unpriced = costs.filter((c) => c == null).length
+  return (
+    <p className={styles.total} aria-live="polite">
+      {t('form.total', { sum: f.money(total) })}
+      {unpriced > 0 && <span className={styles.totalNote}>{t('form.totalUnpriced', { count: unpriced })}</span>}
+    </p>
   )
 }
 

@@ -18,6 +18,10 @@ namespace Mise.Application.Abstractions;
 /// </summary>
 public interface IMiseDbContext
 {
+    /// <summary>Рестораны — без фильтра: это и есть граница данных.</summary>
+    DbSet<Mise.Domain.Restaurants.Restaurant> Restaurants { get; }
+    DbSet<Mise.Domain.Restaurants.Invite> Invites { get; }
+
     DbSet<Product> Products { get; }
     DbSet<Dish> Dishes { get; }
     DbSet<DishIngredient> DishIngredients { get; }

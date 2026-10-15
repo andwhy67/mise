@@ -3,8 +3,8 @@ import { useId, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ApiError } from '@/api/errors'
 import { useCreateOrder } from '@/api/mutations'
-import { useMenu } from '@/api/queries'
-import type { DishAvailability, MissingIngredient } from '@/api/types'
+import { useMenu, useProducts } from '@/api/queries'
+import type { DishAvailability, MissingIngredient, Product } from '@/api/types'
 import { Button } from '@/components/Button'
 import { Meter } from '@/components/Meter'
 import { Page } from '@/components/Page'
@@ -20,8 +20,8 @@ import { useFormat } from '@/lib/useFormat'
 import { uuid } from '@/lib/uuid'
 import { vibrate } from '@/pwa/haptics'
 import { useOnline } from '@/pwa/network'
-import { cartShortages, cartTotals, cartUsage, type Cart } from './cart'
-import { RecentOrders } from './RecentOrders'
+import { activeSubstitutions, cartShortages, cartTotals, cartUsage, type Cart, type CartSubstitution } from './cart'
+import { RecentOrders, type PlacedOrder } from './RecentOrders'
 import styles from './OrdersPage.module.scss'
 
 /** Порций в одной строке заказа — как на сервере (CreateOrderRequestValidator.MaxPortionsPerLine). */
@@ -37,7 +37,21 @@ export function OrdersPage() {
   const { t } = useTranslation('orders')
   const menu = useMenu()
   const [cart, setCart] = useState<Cart>(new Map())
+  // Замены, на которые согласился повар: живут вместе с корзиной и уходят с ней в заказ.
+  const [substitutions, setSubstitutions] = useState<CartSubstitution[]>([])
   const [cartOpen, setCartOpen] = useState(false)
+  // Только что принятый заказ: подсвечивается в «Заказах в работе» вместо тоста — повар и так знает, что нажал.
+  const [placed, setPlaced] = useState<PlacedOrder | null>(null)
+  const products = useProducts().data ?? []
+  const substitution = {
+    list: substitutions,
+    add: (s: CartSubstitution) => setSubstitutions((current) => [...current.filter((c) => c.productId !== s.productId), s]),
+    remove: (productId: string) => setSubstitutions((current) => current.filter((c) => c.productId !== productId)),
+  }
+  const clear = () => {
+    setCart(new Map())
+    setSubstitutions([])
+  }
 
   const setQuantity = (dishId: string, quantity: number) =>
     setCart((current) => {
@@ -61,16 +75,16 @@ export function OrdersPage() {
           ) : dishes.length === 0 ? (
             <EmptyState title={t('menu.empty')}>{t('menu.emptyHint')}</EmptyState>
           ) : (
-            <MenuList dishes={dishes} cart={cart} onChange={setQuantity} />
+            <MenuList dishes={dishes} cart={cart} products={products} substitution={substitution} onChange={setQuantity} />
           )}
         </Panel>
 
         {/* Справа — всё про заказы: собрать новый и вести принятые до выдачи. */}
         <div className={styles.side}>
           <Panel title={t('cart.title')} titleId="orders-cart" className={styles.cartPanel}>
-            <CartContent cart={cart} dishes={dishes} onChange={setQuantity} onDone={() => setCart(new Map())} />
+            <CartContent cart={cart} dishes={dishes} substitution={substitution} onChange={setQuantity} onPlaced={setPlaced} onDone={clear} />
           </Panel>
-          <RecentOrders />
+          <RecentOrders placed={placed} />
         </div>
       </div>
 
@@ -89,9 +103,11 @@ export function OrdersPage() {
         <CartContent
           cart={cart}
           dishes={dishes}
+          substitution={substitution}
           onChange={setQuantity}
+          onPlaced={setPlaced}
           onDone={() => {
-            setCart(new Map())
+            clear()
             setCartOpen(false)
           }}
         />
@@ -105,7 +121,41 @@ function MoneyText({ value }: { value: number }) {
   return <>{f.money(value)}</>
 }
 
-function MenuList({ dishes, cart, onChange }: { dishes: DishAvailability[]; cart: Cart; onChange: (dishId: string, quantity: number) => void }) {
+interface SubstitutionState {
+  list: CartSubstitution[]
+  add: (s: CartSubstitution) => void
+  remove: (productId: string) => void
+}
+
+/**
+ * Чем заменить продукт, на котором блюдо в стопе: первое правило справочника, заменителя которого хватает
+ * хотя бы на порцию (по остаткам меню); если остаток заменителя неизвестен — всё равно предлагаем, решит сервер.
+ */
+function substituteFor(dish: DishAvailability, products: Product[], menu: DishAvailability[]): CartSubstitution | null {
+  const limiting = dish.limitingProduct
+  if (dish.status !== 'StopShortage' || !limiting) return null
+  const rules = products.find((p) => p.id === limiting.productId)?.substitutes ?? []
+  const usable = new Map(menu.flatMap((d) => d.ingredients.map((i) => [i.productId, i.usable] as const)))
+  const fits = rules.filter((r) => (usable.get(r.productId) ?? Infinity) >= limiting.qtyPerPortion * r.ratio)
+  const rule = fits[0]
+  return rule
+    ? { productId: limiting.productId, productName: limiting.productName, substituteId: rule.productId, substituteName: rule.productName, unit: rule.unit, ratio: rule.ratio }
+    : null
+}
+
+function MenuList({
+  dishes,
+  cart,
+  products,
+  substitution,
+  onChange,
+}: {
+  dishes: DishAvailability[]
+  cart: Cart
+  products: Product[]
+  substitution: SubstitutionState
+  onChange: (dishId: string, quantity: number) => void
+}) {
   const { t } = useTranslation('orders')
   const [search, setSearch] = useState('')
   const searchId = useId()
@@ -142,7 +192,14 @@ function MenuList({ dishes, cart, onChange }: { dishes: DishAvailability[]; cart
               <h3 className={styles.categoryTitle}>{group.category || t('menu.other')}</h3>
               <ul className={styles.dishes}>
                 {group.items.map((dish) => (
-                  <DishRow key={dish.dishId} dish={dish} quantity={cart.get(dish.dishId) ?? 0} onChange={(q) => onChange(dish.dishId, q)} />
+                  <DishRow
+                    key={dish.dishId}
+                    dish={dish}
+                    quantity={cart.get(dish.dishId) ?? 0}
+                    offer={substituteFor(dish, products, dishes)}
+                    substitution={substitution}
+                    onChange={(q) => onChange(dish.dishId, q)}
+                  />
                 ))}
               </ul>
             </section>
@@ -153,10 +210,25 @@ function MenuList({ dishes, cart, onChange }: { dishes: DishAvailability[]; cart
   )
 }
 
-function DishRow({ dish, quantity, onChange }: { dish: DishAvailability; quantity: number; onChange: (quantity: number) => void }) {
+function DishRow({
+  dish,
+  quantity,
+  offer,
+  substitution,
+  onChange,
+}: {
+  dish: DishAvailability
+  quantity: number
+  /** Блюдо в стопе, но ограничивающий продукт можно заменить. */
+  offer: CartSubstitution | null
+  substitution: SubstitutionState
+  onChange: (quantity: number) => void
+}) {
   const { t } = useTranslation('orders')
   const f = useFormat()
-  const stopped = dish.inStopList || dish.maxPortions <= 0
+  // Повар уже согласился на замену продукта, из-за которого блюдо в стопе, — блюдо можно добавлять (сколько — решит сервер).
+  const substituted = offer !== null && substitution.list.some((s) => s.productId === offer.productId)
+  const stopped = (dish.inStopList || dish.maxPortions <= 0) && !substituted
   const [open, setOpen] = useState(false)
   const compositionId = useId()
 
@@ -188,14 +260,26 @@ function DishRow({ dish, quantity, onChange }: { dish: DishAvailability; quantit
           <ChevronDown aria-hidden="true" strokeWidth={1.8} />
         </button>
       </div>
-      {stopped ? (
+      {stopped && offer ? (
+        <Button
+          variant="secondary"
+          className={styles.add}
+          onClick={() => {
+            substitution.add(offer)
+            onChange(1)
+          }}
+          aria-label={t('menu.addWithSubstituteLabel', { dish: dish.dishName, product: offer.productName, substitute: offer.substituteName })}
+        >
+          {t('menu.addWithSubstitute', { substitute: offer.substituteName })}
+        </Button>
+      ) : stopped ? (
         <span className={styles.stopNote}>{t('menu.stop')}</span>
       ) : quantity === 0 ? (
         <Button variant="secondary" className={styles.add} onClick={() => onChange(1)} aria-label={t('menu.addLabel', { dish: dish.dishName })}>
           {t('menu.add')}
         </Button>
       ) : (
-        <Stepper value={quantity} label={dish.dishName} max={Math.min(MAX_PER_LINE, dish.maxPortions)} onChange={onChange} />
+        <Stepper value={quantity} label={dish.dishName} max={substituted ? MAX_PER_LINE : Math.min(MAX_PER_LINE, dish.maxPortions)} onChange={onChange} />
       )}
       {open && (
         <div id={compositionId} className={styles.composition}>
@@ -250,12 +334,16 @@ function Composition({ dish }: { dish: DishAvailability }) {
 function CartContent({
   cart,
   dishes,
+  substitution,
   onChange,
+  onPlaced,
   onDone,
 }: {
   cart: Cart
   dishes: DishAvailability[]
+  substitution: SubstitutionState
   onChange: (dishId: string, quantity: number) => void
+  onPlaced: (order: PlacedOrder) => void
   onDone: () => void
 }) {
   const { t } = useTranslation('orders')
@@ -264,33 +352,40 @@ function CartContent({
   const mutation = useCreateOrder()
   const online = useOnline()
   // Отказ сервера относится к конкретному составу корзины: поменяли состав — подсказка уходит.
-  const [refusal, setRefusal] = useState<{ cart: Cart; missing: MissingIngredient[] } | null>(null)
-  const refused = refusal?.cart === cart ? refusal.missing : null
-  // Один ключ на один состав корзины: повтор той же отправки (обрыв связи, двойной клик) не создаст второй заказ.
-  const idempotency = useRef<{ cart: Cart; key: string } | null>(null)
+  const active = activeSubstitutions(cart, dishes, substitution.list)
+  // Состав заказа = блюда + замены: поменяли что-то из этого — прежний отказ и прежний ключ не подходят.
+  const basis = JSON.stringify([[...cart.entries()], active.map((s) => [s.productId, s.substituteId])])
+  const [refusal, setRefusal] = useState<{ basis: string; missing: MissingIngredient[] } | null>(null)
+  const refused = refusal?.basis === basis ? refusal.missing : null
+  // Один ключ на один состав: повтор той же отправки (обрыв связи, двойной клик) не создаст второй заказ.
+  const idempotency = useRef<{ basis: string; key: string } | null>(null)
 
   const lines = [...cart.entries()].map(([dishId, quantity]) => ({ dish: dishes.find((d) => d.dishId === dishId), quantity })).filter((l) => l.dish)
   const totals = cartTotals(cart, dishes)
-  const shortages = cartShortages(cart, dishes)
-  const usage = cartUsage(cart, dishes)
+  const shortages = cartShortages(cart, dishes, active)
+  const usage = cartUsage(cart, dishes, active)
   const missing = refused ?? (shortages.length ? shortages : null)
 
   if (lines.length === 0) return <EmptyState title={t('cart.empty')}>{t('cart.emptyHint')}</EmptyState>
 
   const submit = () => {
-    if (idempotency.current?.cart !== cart) idempotency.current = { cart, key: uuid() }
+    if (idempotency.current?.basis !== basis) idempotency.current = { basis, key: uuid() }
     mutation.mutate(
-      { items: lines.map((l) => ({ dishId: l.dish!.dishId, quantity: l.quantity })), idempotencyKey: idempotency.current.key },
+      {
+        items: lines.map((l) => ({ dishId: l.dish!.dishId, quantity: l.quantity })),
+        substitutions: active.length ? active.map((s) => ({ productId: s.productId, substituteId: s.substituteId })) : undefined,
+        idempotencyKey: idempotency.current.key,
+      },
       {
         onSuccess: (order) => {
           vibrate('success')
-          toast.show(t('cart.done', { number: order.number, total: f.money(order.total) }))
+          onPlaced({ id: order.id, number: order.number, total: order.total })
           onDone()
         },
         onError: (cause) => {
           vibrate('error')
           const fromServer = cause instanceof ApiError ? (cause.problem?.missing as MissingIngredient[] | undefined) : undefined
-          if (fromServer?.length) setRefusal({ cart, missing: fromServer })
+          if (fromServer?.length) setRefusal({ basis, missing: fromServer })
           else toast.show(errorText(cause), 'crit')
         },
       },
@@ -330,6 +425,19 @@ function CartContent({
         <strong>{f.money(totals.total)}</strong>
       </p>
 
+      {active.length > 0 && (
+        <ul className={styles.substitutions} aria-label={t('substitute.applied')}>
+          {active.map((s) => (
+            <li key={s.productId}>
+              <span>{t('substitute.line', { product: s.productName, substitute: s.substituteName, ratio: f.number(s.ratio) })}</span>
+              <Button variant="text" onClick={() => substitution.remove(s.productId)}>
+                {t('substitute.undo')}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+
       {missing && (
         <div className={styles.missing} role="alert">
           <StatusMark tone="crit">{refused ? t('cart.refused') : t('cart.notEnough')}</StatusMark>
@@ -342,6 +450,32 @@ function CartContent({
                   have: f.qty(Math.max(0, m.available), m.unit),
                   dishes: m.dishes.join(', '),
                 })}
+                {/* Замена — только по явному согласию повара: кнопка, а не автоматическая подмена. */}
+                {m.substitutes?.map((offer) =>
+                  offer.enough ? (
+                    <Button
+                      key={offer.productId}
+                      variant="text"
+                      className={styles.substituteOffer}
+                      onClick={() =>
+                        substitution.add({
+                          productId: m.productId,
+                          productName: m.productName,
+                          substituteId: offer.productId,
+                          substituteName: offer.productName,
+                          unit: offer.unit,
+                          ratio: offer.ratio,
+                        })
+                      }
+                    >
+                      {t('substitute.offer', { substitute: offer.productName, need: f.qty(offer.required, offer.unit), have: f.qty(offer.available, offer.unit) })}
+                    </Button>
+                  ) : (
+                    <span key={offer.productId} className={styles.substituteShort}>
+                      {t('substitute.short', { substitute: offer.productName, have: f.qty(offer.available, offer.unit) })}
+                    </span>
+                  ),
+                )}
               </li>
             ))}
           </ul>

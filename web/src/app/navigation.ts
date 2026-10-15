@@ -27,6 +27,8 @@ export interface NavEntry {
   roles: UserRole[]
   /** Вторичный раздел: в сайдбаре — отдельной группой, на телефоне — в «Ещё». */
   secondary?: boolean
+  /** Только в демо-ресторане (симулятор работает его служебной учёткой). */
+  demoOnly?: boolean
 }
 
 const ALL: UserRole[] = ['Warehouse', 'Chef', 'Manager']
@@ -42,7 +44,7 @@ export const NAV: NavEntry[] = [
   { id: 'reports', path: '/reports', label: 'nav.reports', icon: BarChart3, roles: ['Manager'] },
   { id: 'alerts', path: '/alerts', label: 'nav.alerts', icon: Bell, roles: ALL, secondary: true },
   { id: 'catalog', path: '/catalog', label: 'nav.catalog', icon: BookOpen, roles: ['Manager'], secondary: true },
-  { id: 'simulator', path: '/simulator', label: 'nav.simulator', icon: Gauge, roles: ['Manager'], secondary: true },
+  { id: 'simulator', path: '/simulator', label: 'nav.simulator', icon: Gauge, roles: ['Manager'], secondary: true, demoOnly: true },
   { id: 'users', path: '/users', label: 'nav.users', icon: Users, roles: ['Manager'], secondary: true },
   { id: 'audit', path: '/audit', label: 'nav.audit', icon: ScrollText, roles: ['Manager'], secondary: true },
 ]
@@ -56,7 +58,8 @@ const MOBILE_TABS: Record<Exclude<UserRole, 'Simulator'>, string[]> = {
 
 export const MORE: NavEntry = { id: 'more', path: '/more', label: 'nav.more', icon: Menu, roles: ALL }
 
-export const navFor = (role: UserRole) => NAV.filter((entry) => entry.roles.includes(role))
+/** Разделы роли; demo = false — без разделов демо-ресторана (симулятора). */
+export const navFor = (role: UserRole, demo = true) => NAV.filter((entry) => entry.roles.includes(role) && (demo || !entry.demoOnly))
 
 export function mobileTabsFor(role: UserRole): NavEntry[] {
   const ids = MOBILE_TABS[role as keyof typeof MOBILE_TABS] ?? MOBILE_TABS.Chef
@@ -64,10 +67,10 @@ export function mobileTabsFor(role: UserRole): NavEntry[] {
 }
 
 /** Разделы, которые на телефоне живут в «Ещё». */
-export function moreFor(role: UserRole): NavEntry[] {
+export function moreFor(role: UserRole, demo = true): NavEntry[] {
   const tabs = new Set(mobileTabsFor(role).map((entry) => entry.id))
-  return navFor(role).filter((entry) => !tabs.has(entry.id))
+  return navFor(role, demo).filter((entry) => !tabs.has(entry.id))
 }
 
-export const canAccess = (role: UserRole, path: string) =>
-  path === '/' || navFor(role).some((entry) => entry.path !== '/' && path.startsWith(entry.path)) || path === '/more'
+export const canAccess = (role: UserRole, path: string, demo = true) =>
+  path === '/' || navFor(role, demo).some((entry) => entry.path !== '/' && path.startsWith(entry.path)) || path === '/more'

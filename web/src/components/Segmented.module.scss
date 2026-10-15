@@ -56,3 +56,10 @@
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
+
+// Переключатели на бумаге не нужны: выбранное значение экран пишет словами.
+@media print {
+  .group {
+    display: none;
+  }
+}

@@ -7,6 +7,7 @@ using Mise.Application.Abstractions;
 using Mise.Application.Audit;
 using Mise.Application.Common;
 using Mise.Domain.Abstractions;
+using Mise.Domain.Restaurants;
 using Mise.Domain.Users;
 
 namespace Mise.Application.Auth;
@@ -19,6 +20,7 @@ public sealed class AuthService(
     IMiseDbContext db,
     IClock clock,
     IStockLocks locks,
+    ITenant tenant,
     IPasswordHasher hasher,
     ITokenIssuer issuer,
     AuditService audit,
@@ -56,15 +58,19 @@ public sealed class AuthService(
         var settings = options.Value;
         var now = clock.UtcNow;
         var login = TryNormalize(request.Login);
-        var user = login is null ? null : await db.Users.FirstOrDefaultAsync(u => u.Login == login, ct);
+        // Логин уникален во всей системе: ресторан узнаём по пользователю, а не спрашиваем при входе.
+        var found = login is null ? null : await FindAsync(u => u.Login == login, ct);
+        var user = found?.User;
 
-        if (user is null)
+        if (found is null || user is null)
         {
             hasher.Verify(DummyHash.Value, request.Password);
             await audit.RecordAsync(Actions.LoginFailed, null, login ?? request.Login.Trim(), "User", null, new { reason = "unknown_login" }, ct);
             throw InvalidCredentials();
         }
 
+        // Дальше всё — от имени ресторана пользователя: журнал, сохранение счётчиков входа.
+        using var scope = tenant.Use(found.Restaurant.Id);
         if (user.IsLockedOut(now))
         {
             await audit.RecordAsync(Actions.LoginFailed, user.Id, user.Login, "User", user.Id.ToString(), new { reason = "locked" }, ct);
@@ -90,7 +96,7 @@ public sealed class AuthService(
         if (check == PasswordCheck.SuccessRehashNeeded)
             user.SetPasswordHash(hasher.Hash(request.Password));
         user.RegisterSuccessfulLogin(now);
-        var session = IssueSession(user, familyId: Guid.CreateVersion7(now), now, out _);
+        var session = IssueSession(user, found.Restaurant, familyId: Guid.CreateVersion7(now), now, out _);
         await db.SaveChangesAsync(ct);
         await audit.RecordAsync(Actions.Login, user.Id, user.Login, "User", user.Id.ToString(), new { role = user.Role.ToString() }, ct);
         return session;
@@ -99,17 +105,29 @@ public sealed class AuthService(
     /// <summary>
     /// Демо-вход по роли (вызывается, только если Demo:Enabled): та же сессия, что и при обычном входе, с аудитом.
     /// </summary>
+    /// <summary>Сессия сразу после регистрации или входа по приглашению — без повторного ввода пароля.</summary>
+    public async Task<AuthSession> StartSessionAsync(User user, Restaurant restaurant, CancellationToken ct)
+    {
+        var now = clock.UtcNow;
+        user.RegisterSuccessfulLogin(now);
+        var session = IssueSession(user, restaurant, Guid.CreateVersion7(now), now, out _);
+        await db.SaveChangesAsync(ct);
+        return session;
+    }
+
     public async Task<AuthSession> DemoLoginAsync(DemoLoginRequest request, CancellationToken ct)
     {
         var login = DemoUsers.LoginFor(request.Role)
             ?? throw new[] { new FluentValidation.Results.ValidationFailure("role", "Демо-вход доступен для ролей Warehouse, Chef и Manager.") }
                 .ToValidationException();
-        var user = await db.Users.FirstOrDefaultAsync(u => u.Login == login && u.IsActive, ct)
+        var found = await FindAsync(u => u.Login == login && u.IsActive, ct)
             ?? throw new UnauthorizedException(Errors.DemoUnavailable, "Демо-учётка не настроена (Auth:DemoUsersPassword).");
+        var user = found.User;
+        using var scope = tenant.Use(found.Restaurant.Id);
 
         var now = clock.UtcNow;
         user.RegisterSuccessfulLogin(now);
-        var session = IssueSession(user, Guid.CreateVersion7(now), now, out _);
+        var session = IssueSession(user, found.Restaurant, Guid.CreateVersion7(now), now, out _);
         await db.SaveChangesAsync(ct);
         await audit.RecordAsync(Actions.DemoLogin, user.Id, user.Login, "User", user.Id.ToString(), new { role = user.Role.ToString() }, ct);
         return session;
@@ -135,6 +153,7 @@ public sealed class AuthService(
             var revoked = await RevokeFamilyAsync(token.FamilyId, RefreshTokenRevocation.Reused, now, ct);
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
+            using var reuseScope = await UseRestaurantOfAsync(token.UserId, ct);
             await audit.RecordAsync(Actions.RefreshReuse, token.UserId, null, "User", token.UserId.ToString(),
                 new { familyId = token.FamilyId, revoked }, ct);
             throw RefreshInvalid();
@@ -142,7 +161,9 @@ public sealed class AuthService(
         if (!token.IsActiveAt(now))
             throw RefreshInvalid();
 
-        var user = await db.Users.FirstAsync(u => u.Id == token.UserId, ct);
+        var found = await FindAsync(u => u.Id == token.UserId, ct) ?? throw RefreshInvalid();
+        var user = found.User;
+        using var scope = tenant.Use(found.Restaurant.Id);
         if (!user.IsActive)
         {
             await RevokeFamilyAsync(token.FamilyId, RefreshTokenRevocation.UserChanged, now, ct);
@@ -151,7 +172,7 @@ public sealed class AuthService(
             throw new UnauthorizedException(Errors.Inactive, "Учётная запись отключена.");
         }
 
-        var session = IssueSession(user, token.FamilyId, now, out var next);
+        var session = IssueSession(user, found.Restaurant, token.FamilyId, now, out var next);
         token.Revoke(now, RefreshTokenRevocation.Rotated, next.Id);
         await db.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
@@ -169,15 +190,38 @@ public sealed class AuthService(
 
         await RevokeFamilyAsync(token.FamilyId, RefreshTokenRevocation.Logout, clock.UtcNow, ct);
         await db.SaveChangesAsync(ct);
+        using var scope = await UseRestaurantOfAsync(token.UserId, ct);
         await audit.RecordAsync(Actions.Logout, token.UserId, null, "User", token.UserId.ToString(), null, ct);
     }
 
-    public async Task<UserDto> MeAsync(Guid userId, CancellationToken ct)
+    public async Task<MeDto> MeAsync(Guid userId, CancellationToken ct)
     {
-        var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, ct);
-        return user is { IsActive: true }
-            ? UserDto.From(user)
+        var found = await FindAsync(u => u.Id == userId, ct, tracked: false);
+        return found is { User.IsActive: true }
+            ? new MeDto(UserDto.From(found.User), RestaurantDto.From(found.Restaurant))
             : throw new UnauthorizedException(Errors.Inactive, "Учётная запись не найдена или отключена.");
+    }
+
+    /// <summary>Пользователь вместе с рестораном — мимо фильтра ресторана: при входе ресторан ещё неизвестен.</summary>
+    private async Task<FoundUser?> FindAsync(System.Linq.Expressions.Expression<Func<User, bool>> predicate, CancellationToken ct, bool tracked = true)
+    {
+        var users = tracked ? db.Users.IgnoreQueryFilters() : db.Users.IgnoreQueryFilters().AsNoTracking();
+        return await users
+            .Where(predicate)
+            .Join(db.Restaurants, u => EF.Property<Guid>(u, "RestaurantId"), r => r.Id, (u, r) => new FoundUser(u, r))
+            .FirstOrDefaultAsync(ct);
+    }
+
+    private sealed record FoundUser(User User, Restaurant Restaurant);
+
+    /// <summary>Журнал без входа (выход, повтор refresh) — от имени ресторана пользователя.</summary>
+    private async Task<IDisposable> UseRestaurantOfAsync(Guid userId, CancellationToken ct) =>
+        await FindAsync(u => u.Id == userId, ct, tracked: false) is { } found ? tenant.Use(found.Restaurant.Id) : NoScope.Instance;
+
+    private sealed class NoScope : IDisposable
+    {
+        public static readonly NoScope Instance = new();
+        public void Dispose() { }
     }
 
     /// <summary>Отзывает все активные токены пользователя (смена пароля, роли, отключение).</summary>
@@ -190,14 +234,14 @@ public sealed class AuthService(
     public static string HashToken(string rawToken) =>
         Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(rawToken)));
 
-    private AuthSession IssueSession(User user, Guid familyId, DateTimeOffset now, out RefreshToken refresh)
+    private AuthSession IssueSession(User user, Restaurant restaurant, Guid familyId, DateTimeOffset now, out RefreshToken refresh)
     {
-        var access = issuer.Issue(user, now);
+        var access = issuer.Issue(user, restaurant.Id, now);
         var raw = Base64UrlEncode(RandomNumberGenerator.GetBytes(32));
         refresh = new RefreshToken(Guid.CreateVersion7(now), user.Id, HashToken(raw), familyId, now,
             now.AddDays(options.Value.RefreshTokenDays));
         db.RefreshTokens.Add(refresh);
-        return new AuthSession(access.Token, access.ExpiresAt, UserDto.From(user), raw, refresh.ExpiresAt);
+        return new AuthSession(access.Token, access.ExpiresAt, UserDto.From(user), RestaurantDto.From(restaurant), raw, refresh.ExpiresAt);
     }
 
     private async Task<int> RevokeFamilyAsync(Guid familyId, RefreshTokenRevocation reason, DateTimeOffset now, CancellationToken ct)

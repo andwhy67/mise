@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient, type QueryKey } from '@tanstack/react-query'
 import { api } from './client'
 import { queryKeys } from './keys'
-import type { Order, OrderStatus, Supply, WriteOffRequest } from './types'
+import type { Order, OrderStatus, Supply, SupplyRequest, WriteOffRequest } from './types'
 
 /**
  * Изменения данных. После успеха сразу инвалидируем затронутое: хаб тоже пришлёт событие,
@@ -27,12 +27,18 @@ export interface OrderLine {
   quantity: number
 }
 
+/** Замена с согласия повара: весь productId заказа — из substituteId (по правилу справочника). */
+export interface OrderSubstitution {
+  productId: string
+  substituteId: string
+}
+
 /** Заказ с Idempotency-Key: повторное нажатие или обрыв связи не создаст второй заказ. */
 export function useCreateOrder() {
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: ({ items, idempotencyKey }: { items: OrderLine[]; idempotencyKey: string }) =>
-      api.post<Order>('/api/v1/orders', { items }, { headers: { 'Idempotency-Key': idempotencyKey } }),
+    mutationFn: ({ items, substitutions, idempotencyKey }: { items: OrderLine[]; substitutions?: OrderSubstitution[]; idempotencyKey: string }) =>
+      api.post<Order>('/api/v1/orders', { items, substitutions }, { headers: { 'Idempotency-Key': idempotencyKey } }),
     onSuccess: () => invalidate(...STOCK_EFFECTS, queryKeys.orders),
   })
 }
@@ -80,6 +86,14 @@ export function useCreateSupply() {
     mutationFn: ({ body, idempotencyKey }: { body: unknown; idempotencyKey: string }) =>
       api.post<Supply>('/api/v1/supplies', body, { headers: { 'Idempotency-Key': idempotencyKey } }),
     onSuccess: () => invalidate(...STOCK_EFFECTS, queryKeys.supplies, queryKeys.supplySuggestions, queryKeys.alerts),
+  })
+}
+
+/** Заявка поставщику: номер и запись в журнале; остатки не меняет. */
+export function useCreateSupplyRequest() {
+  return useMutation({
+    mutationFn: (body: { supplier: string | null; lines: { productId: string; quantity: number }[] }) =>
+      api.post<SupplyRequest>('/api/v1/supply-requests', body),
   })
 }
 

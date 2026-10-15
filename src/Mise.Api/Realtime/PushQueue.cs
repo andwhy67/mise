@@ -1,4 +1,5 @@
 using System.Threading.Channels;
+using Mise.Application.Abstractions;
 using Mise.Application.Alerts;
 using Mise.Application.Push;
 
@@ -11,29 +12,31 @@ namespace Mise.Api.Realtime;
 /// </summary>
 public sealed class PushQueue
 {
-    private readonly Channel<IReadOnlyList<AlertDto>> channel =
-        Channel.CreateBounded<IReadOnlyList<AlertDto>>(new BoundedChannelOptions(64) { FullMode = BoundedChannelFullMode.DropOldest, SingleReader = true });
+    private readonly Channel<(Guid RestaurantId, IReadOnlyList<AlertDto> Alerts)> channel =
+        Channel.CreateBounded<(Guid, IReadOnlyList<AlertDto>)>(new BoundedChannelOptions(64) { FullMode = BoundedChannelFullMode.DropOldest, SingleReader = true });
 
-    public void Enqueue(IReadOnlyList<AlertDto> alerts)
+    public void Enqueue(Guid restaurantId, IReadOnlyList<AlertDto> alerts)
     {
         if (alerts.Count > 0)
-            channel.Writer.TryWrite(alerts);
+            channel.Writer.TryWrite((restaurantId, alerts));
     }
 
-    internal ChannelReader<IReadOnlyList<AlertDto>> Reader => channel.Reader;
+    internal ChannelReader<(Guid RestaurantId, IReadOnlyList<AlertDto> Alerts)> Reader => channel.Reader;
 }
 
 /// <summary>Фоновая рассылка пушей из <see cref="PushQueue"/>. Ошибка одной пачки не останавливает остальные.</summary>
-internal sealed class PushWorker(PushQueue queue, IServiceScopeFactory scopes, ILogger<PushWorker> logger) : BackgroundService
+internal sealed class PushWorker(PushQueue queue, IServiceScopeFactory scopes, ITenant tenant, ILogger<PushWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         try
         {
-            await foreach (var alerts in queue.Reader.ReadAllAsync(stoppingToken))
+            await foreach (var (restaurantId, alerts) in queue.Reader.ReadAllAsync(stoppingToken))
             {
                 try
                 {
+                    // Подписки — только сотрудников того ресторана, где случился алерт.
+                    using var _ = tenant.Use(restaurantId);
                     await using var scope = scopes.CreateAsyncScope();
                     var sent = await scope.ServiceProvider.GetRequiredService<PushDispatcher>().DispatchAsync(alerts, stoppingToken);
                     if (sent > 0)

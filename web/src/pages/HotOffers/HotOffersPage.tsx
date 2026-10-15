@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import { useHotMenu } from '@/api/queries'
 import type { HotMenuItem, HotOffer } from '@/api/types'
 import { HotOfferRow } from '@/components/HotOfferRow'
-import { LiveIndicator } from '@/components/LiveIndicator'
 import { Page } from '@/components/Page'
 import { Panel } from '@/components/Panel'
 import { ScrollArea } from '@/components/ScrollArea'
@@ -36,7 +35,6 @@ export function HotOffersPage() {
     <Page
       title={t('title')}
       subtitle={query.data ? t('updated', { time: f.time(query.data.generatedAt) }) : t('subtitle')}
-      actions={<LiveIndicator />}
     >
       {query.isPending ? (
         <LoadingState lines={6} />

@@ -402,3 +402,39 @@
     transform: translateY(-4px);
   }
 }
+
+// ---------- Замены ----------
+
+.substitutions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  list-style: none;
+  border: 1px solid var(--hairline);
+  border-left: 3px solid var(--warn-bar);
+  border-radius: var(--radius-control);
+  font-size: 14px;
+
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+  }
+}
+
+.substituteOffer {
+  display: flex;
+  margin-top: var(--space-1);
+  text-align: left;
+}
+
+.substituteShort {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: 13px;
+  color: var(--ink-2);
+}

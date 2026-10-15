@@ -10,6 +10,10 @@ namespace Mise.Infrastructure.Seed;
 /// </summary>
 public static class SeedData
 {
+    /// <summary>Демо-ресторан: демо-учётки, стартовый словарь и симулятор. В него же переехали данные до появления ресторанов.</summary>
+    public static readonly Guid DemoRestaurantId = Guid.Parse("5e7a0000-0000-4000-8000-00000000d3e0");
+    public const string DemoRestaurantName = "Mise · демо";
+
     public static class Products
     {
         public static readonly Guid Cream = P(1);
@@ -68,35 +72,46 @@ public static class SeedData
     private const string Fridge = "Холодильник";
     private const string Dry = "Сухой склад";
 
-    public static IReadOnlyList<Product> CreateProducts() =>
+    /// <summary>Замены при нехватке (base-единицы): зелень между собой, моцарелла → фета (её солонее — берём меньше), креветки → лосось.</summary>
+    public static readonly IReadOnlyList<(Guid ProductId, Guid SubstituteId, decimal Ratio)> Substitutes =
     [
-        Product(Products.Cream, "Сливки 33%", MeasureUnit.Milliliter, 168, 2000, 1000, Dairy, Fridge),
-        Product(Products.Milk, "Молоко 3,2%", MeasureUnit.Milliliter, 120, 3000, 1000, Dairy, Fridge),
-        Product(Products.Butter, "Масло сливочное 82%", MeasureUnit.Gram, 336, 1000, 500, Dairy, Fridge),
-        Product(Products.Parmesan, "Пармезан", MeasureUnit.Gram, 720, 500, 1000, Dairy, Fridge),
-        Product(Products.Mozzarella, "Моцарелла", MeasureUnit.Gram, 120, 1000, 1000, Dairy, Fridge),
-        Product(Products.Feta, "Сыр фета", MeasureUnit.Gram, 240, 500, 500, Dairy, Fridge),
-        Product(Products.Eggs, "Яйца куриные С0", MeasureUnit.Piece, 336, 30, 30, Dairy, Fridge),
-        Product(Products.Chicken, "Куриное филе охл.", MeasureUnit.Gram, 72, 3000, 1000, MeatFish, Fridge),
-        Product(Products.Salmon, "Лосось охл.", MeasureUnit.Gram, 72, 2000, 1000, MeatFish, Fridge),
-        Product(Products.Shrimp, "Креветки очищенные", MeasureUnit.Gram, 48, 1000, 1000, MeatFish, Fridge),
-        Product(Products.Beef, "Говяжья вырезка", MeasureUnit.Gram, 96, 2000, 1000, MeatFish, Fridge),
-        Product(Products.Bacon, "Бекон", MeasureUnit.Gram, 168, 500, 500, MeatFish, Fridge),
-        Product(Products.Tomatoes, "Томаты", MeasureUnit.Gram, 120, 3000, 1000, Vegetables, Fridge),
-        Product(Products.Cucumbers, "Огурцы", MeasureUnit.Gram, 120, 2000, 1000, Vegetables, Fridge),
-        Product(Products.Romaine, "Салат романо", MeasureUnit.Gram, 72, 1000, 500, Vegetables, Fridge),
-        Product(Products.Arugula, "Руккола", MeasureUnit.Gram, 48, 500, 250, Vegetables, Fridge),
-        Product(Products.Basil, "Базилик", MeasureUnit.Gram, 72, 100, 100, Vegetables, Fridge),
-        Product(Products.Spinach, "Шпинат", MeasureUnit.Gram, 72, 500, 250, Vegetables, Fridge),
-        Product(Products.Mushrooms, "Шампиньоны", MeasureUnit.Gram, 96, 1000, 500, Vegetables, Fridge),
-        Product(Products.Potatoes, "Картофель", MeasureUnit.Gram, 720, 5000, 5000, Vegetables, Dry),
-        Product(Products.Onion, "Лук репчатый", MeasureUnit.Gram, 720, 2000, 1000, Vegetables, Dry),
-        Product(Products.Garlic, "Чеснок", MeasureUnit.Gram, 720, 300, 500, Vegetables, Dry),
-        Product(Products.Lemons, "Лимоны", MeasureUnit.Piece, 336, 10, 10, Vegetables, Fridge),
-        Product(Products.Spaghetti, "Спагетти", MeasureUnit.Gram, 8760, 2000, 1000, Grocery, Dry),
-        Product(Products.Arborio, "Рис арборио", MeasureUnit.Gram, 8760, 2000, 1000, Grocery, Dry),
-        Product(Products.Flour, "Мука пшеничная", MeasureUnit.Gram, 4320, 2000, 1000, Grocery, Dry),
+        (Products.Spinach, Products.Arugula, 1m),
+        (Products.Arugula, Products.Spinach, 1m),
+        (Products.Romaine, Products.Arugula, 1m),
+        (Products.Mozzarella, Products.Feta, 0.8m),
+        (Products.Shrimp, Products.Salmon, 1m),
     ];
+
+    public static IReadOnlyList<Product> CreateProducts() => WithSubstitutes(
+
+    [
+        Product(Products.Cream, "Сливки 33%", MeasureUnit.Milliliter, 168, 2000, 1000, Dairy, Fridge, 550m, "Молочный двор"),
+        Product(Products.Milk, "Молоко 3,2%", MeasureUnit.Milliliter, 120, 3000, 1000, Dairy, Fridge, 95m, "Молочный двор"),
+        Product(Products.Butter, "Масло сливочное 82%", MeasureUnit.Gram, 336, 1000, 500, Dairy, Fridge, 950m, "Молочный двор"),
+        Product(Products.Parmesan, "Пармезан", MeasureUnit.Gram, 720, 500, 1000, Dairy, Fridge, 2600m, "Молочный двор"),
+        Product(Products.Mozzarella, "Моцарелла", MeasureUnit.Gram, 120, 1000, 1000, Dairy, Fridge, 1100m, "Молочный двор"),
+        Product(Products.Feta, "Сыр фета", MeasureUnit.Gram, 240, 500, 500, Dairy, Fridge, 1200m, "Молочный двор"),
+        Product(Products.Eggs, "Яйца куриные С0", MeasureUnit.Piece, 336, 30, 30, Dairy, Fridge, 14m, "Молочный двор"),
+        Product(Products.Chicken, "Куриное филе охл.", MeasureUnit.Gram, 72, 3000, 1000, MeatFish, Fridge, 520m, "Мясной цех"),
+        Product(Products.Salmon, "Лосось охл.", MeasureUnit.Gram, 72, 2000, 1000, MeatFish, Fridge, 1900m, "Рыбный двор"),
+        Product(Products.Shrimp, "Креветки очищенные", MeasureUnit.Gram, 48, 1000, 1000, MeatFish, Fridge, 1600m, "Рыбный двор"),
+        Product(Products.Beef, "Говяжья вырезка", MeasureUnit.Gram, 96, 2000, 1000, MeatFish, Fridge, 2700m, "Мясной цех"),
+        Product(Products.Bacon, "Бекон", MeasureUnit.Gram, 168, 500, 500, MeatFish, Fridge, 900m, "Мясной цех"),
+        Product(Products.Tomatoes, "Томаты", MeasureUnit.Gram, 120, 3000, 1000, Vegetables, Fridge, 280m, "ООО «Свежесть»"),
+        Product(Products.Cucumbers, "Огурцы", MeasureUnit.Gram, 120, 2000, 1000, Vegetables, Fridge, 220m, "ООО «Свежесть»"),
+        Product(Products.Romaine, "Салат романо", MeasureUnit.Gram, 72, 1000, 500, Vegetables, Fridge, 450m, "Агроферма «Зелёная»"),
+        Product(Products.Arugula, "Руккола", MeasureUnit.Gram, 48, 500, 250, Vegetables, Fridge, 1400m, "Агроферма «Зелёная»"),
+        Product(Products.Basil, "Базилик", MeasureUnit.Gram, 72, 100, 100, Vegetables, Fridge, 2400m, "Агроферма «Зелёная»"),
+        Product(Products.Spinach, "Шпинат", MeasureUnit.Gram, 72, 500, 250, Vegetables, Fridge, 900m, "Агроферма «Зелёная»"),
+        Product(Products.Mushrooms, "Шампиньоны", MeasureUnit.Gram, 96, 1000, 500, Vegetables, Fridge, 350m, "ООО «Свежесть»"),
+        Product(Products.Potatoes, "Картофель", MeasureUnit.Gram, 720, 5000, 5000, Vegetables, Dry, 55m, "ООО «Свежесть»"),
+        Product(Products.Onion, "Лук репчатый", MeasureUnit.Gram, 720, 2000, 1000, Vegetables, Dry, 45m, "ООО «Свежесть»"),
+        Product(Products.Garlic, "Чеснок", MeasureUnit.Gram, 720, 300, 500, Vegetables, Dry, 400m, "ООО «Свежесть»"),
+        Product(Products.Lemons, "Лимоны", MeasureUnit.Piece, 336, 10, 10, Vegetables, Fridge, 25m, "ООО «Свежесть»"),
+        Product(Products.Spaghetti, "Спагетти", MeasureUnit.Gram, 8760, 2000, 1000, Grocery, Dry, 230m, "Сухой склад №1"),
+        Product(Products.Arborio, "Рис арборио", MeasureUnit.Gram, 8760, 2000, 1000, Grocery, Dry, 420m, "Сухой склад №1"),
+        Product(Products.Flour, "Мука пшеничная", MeasureUnit.Gram, 4320, 2000, 1000, Grocery, Dry, 60m, "Сухой склад №1"),
+    ]);
 
     public static IReadOnlyList<Dish> CreateDishes() =>
     [
@@ -139,14 +154,24 @@ public static class SeedData
     private static Guid P(int n) => Guid.Parse($"10000000-0000-0000-0000-{n:D12}");
     private static Guid D(int n) => Guid.Parse($"20000000-0000-0000-0000-{n:D12}");
 
+    private static IReadOnlyList<Product> WithSubstitutes(IReadOnlyList<Product> products)
+    {
+        foreach (var product in products)
+            product.SetSubstitutes(Substitutes.Where(s => s.ProductId == product.Id).Select(s => (s.SubstituteId, s.Ratio)));
+        return products;
+    }
+
+    /// <param name="price">Ориентировочная цена закупки за кг / л / шт, ₽.</param>
     private static Product Product(Guid id, string name, MeasureUnit unit, int shelfLifeHours, decimal minStock, decimal packSize,
-        string category, string storage) => new(id, name, unit)
+        string category, string storage, decimal price, string supplier) => new(id, name, unit)
     {
         DefaultShelfLifeHours = shelfLifeHours,
         MinStockQty = minStock,
         PackSize = packSize,
         Category = category,
         StorageType = storage,
+        ReferenceUnitCost = Prices.ToBase(price, unit),
+        Supplier = supplier,
     };
 
     private static Dish Dish(Guid id, string name, string category, decimal price, params (Guid ProductId, decimal Quantity)[] ingredients)

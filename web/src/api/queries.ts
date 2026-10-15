@@ -8,6 +8,7 @@ import type {
   Batch,
   Dish,
   DishAvailability,
+  DishEconomics,
   HotMenu,
   HotOffers,
   Kpi,
@@ -16,6 +17,7 @@ import type {
   Paged,
   Product,
   ProductBatches,
+  Restock,
   StockItem,
   StopListForecast,
   StopListHistoryItem,
@@ -36,6 +38,10 @@ export const useStopListForecast = (horizonHours: number) =>
     queryKey: [...queryKeys.stopListForecast, horizonHours],
     queryFn: ({ signal }) => api.get<StopListForecast>(`/api/v1/stoplist/forecast?horizonHours=${horizonHours}`, { signal }),
   })
+
+/** Живёт в ветке стоп-листа: меняется вместе с ним и с остатками. */
+export const useRestock = () =>
+  useQuery({ queryKey: [...queryKeys.stopList, 'restock'], queryFn: ({ signal }) => api.get<Restock>('/api/v1/stoplist/restock', { signal }) })
 
 export const useHotOffers = () =>
   useQuery({
@@ -137,6 +143,14 @@ export const useSupply = (id: string, enabled = true) =>
   useQuery({
     queryKey: [...queryKeys.supplies, 'detail', id],
     queryFn: ({ signal }) => api.get<Supply>(`/api/v1/supplies/${id}`, { signal }),
+    enabled,
+  })
+
+/** Себестоимость и маржа блюд — только менеджеру; меняется с каждой поставкой, поэтому живёт в ветке «stock». */
+export const useDishEconomics = (enabled = true) =>
+  useQuery({
+    queryKey: [...queryKeys.stock, 'dish-economics'],
+    queryFn: ({ signal }) => api.get<DishEconomics[]>('/api/v1/analytics/dish-economics', { signal }),
     enabled,
   })
 

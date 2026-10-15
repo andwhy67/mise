@@ -63,7 +63,14 @@ public sealed record AccessToken(string Token, DateTimeOffset ExpiresAt);
 
 public interface ITokenIssuer
 {
-    AccessToken Issue(User user, DateTimeOffset now);
+    /// <param name="restaurantId">Ресторан пользователя — claim <c>rid</c>: по нему сервер ограничивает все данные запроса.</param>
+    AccessToken Issue(User user, Guid restaurantId, DateTimeOffset now);
+}
+
+/// <summary>Ресторан сотрудника — для шапки интерфейса; <see cref="IsDemo"/> — демо-ресторан с симулятором.</summary>
+public sealed record RestaurantDto(Guid Id, string Name, bool IsDemo)
+{
+    public static RestaurantDto From(Mise.Domain.Restaurants.Restaurant r) => new(r.Id, r.Name, r.IsDemo);
 }
 
 public sealed record LoginRequest(string Login, string Password);
@@ -93,7 +100,16 @@ public sealed record UserDto(Guid Id, string Login, string DisplayName, UserRole
 }
 
 /// <summary>Результат входа/обновления. Refresh-токен уходит клиенту только в httpOnly-cookie.</summary>
-public sealed record AuthSession(string AccessToken, DateTimeOffset AccessTokenExpiresAt, UserDto User, string RefreshToken, DateTimeOffset RefreshTokenExpiresAt);
+public sealed record AuthSession(
+    string AccessToken,
+    DateTimeOffset AccessTokenExpiresAt,
+    UserDto User,
+    RestaurantDto Restaurant,
+    string RefreshToken,
+    DateTimeOffset RefreshTokenExpiresAt);
+
+/// <summary>Текущий пользователь и его ресторан (GET /auth/me).</summary>
+public sealed record MeDto(UserDto User, RestaurantDto Restaurant);
 
 public sealed record CreateUserRequest(string Login, string DisplayName, UserRole Role, string Password);
 
@@ -125,7 +141,8 @@ internal sealed class CreateUserRequestValidator : AbstractValidator<CreateUserR
     {
         RuleFor(x => x.Login).NotEmpty().Must(BeValidLogin).WithMessage("Логин: 3–32 символа, латиница, цифры, «.», «_», «-».");
         RuleFor(x => x.DisplayName).NotEmpty().MaximumLength(100);
-        RuleFor(x => x.Role).IsInEnum();
+        // Служебная роль симулятора создаётся только сидером демо-ресторана, не руками менеджера.
+        RuleFor(x => x.Role).IsInEnum().NotEqual(UserRole.Simulator).WithMessage("Роль: менеджер, кладовщик или повар.");
         RuleFor(x => x.Password).IsPassword();
     }
 

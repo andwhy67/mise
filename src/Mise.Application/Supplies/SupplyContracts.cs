@@ -15,7 +15,8 @@ public sealed record CreateSupplyItemRequest(
     decimal Quantity,
     InputUnit? Unit,
     int? ShelfLifeHours,
-    DateTimeOffset? ExpiresAt);
+    DateTimeOffset? ExpiresAt,
+    decimal? Price = null);
 
 /// <param name="Id">Идентификатор поставки; если не передан — генерируется.</param>
 /// <param name="CreatedAt">Дата создания поставки; по умолчанию — текущее время сервера.</param>
@@ -38,7 +39,9 @@ public sealed record SupplyItemDto(
     Guid BatchId,
     DateTimeOffset ExpiresAt,
     ExpirySource ExpirySource,
-    BatchStatus BatchStatus);
+    BatchStatus BatchStatus,
+    decimal? Price,
+    decimal? LineCost);
 
 public sealed record SupplyDto(
     Guid Id,
@@ -81,6 +84,7 @@ internal sealed class CreateSupplyRequestValidator : AbstractValidator<CreateSup
             item.RuleFor(i => i.Quantity).GreaterThan(0m).LessThanOrEqualTo(Limits.MaxQuantity);
             item.RuleFor(i => i.Unit).IsInEnum();
             item.RuleFor(i => i.ShelfLifeHours).InclusiveBetween(1, Limits.MaxShelfLifeHours);
+            item.RuleFor(i => i.Price).GreaterThanOrEqualTo(0m).LessThanOrEqualTo(Limits.MaxPrice);
         });
     }
 }

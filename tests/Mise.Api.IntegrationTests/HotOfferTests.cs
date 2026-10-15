@@ -95,7 +95,9 @@ public sealed class HotOfferTests(MiseApiFactory factory)
 
         // Событий нет, но прошло время — таймерный пересчёт поднимает срочность.
         factory.Clock.Advance(TimeSpan.FromHours(10));
-        factory.Services.GetRequiredService<IRealtimeNotifier>().HotOffersMayHaveChanged();
+        // Как тикер: от имени ресторана — изменение без ресторана разослать некому.
+        using (factory.AsDemoRestaurant())
+            factory.Services.GetRequiredService<IRealtimeNotifier>().HotOffersMayHaveChanged();
         var later = await hub.WaitForAsync("HotOffersChanged", e => ScoreOf(e, dish) > before);
 
         Assert.Equal("v2", later.GetProperty("scorer").GetString());

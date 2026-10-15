@@ -65,32 +65,35 @@
   color-scheme: light;
 }
 
-/* «Графит» — тёплый приглушённый серый, не чёрный (DESIGN.md §2.1a). */
-:root.dark {
-  --bg: #2b2e33;
-  --surface: #34383e;
-  --border: #4a5058;
-  --hairline: #3e434a;
-  --border-input: #6a727b;
+/* «Графит» — тёплый приглушённый серый, не чёрный (DESIGN.md §2.1a).
+   Только на экране: печать и PDF всегда в светлой палитре — бумага белая при любой теме. */
+@media screen {
+  :root.dark {
+    --bg: #2b2e33;
+    --surface: #34383e;
+    --border: #4a5058;
+    --hairline: #3e434a;
+    --border-input: #6a727b;
 
-  --ink: #eceae6;
-  --ink-2: #c9cdd2;
-  --muted: #a2aab3;
+    --ink: #eceae6;
+    --ink-2: #c9cdd2;
+    --muted: #a2aab3;
 
-  --brand: #4fa8dc;
-  --brand-strong: #86c4ea;
-  --brand-tint: #2f4352;
-  --on-brand-text: #12263a;
+    --brand: #4fa8dc;
+    --brand-strong: #86c4ea;
+    --brand-tint: #2f4352;
+    --on-brand-text: #12263a;
 
-  --fresh-text: #7ccfa6;
-  --fresh-bar: #4fb585;
-  --warn-text: #e9b656;
-  --warn-bar: #e0a23a;
-  --crit-text: #f4968e; /* ≥ 4,5:1 и на подсветке активного пункта (--brand-tint), не только на панели */
-  --crit-bar: #e0665c;
-  --expired-text: #e7a39c;
-  --expired-bar: #b8584f;
-  --info-text: #86c4ea;
-  --info-bar: #4fa8dc;
-  color-scheme: dark;
+    --fresh-text: #7ccfa6;
+    --fresh-bar: #4fb585;
+    --warn-text: #e9b656;
+    --warn-bar: #e0a23a;
+    --crit-text: #f4968e; /* ≥ 4,5:1 и на подсветке активного пункта (--brand-tint), не только на панели */
+    --crit-bar: #e0665c;
+    --expired-text: #e7a39c;
+    --expired-bar: #b8584f;
+    --info-text: #86c4ea;
+    --info-bar: #4fa8dc;
+    color-scheme: dark;
+  }
 }

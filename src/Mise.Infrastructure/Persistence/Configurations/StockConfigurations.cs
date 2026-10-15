@@ -17,8 +17,8 @@ internal sealed class SupplyConfiguration : IEntityTypeConfiguration<Supply>
         builder.Property(s => s.SupplierName).HasMaxLength(200);
         builder.Property(s => s.IdempotencyKey).HasMaxLength(200);
         builder.Property(s => s.RequestHash).HasMaxLength(64);
-        builder.HasIndex(s => s.Number).IsUnique();
-        builder.HasIndex(s => s.IdempotencyKey).IsUnique().HasFilter("idempotency_key IS NOT NULL");
+        builder.HasIndex(MiseDbContext.RestaurantIdProperty, nameof(Supply.Number)).IsUnique();
+        builder.HasIndex(MiseDbContext.RestaurantIdProperty, nameof(Supply.IdempotencyKey)).IsUnique().HasFilter("idempotency_key IS NOT NULL");
         builder.HasIndex(s => s.CreatedAt);
         builder.HasMany(s => s.Items).WithOne().HasForeignKey(i => i.SupplyId).OnDelete(DeleteBehavior.Restrict);
         builder.Navigation(s => s.Items).UsePropertyAccessMode(PropertyAccessMode.Field);
@@ -37,6 +37,7 @@ internal sealed class SupplyItemConfiguration : IEntityTypeConfiguration<SupplyI
         builder.HasKey(i => i.Id);
         builder.Property(i => i.Id).ValueGeneratedNever();
         builder.Property(i => i.ProductName).HasMaxLength(200).IsRequired();
+        builder.Property(i => i.UnitCost).HasPrecision(18, 6);
         builder.HasIndex(i => new { i.SupplyId, i.LineNo }).IsUnique();
         builder.HasIndex(i => i.ProductId);
         builder.HasOne<Product>().WithMany().HasForeignKey(i => i.ProductId).OnDelete(DeleteBehavior.Restrict);
@@ -54,6 +55,7 @@ internal sealed class BatchConfiguration : IEntityTypeConfiguration<Batch>
             t.HasCheckConstraint("ck_batches_remaining_le_initial", "remaining_qty <= initial_qty");
             t.HasCheckConstraint("ck_batches_initial_positive", "initial_qty > 0");
         });
+        builder.Property(b => b.UnitCost).HasPrecision(18, 6);
         builder.HasKey(b => b.Id);
         builder.Property(b => b.Id).ValueGeneratedNever();
         builder.Property(b => b.Status).HasConversion<string>().HasMaxLength(16);
@@ -85,6 +87,7 @@ internal sealed class StockMovementConfiguration : IEntityTypeConfiguration<Stoc
     {
         builder.ToTable("stock_movements", t => t.HasCheckConstraint("ck_stock_movements_delta_non_zero", "qty_delta <> 0"));
         builder.HasKey(m => m.Id);
+        builder.Property(m => m.Cost).HasPrecision(14, 2);
         builder.Property(m => m.Id).ValueGeneratedNever();
         builder.Property(m => m.Type).HasConversion<string>().HasMaxLength(32);
         builder.Property(m => m.Reason).HasMaxLength(500);

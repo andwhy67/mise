@@ -197,6 +197,8 @@ export interface Order {
   total: number
   items: { lineNo: number; dishId: string; dishName: string; quantity: number; price: number; amount: number }[]
   consumption: { productId: string; productName: string; unit: MeasureUnit; batchId: string; batchExpiresAt: string; consumed: number; returned: number }[]
+  /** Замены, на которые согласился повар. */
+  substitutions: { productId: string; productName: string; substituteId: string; substituteName: string; unit: MeasureUnit; ratio: number }[]
 }
 
 /** Чего не хватило для заказа — расширение `missing` в ответе 422. */
@@ -208,6 +210,8 @@ export interface MissingIngredient {
   available: number
   shortage: number
   dishes: string[]
+  /** Чем можно заменить (правила справочника); required — сколько заменителя нужно всему заказу. */
+  substitutes: { productId: string; productName: string; unit: MeasureUnit; ratio: number; required: number; available: number; enough: boolean }[]
 }
 
 export type AlertType = 'ExpiringSoon' | 'Expired' | 'LowStock' | 'StopListOn' | 'StopListOff'
@@ -259,6 +263,65 @@ export interface Product {
   packSize: number
   category: string | null
   storageType: string | null
+  /** Ориентировочная цена закупки, ₽ за кг / л / шт. */
+  referencePrice: number | null
+  supplier: string | null
+  /** Чем можно заменить при нехватке: ratio единиц заменителя на 1 единицу продукта (базовые единицы). */
+  substitutes: { productId: string; productName: string; unit: MeasureUnit; ratio: number }[]
+}
+
+/** Себестоимость порции по партиям, которые уйдут в работу первыми (FEFO), и маржа блюда. */
+export interface DishEconomics {
+  dishId: string
+  dishName: string
+  category: string | null
+  price: number
+  /** null — у какого-то продукта нет ни цены партии, ни справочной. */
+  portionCost: number | null
+  margin: number | null
+  /** Доля себестоимости в цене, 0…1. */
+  foodCostShare: number | null
+  /** Часть цены — справочная, а не из партий. */
+  estimated: boolean
+  unpricedProducts: string[]
+}
+
+/** «Что докупить, чтобы вернуть блюда из стопа». */
+export interface Restock {
+  now: string
+  horizonHours: number
+  minPortions: number
+  dishes: {
+    dishId: string
+    dishName: string
+    category: string | null
+    targetPortions: number
+    portionsPerDay: number
+    lines: { productId: string; productName: string; unit: MeasureUnit; perPortion: number; needed: number; usable: number; missing: number }[]
+    explanation: string
+  }[]
+  purchases: {
+    productId: string
+    productName: string
+    unit: MeasureUnit
+    supplier: string | null
+    packSize: number
+    missing: number
+    toBuy: number
+    /** Названия блюд, которые вернёт закупка. */
+    dishes: string[]
+    explanation: string
+  }[]
+}
+
+/** Заявка поставщику: номер и ориентировочная сумма (статусов нет — отправляет человек). */
+export interface SupplyRequest {
+  number: string
+  createdAt: string
+  supplier: string | null
+  lines: { productId: string; productName: string; unit: MeasureUnit; quantity: number; price: number | null; cost: number | null }[]
+  estimatedTotal: number
+  unpricedLines: number
 }
 
 export interface SupplyListItem {
@@ -289,6 +352,9 @@ export interface Supply {
     expiresAt: string
     expirySource: string
     batchStatus: 'Active' | 'Depleted' | 'Expired' | 'WrittenOff'
+    /** ₽ за кг / л / шт; null — цены нет. */
+    price: number | null
+    lineCost: number | null
   }[]
 }
 

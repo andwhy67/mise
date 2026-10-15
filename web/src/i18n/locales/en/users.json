@@ -45,5 +45,30 @@
     "displayName": "Enter a name.",
     "password": "Password — at least {{min}} characters.",
     "duplicate": "This login already exists."
+  },
+  "invites": {
+    "title": "Invites",
+    "subtitle": "The employee signs up with the code and joins your restaurant with the chosen role. Single use, valid for 7 days.",
+    "role": "Whom to invite",
+    "create": "Invite",
+    "empty": "No invites yet",
+    "emptyHint": "Choose a role and press “Invite” — the link is copied, send it to the employee.",
+    "until": "valid until {{when}}",
+    "acceptedBy": "{{name}} joined {{when}}",
+    "copyLink": "Link",
+    "copyLinkLabel": "Copy invite link {{code}}",
+    "copyCode": "Code",
+    "copyCodeLabel": "Copy code {{code}}",
+    "revoke": "Revoke",
+    "revokeLabel": "Revoke invite {{code}}",
+    "linkCopied": "Link with code {{code}} copied — send it to the employee",
+    "codeCopied": "Code {{code}} copied",
+    "copyFailed": "Could not copy — write the code down manually",
+    "status": {
+      "Active": "Active",
+      "Accepted": "Used",
+      "Revoked": "Revoked",
+      "Expired": "Expired"
+    }
   }
 }

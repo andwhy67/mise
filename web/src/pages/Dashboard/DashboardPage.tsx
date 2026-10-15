@@ -5,7 +5,6 @@ import { useSession, type UserRole } from '@/auth/session'
 import { LinkButton } from '@/components/Button'
 import { ExpiryList } from '@/components/ExpiryList'
 import { HotOfferRow } from '@/components/HotOfferRow'
-import { LiveIndicator } from '@/components/LiveIndicator'
 import { Page } from '@/components/Page'
 import { Panel } from '@/components/Panel'
 import { EmptyState, ErrorState, LoadingState } from '@/components/StateBlocks'
@@ -36,7 +35,6 @@ export function DashboardPage() {
       subtitle={f.todayLine()}
       actions={
         <div className={styles.headerActions}>
-          <LiveIndicator />
           {sells ? (
             <LinkButton to="/orders" icon={<Plus />}>
               {t('takeOrder')}

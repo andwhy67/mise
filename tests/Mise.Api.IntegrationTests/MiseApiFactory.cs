@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
+using Mise.Application.Abstractions;
 using Mise.Application.Auth;
 using Mise.Application.Expiry;
 using Mise.Application.Push;
@@ -82,8 +83,8 @@ public sealed class MiseApiFactory : WebApplicationFactory<Program>, IAsyncLifet
     {
         using var scope = Services.CreateScope();
         var login = r == UserRole.Simulator ? UserSeeder.SimulatorLogin : DemoUsers.LoginFor(r)!;
-        var user = scope.ServiceProvider.GetRequiredService<MiseDbContext>().Users.AsNoTracking().Single(u => u.Login == login);
-        return scope.ServiceProvider.GetRequiredService<ITokenIssuer>().Issue(user, Clock.UtcNow).Token;
+        var user = scope.ServiceProvider.GetRequiredService<MiseDbContext>().Users.IgnoreQueryFilters().AsNoTracking().Single(u => u.Login == login);
+        return scope.ServiceProvider.GetRequiredService<ITokenIssuer>().Issue(user, SeedData.DemoRestaurantId, Clock.UtcNow).Token;
     });
 
     protected override void ConfigureClient(HttpClient client)
@@ -95,10 +96,18 @@ public sealed class MiseApiFactory : WebApplicationFactory<Program>, IAsyncLifet
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TokenFor(role));
     }
 
+    /// <summary>
+    /// Тесты работают в демо-ресторане (демо-учётки): прямой доступ к БД — от его имени, иначе фильтр ресторана
+    /// честно вернёт пустоту. Синхронный вызов: значение AsyncLocal остаётся у вызывающего до Dispose.
+    /// </summary>
+    public IDisposable AsDemoRestaurant() => Services.GetRequiredService<ITenant>().Use(SeedData.DemoRestaurantId);
+
     /// <summary>Один тик мониторинга сроков на текущем времени <see cref="Clock"/> (фоновый воркер в тестах выключен).</summary>
     public async Task<ExpiryRunResult> RunExpiryTickAsync(bool autoWriteOff = true)
     {
         await using var scope = Services.CreateAsyncScope();
+        // Тесты работают в демо-ресторане (демо-учётки) — тик сроков тоже его.
+        using var tenant = scope.ServiceProvider.GetRequiredService<ITenant>().Use(SeedData.DemoRestaurantId);
         var service = ActivatorUtilities.CreateInstance<ExpiryMonitorService>(scope.ServiceProvider,
             Options.Create(new ExpiryOptions { AutoWriteOff = autoWriteOff }));
         return await service.RunOnceAsync(CancellationToken.None);

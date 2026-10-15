@@ -1,7 +1,9 @@
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSetDishActive } from '@/api/mutations'
-import { useMenu, useStopList, useStopListForecast, useStopListHistory } from '@/api/queries'
+import { useNavigate } from 'react-router'
+import { useMenu, useRestock, useStopList, useStopListForecast, useStopListHistory } from '@/api/queries'
+import { canAccess } from '@/app/navigation'
 import type { StopListForecastItem, StopListItem } from '@/api/types'
 import { useSession } from '@/auth/session'
 import { Button } from '@/components/Button'
@@ -42,6 +44,7 @@ export function StopListPage() {
         <NowPanel />
         <SoonPanel />
       </div>
+      <RestockPanel />
       <HistoryPanel />
       {isManager && <RemoveDishSheet open={removing} onClose={() => setRemoving(false)} />}
     </Page>
@@ -76,6 +79,86 @@ function NowPanel() {
             </li>
           ))}
         </ul>
+      )}
+    </Panel>
+  )
+}
+
+/**
+ * «Что докупить, чтобы вернуть блюда из стопа»: закупка по продуктам (общий продукт — одной строкой на все блюда),
+ * под ней — что именно не хватает каждому блюду. Кладовщик и менеджер переносят всё в форму поставки одной кнопкой.
+ */
+function RestockPanel() {
+  const { t } = useTranslation('stoplist')
+  const f = useFormat()
+  const query = useRestock()
+  const navigate = useNavigate()
+  const role = useSession().user?.role
+  const canReceive = role !== undefined && canAccess(role, '/supplies')
+  const purchases = query.data?.purchases ?? []
+  const toSupply = (rows: { productId: string; toBuy: number }[]) =>
+    void navigate('/supplies?receive=1', { state: { prefill: rows.map((r) => ({ productId: r.productId, quantity: r.toBuy })) } })
+
+  return (
+    <Panel
+      title={t('restock.title')}
+      subtitle={query.data ? t('restock.subtitle', { portions: query.data.minPortions, hours: query.data.horizonHours }) : undefined}
+      titleId="stop-restock"
+      action={
+        canReceive &&
+        purchases.length > 0 && (
+          <Button variant="secondary" onClick={() => toSupply(purchases)}>
+            {t('restock.all', { count: purchases.length })}
+          </Button>
+        )
+      }
+    >
+      {query.isPending ? (
+        <LoadingState />
+      ) : query.isError ? (
+        <ErrorState error={query.error} onRetry={() => void query.refetch()} />
+      ) : purchases.length === 0 ? (
+        <EmptyState title={t('restock.empty')}>{t('restock.emptyHint')}</EmptyState>
+      ) : (
+        <div className={styles.restock}>
+          <ul className={styles.list} aria-label={t('restock.buy')}>
+            {purchases.map((p) => (
+              <li key={p.productId} className={styles.restockRow}>
+                <div className={styles.restockMain}>
+                  <h3 className={styles.dish}>{p.productName}</h3>
+                  <p className={styles.reason}>{t('restock.returns', { dishes: p.dishes.join(', '), count: p.dishes.length })}</p>
+                  <p className={styles.meta}>
+                    {[p.toBuy > p.missing ? t('restock.packed', { missing: f.qty(p.missing, p.unit) }) : null, p.supplier].filter(Boolean).join(' · ')}
+                  </p>
+                </div>
+                <span className={styles.restockQty}>{f.qty(p.toBuy, p.unit)}</span>
+                {canReceive && (
+                  <Button variant="text" className={styles.action} onClick={() => toSupply([p])} aria-label={t('restock.oneLabel', { product: p.productName })}>
+                    {t('restock.one')}
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+          <details className={styles.restockDetails}>
+            <summary>{t('restock.byDish')}</summary>
+            <ul className={styles.list}>
+              {query.data.dishes.map((d) => (
+                <li key={d.dishId} className={styles.row}>
+                  <h3 className={styles.dish}>{d.dishName}</h3>
+                  <p className={styles.reason}>
+                    {t(d.portionsPerDay * (query.data.horizonHours / 24) >= query.data.minPortions ? 'restock.targetDemand' : 'restock.targetMin', {
+                      count: d.targetPortions,
+                    })}
+                  </p>
+                  <p className={styles.meta}>
+                    {d.lines.map((l) => t('restock.line', { product: l.productName, missing: f.qty(l.missing, l.unit), usable: f.qty(l.usable, l.unit) })).join('; ')}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </details>
+        </div>
       )}
     </Panel>
   )

@@ -21,7 +21,9 @@
     "add": "Добавить",
     "addLabel": "Добавить «{{dish}}» в заказ",
     "composition": "Из чего",
-    "hideComposition": "Скрыть состав"
+    "hideComposition": "Скрыть состав",
+    "addWithSubstitute": "С заменой: {{substitute}}",
+    "addWithSubstituteLabel": "Добавить {{dish}}: {{product}} заменить на {{substitute}}"
   },
   "cart": {
     "title": "Заказ",
@@ -99,5 +101,12 @@
   "usage": {
     "title": "Хватит ли продуктов",
     "value": "заказ берёт {{need}} из {{have}}"
+  },
+  "substitute": {
+    "applied": "Замены в заказе",
+    "line": "{{product}} → {{substitute}} (×{{ratio}})",
+    "undo": "Без замены",
+    "offer": "Заменить на «{{substitute}}»: нужно {{need}}, есть {{have}}",
+    "short": "«{{substitute}}» тоже мало — есть {{have}}"
   }
 }

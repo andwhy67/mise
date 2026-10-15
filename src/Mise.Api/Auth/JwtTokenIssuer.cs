@@ -15,6 +15,8 @@ public static class MiseClaims
     public const string Login = "login";
     public const string Name = "name";
     public const string Role = "role";
+    /// <summary>Ресторан — граница данных запроса.</summary>
+    public const string RestaurantId = "rid";
 }
 
 /// <summary>Короткоживущий access JWT (HS256) — PLAN §6.</summary>
@@ -22,7 +24,7 @@ internal sealed class JwtTokenIssuer(IOptions<AuthOptions> options) : ITokenIssu
 {
     private readonly JsonWebTokenHandler _handler = new();
 
-    public AccessToken Issue(User user, DateTimeOffset now)
+    public AccessToken Issue(User user, Guid restaurantId, DateTimeOffset now)
     {
         var settings = options.Value;
         var expires = now.AddMinutes(settings.AccessTokenMinutes);
@@ -39,6 +41,7 @@ internal sealed class JwtTokenIssuer(IOptions<AuthOptions> options) : ITokenIssu
                 new Claim(MiseClaims.Login, user.Login),
                 new Claim(MiseClaims.Name, user.DisplayName),
                 new Claim(MiseClaims.Role, user.Role.ToString()),
+                new Claim(MiseClaims.RestaurantId, restaurantId.ToString()),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N")),
             ]),
             SigningCredentials = new SigningCredentials(SigningKey(settings), SecurityAlgorithms.HmacSha256),

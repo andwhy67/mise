@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
+using Mise.Application.Abstractions;
 using Mise.Application.Realtime;
 
 namespace Mise.Api.Realtime;
@@ -16,7 +17,8 @@ public sealed class RealtimeOptions
 }
 
 /// <summary>
-/// Раз в окно дебаунса забирает накопленные изменения, читает актуальное состояние и рассылает события всем клиентам.
+/// Раз в окно дебаунса забирает накопленные изменения, читает актуальное состояние и рассылает события клиентам.
+/// Изменения каждого ресторана читаются от его имени и уходят только в его группу хаба — сотрудникам этого ресторана.
 /// С Redis backplane событие доходит до клиентов всех инстансов API.
 /// </summary>
 internal sealed class RealtimePublisher(
@@ -24,6 +26,7 @@ internal sealed class RealtimePublisher(
     IServiceScopeFactory scopes,
     IHubContext<StockHub, IStockClient> hub,
     PushQueue pushQueue,
+    ITenant tenant,
     IOptions<RealtimeOptions> options,
     ILogger<RealtimePublisher> logger) : BackgroundService
 {
@@ -38,9 +41,9 @@ internal sealed class RealtimePublisher(
                 if (debounce > TimeSpan.Zero)
                     await Task.Delay(debounce, stoppingToken);
 
-                var changes = buffer.TakePending();
-                if (!changes.IsEmpty)
-                    await PublishAsync(changes, stoppingToken);
+                foreach (var (restaurantId, changes) in buffer.TakePending())
+                    if (!changes.IsEmpty)
+                        await PublishAsync(restaurantId, changes, stoppingToken);
             }
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -49,13 +52,14 @@ internal sealed class RealtimePublisher(
         }
     }
 
-    private async Task PublishAsync(RealtimeChangeSet changes, CancellationToken ct)
+    private async Task PublishAsync(Guid restaurantId, RealtimeChangeSet changes, CancellationToken ct)
     {
         try
         {
+            using var _ = tenant.Use(restaurantId);
             await using var scope = scopes.CreateAsyncScope();
             var payload = await scope.ServiceProvider.GetRequiredService<RealtimePayloadBuilder>().BuildAsync(changes, ct);
-            var clients = hub.Clients.All;
+            var clients = hub.Clients.Group(StockHub.GroupOf(restaurantId));
 
             foreach (var supply in payload.SuppliesReceived)
                 await clients.SupplyReceived(supply);
@@ -74,8 +78,8 @@ internal sealed class RealtimePublisher(
             if (payload.Alerts is { } alerts)
             {
                 await clients.AlertRaised(alerts);
-                // Те же алерты — пушами на телефоны тех, кому нужно действовать (PushAudience).
-                pushQueue.Enqueue(alerts.Alerts);
+                // Те же алерты — пушами на телефоны тех, кому нужно действовать (PushAudience), в том же ресторане.
+                pushQueue.Enqueue(restaurantId, alerts.Alerts);
             }
             if (payload.HotOffers is { } hotOffers)
                 await clients.HotOffersChanged(hotOffers);
@@ -85,7 +89,7 @@ internal sealed class RealtimePublisher(
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Клиенты догонят состояние через REST; следующее окно отправится как обычно.
-            logger.LogError(ex, "Realtime publish failed");
+            logger.LogError(ex, "Realtime publish failed for restaurant {RestaurantId}", restaurantId);
         }
     }
 }

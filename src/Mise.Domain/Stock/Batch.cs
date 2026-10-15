@@ -21,6 +21,7 @@ public sealed class Batch
     public static class Errors
     {
         public const string InvalidQuantity = "batch.invalid_quantity";
+        public const string InvalidCost = "batch.invalid_cost";
         public const string InsufficientQuantity = "batch.insufficient_quantity";
         public const string NotUsable = "batch.not_usable";
         public const string NotReturnable = "batch.not_returnable";
@@ -38,6 +39,8 @@ public sealed class Batch
     public decimal InitialQty { get; private set; }
     public decimal RemainingQty { get; private set; }
     public BatchStatus Status { get; private set; }
+    /// <summary>Цена закупки за базовую единицу (₽ за г / мл / шт); null — цена неизвестна.</summary>
+    public decimal? UnitCost { get; private set; }
 
     public static Batch Receive(
         Guid id,
@@ -46,10 +49,13 @@ public sealed class Batch
         DateTimeOffset receivedAt,
         ExpiryResolution expiry,
         decimal quantity,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        decimal? unitCost = null)
     {
         if (quantity <= 0)
             throw new DomainException(Errors.InvalidQuantity, "Количество в партии должно быть больше нуля.");
+        if (unitCost < 0)
+            throw new DomainException(Errors.InvalidCost, "Цена закупки не может быть отрицательной.");
 
         return new Batch
         {
@@ -61,10 +67,14 @@ public sealed class Batch
             ExpirySource = expiry.Source,
             InitialQty = quantity,
             RemainingQty = quantity,
+            UnitCost = unitCost,
             // Партия, срок которой истёк ещё до регистрации, сразу помечается Expired (assumptions A2).
             Status = now >= expiry.ExpiresAt ? BatchStatus.Expired : BatchStatus.Active,
         };
     }
+
+    /// <summary>Стоимость количества по цене партии, до копеек; null — цена партии неизвестна.</summary>
+    public decimal? CostOf(decimal quantity) => UnitCost is { } price ? decimal.Round(quantity * price, 2, MidpointRounding.AwayFromZero) : null;
 
     /// <summary>Партия участвует в заказах и в доступном остатке (CLAUDE.md, правило 2).</summary>
     public bool IsUsableAt(DateTimeOffset now) => Status == BatchStatus.Active && RemainingQty > 0 && now < ExpiresAt;

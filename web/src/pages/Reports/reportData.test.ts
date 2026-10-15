@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { consumptionByDay, daysInPeriod, deficitRanking, periodRange, worstRates, writeOffDays, type DeficitItem } from './reportData'
+import { compare, comparePoints, marginShare, moneyRanking, previousRange, type MoneyProduct } from './reportData'
 
 // Среда, 14 октября 2026, 23:30 по Москве.
 const NOW = new Date('2026-10-14T20:30:00Z')
@@ -84,5 +85,54 @@ describe('расход по дням', () => {
       { date: '2026-10-13', qty: 0 },
       { date: '2026-10-14', qty: 13320 },
     ])
+  })
+})
+
+describe('деньги', () => {
+  const item = (name: string, losses: number, rescued: number): MoneyProduct => ({
+    productId: name,
+    productName: name,
+    unit: 'Gram',
+    purchased: 0,
+    costOfSales: 0,
+    losses,
+    expiryLosses: losses,
+    rescued,
+    rescuedQty: 0,
+  })
+
+  it('сначала дорогие потери, затем спасённое; нули не показываем', () => {
+    const ranked = moneyRanking([item('Лосось', 120.4, 900), item('Соль', 0, 0), item('Сливки', 830.6, 0), item('Базилик', 0, 310)], 8)
+    expect(ranked.map((r) => r.name)).toEqual(['Сливки', 'Лосось', 'Базилик'])
+    expect(ranked[0]).toMatchObject({ losses: 831, rescued: 0 })
+  })
+
+  it('маржа в процентах от выручки, без выручки — нет', () => {
+    expect(marginShare({ revenue: 1000, grossMargin: 700 })).toBe(0.7)
+    expect(marginShare({ revenue: 0, grossMargin: -50 })).toBeNull()
+  })
+})
+
+describe('сравнение с прошлым периодом', () => {
+  it('прошлый период той же длины и до того же часа', () => {
+    const now = new Date('2026-10-15T11:00:00Z') // 14:00 по Москве
+    expect(previousRange('today', '2026-10-14T21:00:00.000Z', now)).toEqual({ from: '2026-10-13T21:00:00.000Z', to: '2026-10-14T11:00:00.000Z' })
+    expect(previousRange('week', '2026-10-08T21:00:00.000Z', now)).toEqual({ from: '2026-10-01T21:00:00.000Z', to: '2026-10-08T11:00:00.000Z' })
+  })
+
+  it('рост выручки — хорошо, рост потерь — плохо; меньше 1 % — без изменений', () => {
+    expect(compare(1200, 1000, 'up')).toEqual({ direction: 'up', percent: 20, tone: 'good' })
+    expect(compare(1200, 1000, 'down')).toEqual({ direction: 'up', percent: 20, tone: 'bad' })
+    expect(compare(800, 1000, 'down')).toEqual({ direction: 'down', percent: -20, tone: 'good' })
+    expect(compare(1005, 1000, 'up')).toEqual({ direction: 'flat', percent: 0.5, tone: 'neutral' })
+  })
+
+  it('прошлого не было — процента нет, только направление', () => {
+    expect(compare(500, 0, 'up')).toEqual({ direction: 'up', percent: null, tone: 'good' })
+    expect(compare(0, 0, 'up')).toEqual({ direction: 'flat', percent: null, tone: 'neutral' })
+  })
+
+  it('доли — в процентных пунктах', () => {
+    expect(comparePoints(0.05, 0.03, 'down')).toEqual({ direction: 'up', percent: null, tone: 'bad', points: 2 })
   })
 })

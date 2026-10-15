@@ -21,6 +21,7 @@ public sealed class Order
     }
 
     private readonly List<OrderItem> _items = [];
+    private readonly List<OrderSubstitution> _substitutions = [];
 
     private Order() { }
 
@@ -44,12 +45,18 @@ public sealed class Order
 
     public IReadOnlyCollection<OrderItem> Items => _items;
 
+    /// <summary>Замены продуктов, на которые согласился повар при оформлении заказа.</summary>
+    public IReadOnlyCollection<OrderSubstitution> Substitutions => _substitutions;
+
     public decimal Total => _items.Sum(i => i.PriceSnapshot * i.Quantity);
 
     public bool CanBeCancelled => Status is OrderStatus.Created or OrderStatus.Cooking;
 
     public void AddItem(Guid dishId, string dishName, int quantity, decimal price) =>
         _items.Add(new OrderItem(Id, _items.Count + 1, dishId, dishName, quantity, price));
+
+    public void AddSubstitution(Substitution substitution) =>
+        _substitutions.Add(new OrderSubstitution(Id, substitution.ProductId, substitution.SubstituteId, substitution.Ratio));
 
     /// <summary>Только вперёд: Created → Cooking → Done → Served (Done можно и сразу из Created). Повтор текущего статуса — no-op.</summary>
     public void ChangeStatus(OrderStatus target, DateTimeOffset now)
@@ -107,4 +114,23 @@ public sealed class OrderItem
     public int Quantity { get; private set; }
     /// <summary>Цена порции на момент заказа.</summary>
     public decimal PriceSnapshot { get; private set; }
+}
+
+/// <summary>Продукт <see cref="ProductId"/> в этом заказе взят из <see cref="SubstituteId"/> (× <see cref="Ratio"/>).</summary>
+public sealed class OrderSubstitution
+{
+    private OrderSubstitution() { }
+
+    internal OrderSubstitution(Guid orderId, Guid productId, Guid substituteId, decimal ratio)
+    {
+        OrderId = orderId;
+        ProductId = productId;
+        SubstituteId = substituteId;
+        Ratio = ratio;
+    }
+
+    public Guid OrderId { get; private set; }
+    public Guid ProductId { get; private set; }
+    public Guid SubstituteId { get; private set; }
+    public decimal Ratio { get; private set; }
 }

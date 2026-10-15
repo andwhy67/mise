@@ -16,13 +16,31 @@ public sealed class DatabaseSeeder(MiseDbContext db, ILogger<DatabaseSeeder> log
         var newProducts = products.Where(p => !existingProducts.Contains(p.Id)).ToList();
         db.Products.AddRange(newProducts);
 
+        // База, засеянная до появления цен: заполняем цену и поставщика, только если их ещё нет (правки менеджера не трогаем).
+        var unpriced = await db.Products.Where(p => existingProducts.Contains(p.Id) && p.ReferenceUnitCost == null).ToListAsync(ct);
+        foreach (var product in unpriced)
+        {
+            var seed = products.First(p => p.Id == product.Id);
+            product.ReferenceUnitCost = seed.ReferenceUnitCost;
+            product.Supplier ??= seed.Supplier;
+        }
+
+        // Замены — если в базе их ещё нет совсем (база, засеянная до них); заданные менеджером не трогаем.
+        var withoutRules = await db.Products.AnyAsync(p => p.Substitutes.Any(), ct)
+            ? []
+            : await db.Products.Include(p => p.Substitutes).Where(p => existingProducts.Contains(p.Id)).ToListAsync(ct);
+        foreach (var product in withoutRules)
+            product.SetSubstitutes(SeedData.Substitutes.Where(s => s.ProductId == product.Id && existingProducts.Contains(s.SubstituteId))
+                .Select(s => (s.SubstituteId, s.Ratio)));
+        var rulesAdded = withoutRules.Any(p => p.Substitutes.Count > 0);
+
         var dishes = SeedData.CreateDishes();
         var dishIds = dishes.Select(d => d.Id).ToList();
         var existingDishes = await db.Dishes.Where(d => dishIds.Contains(d.Id)).Select(d => d.Id).ToListAsync(ct);
         var newDishes = dishes.Where(d => !existingDishes.Contains(d.Id)).ToList();
         db.Dishes.AddRange(newDishes);
 
-        if (newProducts.Count + newDishes.Count == 0)
+        if (newProducts.Count + newDishes.Count + unpriced.Count == 0 && !rulesAdded)
             return;
 
         try

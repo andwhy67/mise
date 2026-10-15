@@ -197,6 +197,8 @@ public sealed class SupplyAndStockTests(MiseApiFactory factory)
         Assert.Equal(100m, (await _client.GetStockItemAsync(product)).GetProperty("usableQty").GetDecimal());
 
         await using var scope = factory.Services.CreateAsyncScope();
+
+        using var demo = factory.AsDemoRestaurant();
         var db = scope.ServiceProvider.GetRequiredService<MiseDbContext>();
         Assert.Equal(1, await db.StockMovements.CountAsync(m => m.ProductId == product));
     }

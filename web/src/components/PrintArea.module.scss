@@ -1,0 +1,41 @@
+// Печатный документ: чёрное на белом при любой теме, без фона и теней (DESIGN.md: печать — «как бумага»).
+.root {
+  color: #1a1a1a;
+  background: #fff;
+  font-family: var(--font-sans);
+  font-size: 12pt;
+  line-height: 1.45;
+
+  h1 {
+    margin: 0 0 4pt;
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: 22pt;
+  }
+
+  table {
+    width: 100%;
+    margin-top: 12pt;
+    border-collapse: collapse;
+  }
+
+  th,
+  td {
+    padding: 5pt 6pt;
+    border-bottom: 0.5pt solid #999;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    font-size: 10pt;
+    font-weight: 600;
+    color: #444;
+  }
+
+  :global(.num) {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+}

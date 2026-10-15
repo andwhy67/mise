@@ -33,9 +33,10 @@ test('заказ: общая нехватка → понятный отказ �
   await cart.getByRole('button', { name: `${second.name}: на порцию меньше` }).click()
   await expect(cart.getByRole('alert')).toHaveCount(0)
   await cart.getByRole('button', { name: 'Принять заказ' }).click()
-  const toast = page.getByRole('status').getByText(/Заказ ORD-\d+ принят/)
-  await expect(toast).toBeVisible()
-  const number = (await toast.innerText()).match(/ORD-\d+/)![0]
+  // Тоста нет: принятый заказ подсвечен в «Заказах в работе», диктору — объявление role=status.
+  const placed = page.locator('section[aria-labelledby=orders-recent]').getByRole('status')
+  await expect(placed).toHaveText(/Заказ ORD-\d+ принят/)
+  const number = (await placed.textContent())!.match(/ORD-\d+/)![0]
 
   // Ведём заказ до выдачи: Принят → Готовится → Готов → Выдан.
   const tracking = page.locator('section[aria-labelledby=orders-recent]')

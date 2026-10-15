@@ -95,3 +95,9 @@
     transform: translateY(10px);
   }
 }
+
+@media print {
+  .region {
+    display: none;
+  }
+}

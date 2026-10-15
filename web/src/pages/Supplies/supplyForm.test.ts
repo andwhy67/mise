@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Product } from '@/api/types'
-import { emptyRow, fromMoscowInput, previewExpiry, rowFromSuggestion, toMoscowInput, toRequest, validateSupply, type SupplyFormState } from './supplyForm'
+import { emptyRow, fromMoscowInput, lineCost, previewExpiry, rowFromSuggestion, toMoscowInput, toRequest, validateSupply, type SupplyFormState } from './supplyForm'
 
 const spinach: Product = {
   id: 'spinach',
@@ -11,6 +11,9 @@ const spinach: Product = {
   packSize: 1000,
   category: 'Овощи',
   storageType: null,
+  referencePrice: 900,
+  supplier: null,
+  substitutes: [],
 }
 const salt: Product = { ...spinach, id: 'salt', name: 'Соль', defaultShelfLifeHours: null }
 const products = [spinach, salt]
@@ -143,5 +146,31 @@ describe('подсказка «что заказать» → строка пос
 
   it('продукта нет в справочнике — строки нет (единицу не угадываем)', () => {
     expect(rowFromSuggestion('r', undefined, 80)).toBeNull()
+  })
+})
+
+describe('цена в поставке — за кг / л / шт, как в накладной', () => {
+  const row = { ...emptyRow('r'), productId: 'spinach', quantity: '500', unit: 'Gram' as const }
+
+  it('сумма строки по введённой цене за кг, хотя количество в граммах', () => {
+    expect(lineCost({ ...row, price: '1200' }, spinach)).toBe(600)
+  })
+
+  it('без цены — по справочной цене продукта', () => {
+    expect(lineCost(row, spinach)).toBe(450)
+    expect(lineCost(row, salt)).toBe(450)
+    expect(lineCost(row, { ...spinach, referencePrice: null })).toBeNull()
+  })
+
+  it('в запрос уходит цена за единицу ввода', () => {
+    const body = toRequest(form([{ ...row, price: '1200' }]))
+    expect(body.items[0]!.price).toBe(1.2)
+    expect(toRequest(form([{ ...row, unit: 'Kilogram', quantity: '0,5', price: '1200' }])).items[0]!.price).toBe(1200)
+    expect(toRequest(form([row])).items[0]!.price).toBeUndefined()
+  })
+
+  it('отрицательная цена — ошибка строки', () => {
+    expect(validateSupply(form([{ ...row, price: '-5' }]), products)['r.price']).toBe('price')
+    expect(validateSupply(form([{ ...row, price: '' }]), products)['r.price']).toBeUndefined()
   })
 })

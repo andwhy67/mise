@@ -34,7 +34,9 @@ public sealed class SecurityTests(MiseApiFactory factory)
         using var me = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         me.Headers.Authorization = new("Bearer", body.GetProperty("accessToken").GetString());
         var meBody = await (await client.SendAsync(me)).ReadJsonAsync();
-        Assert.Equal("manager", meBody.GetProperty("login").GetString());
+        Assert.Equal("manager", meBody.GetProperty("user").GetProperty("login").GetString());
+        Assert.True(meBody.GetProperty("restaurant").GetProperty("isDemo").GetBoolean());
+        Assert.True(body.GetProperty("restaurant").GetProperty("isDemo").GetBoolean());
     }
 
     [Fact]

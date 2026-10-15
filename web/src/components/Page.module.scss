@@ -3,7 +3,8 @@
   flex-direction: column;
   gap: var(--space-6);
   max-width: 1280px;
-  padding: var(--space-10);
+  // Сверху на десктопе — служебная строка (язык, тема): отступ под неё задаёт раскладка.
+  padding: var(--page-top, var(--space-10)) var(--space-10) var(--space-10);
 
   @media (max-width: 767px) {
     gap: var(--space-4);
@@ -48,4 +49,10 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-4) var(--space-6);
+}
+
+@media print {
+  .actions {
+    display: none;
+  }
 }

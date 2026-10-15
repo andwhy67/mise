@@ -90,3 +90,27 @@ body:has(dialog[open]) {
     transition-duration: 0.01ms !important;
   }
 }
+
+// ---------- Печать документа (components/PrintArea.tsx) ----------
+.print-root {
+  display: none;
+}
+
+@media print {
+  @page {
+    margin: 16mm;
+  }
+
+  body.printing > :not(.print-root) {
+    display: none !important;
+  }
+
+  body.printing .print-root {
+    display: block;
+  }
+
+  html,
+  body {
+    background: #fff;
+  }
+}

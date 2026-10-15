@@ -1,4 +1,5 @@
 using System.Threading.Channels;
+using Mise.Application.Abstractions;
 using Mise.Application.Menu;
 using Mise.Application.Realtime;
 using Mise.Application.Simulator;
@@ -9,22 +10,23 @@ namespace Mise.Api.Realtime;
 /// Реализация <see cref="IRealtimeNotifier"/>: копит изменения в памяти и будит <see cref="RealtimePublisher"/>.
 /// Вызовы дешёвые и не бросают — запрос, который уже закоммитил изменения, не должен падать из-за real-time.
 /// </summary>
-internal sealed class RealtimeChangeBuffer : IRealtimeNotifier
+internal sealed class RealtimeChangeBuffer(ITenant tenant, ILogger<RealtimeChangeBuffer> logger) : IRealtimeNotifier
 {
     private readonly Lock _gate = new();
     private readonly Channel<bool> _signal = Channel.CreateBounded<bool>(
         new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.DropWrite });
-    private RealtimeChangeSet _pending = new();
+    // Изменения копятся отдельно по ресторанам: рассылка — только в группу своего ресторана.
+    private Dictionary<Guid, RealtimeChangeSet> _pending = [];
 
     public ChannelReader<bool> Signals => _signal.Reader;
 
-    /// <summary>Забирает накопленное и начинает новое окно.</summary>
-    public RealtimeChangeSet TakePending()
+    /// <summary>Забирает накопленное по всем ресторанам и начинает новое окно.</summary>
+    public IReadOnlyDictionary<Guid, RealtimeChangeSet> TakePending()
     {
         lock (_gate)
         {
             var pending = _pending;
-            _pending = new RealtimeChangeSet();
+            _pending = [];
             return pending;
         }
     }
@@ -51,11 +53,19 @@ internal sealed class RealtimeChangeBuffer : IRealtimeNotifier
 
     private void Update(Action<RealtimeChangeSet> change)
     {
+        if (tenant.RestaurantId is not { } restaurantId)
+        {
+            // Изменение без ресторана — ошибка вызывающего кода: разослать его некому (и нельзя — всем).
+            logger.LogWarning("Realtime change without a restaurant is dropped");
+            return;
+        }
         bool empty;
         lock (_gate)
         {
-            change(_pending);
-            empty = _pending.IsEmpty;
+            if (!_pending.TryGetValue(restaurantId, out var set))
+                _pending[restaurantId] = set = new RealtimeChangeSet();
+            change(set);
+            empty = set.IsEmpty;
         }
         if (!empty)
             _signal.Writer.TryWrite(true);

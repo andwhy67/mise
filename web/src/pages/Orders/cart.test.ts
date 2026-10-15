@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { DishAvailability } from '@/api/types'
 import type { MeasureUnit } from '@/lib/format'
-import { cartShortages, cartTotals, cartUsage } from './cart'
+import { activeSubstitutions, cartShortages, cartTotals, cartUsage, type CartSubstitution } from './cart'
 
 interface Product {
   productId: string
@@ -36,7 +36,7 @@ describe('проверка корзины — суммарно по всем б�
       ['Омлет', 2],
     ])
     expect(cartShortages(cart, menu)).toEqual([
-      { productId: 'eggs', productName: 'Яйца', unit: 'Piece', required: 12, available: 10, shortage: 2, dishes: ['Блины', 'Омлет'] },
+      { productId: 'eggs', productName: 'Яйца', unit: 'Piece', required: 12, available: 10, shortage: 2, dishes: ['Блины', 'Омлет'], substitutes: [] },
     ])
   })
 
@@ -67,5 +67,45 @@ describe('сколько заказ берёт от остатка — по ка
 
   it('пустая корзина — пусто', () => {
     expect(cartUsage(new Map(), menu)).toEqual([])
+  })
+})
+
+describe('замены, на которые согласился повар', () => {
+  const cream: Product = { productId: 'cream', productName: 'Сливки', unit: 'Milliliter', usable: 50 }
+  const pasta = dish('Паста', 600, [[cream, 100], [milk, 20]])
+  const withCream = [...menu, pasta]
+  const creamToMilk: CartSubstitution = {
+    productId: 'cream',
+    productName: 'Сливки',
+    substituteId: 'milk',
+    substituteName: 'Молоко',
+    unit: 'Milliliter',
+    ratio: 1.5,
+  }
+
+  it('потребность переходит на заменитель и суммируется с его собственным расходом', () => {
+    const cart = new Map([['Паста', 2]])
+    expect(cartShortages(cart, withCream)).toMatchObject([{ productId: 'cream', required: 200, available: 50 }])
+    expect(cartShortages(cart, withCream, [creamToMilk])).toEqual([])
+    expect(cartUsage(cart, withCream, [creamToMilk])).toEqual([
+      { productId: 'milk', productName: 'Молоко', unit: 'Milliliter', required: 340, available: 1000, share: 0.34 },
+    ])
+  })
+
+  it('заменитель тоже кончается — нехватка уже по нему', () => {
+    const cart = new Map([['Паста', 4]]) // 400 × 1,5 + 80 = 680 ≤ 1000 — хватает; ×8 — нет
+    expect(cartShortages(new Map([['Паста', 8]]), withCream, [creamToMilk])).toMatchObject([{ productId: 'milk', required: 1360, shortage: 360 }])
+    expect(cartShortages(cart, withCream, [creamToMilk])).toEqual([])
+  })
+
+  it('в запрос — только замены продуктов, которые есть в корзине', () => {
+    expect(activeSubstitutions(new Map([['Блины', 1]]), withCream, [creamToMilk])).toEqual([])
+    expect(activeSubstitutions(new Map([['Паста', 1]]), withCream, [creamToMilk])).toEqual([creamToMilk])
+  })
+
+  it('остаток заменителя не из меню неизвестен — не гадаем, решит сервер', () => {
+    const toSoy = { ...creamToMilk, substituteId: 'soy', substituteName: 'Соевые сливки' }
+    expect(cartShortages(new Map([['Паста', 2]]), withCream, [toSoy])).toEqual([])
+    expect(cartUsage(new Map([['Паста', 2]]), withCream, [toSoy]).map((u) => u.productId)).toEqual(['milk'])
   })
 })

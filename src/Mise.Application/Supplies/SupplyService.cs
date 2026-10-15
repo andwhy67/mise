@@ -139,13 +139,18 @@ public sealed class SupplyService(
         var expiry = ExpiryPolicy.Resolve(createdAt, item.ExpiresAt, item.ShelfLifeHours, product.DefaultShelfLifeHours);
         var name = string.IsNullOrWhiteSpace(item.Name) ? product.Name : item.Name.Trim();
 
+        // Цена в строке — за единицу ввода (₽ за кг, если вводили в кг); в партии — за базовую. Нет цены — ориентировочная из справочника.
+        var unitCost = item.Price is { } price
+            ? price / UnitConverter.ToBase(1m, item.Unit ?? UnitConverter.DefaultInputFor(product.Unit), product.Unit)
+            : product.ReferenceUnitCost;
         var supplyItem = new SupplyItem(Guid.CreateVersion7(now), supply.Id, lineNo, product.Id, name, quantity)
         {
             ShelfLifeHours = item.ShelfLifeHours,
             ExpiresAt = item.ExpiresAt?.ToUniversalTime(),
+            UnitCost = unitCost,
         };
         supply.AddItem(supplyItem);
-        return Batch.Receive(Guid.CreateVersion7(now), supplyItem.Id, product.Id, createdAt, expiry, quantity, now);
+        return Batch.Receive(Guid.CreateVersion7(now), supplyItem.Id, product.Id, createdAt, expiry, quantity, now, unitCost);
     }
 
     /// <summary>
@@ -204,9 +209,12 @@ public sealed class SupplyService(
                 .Select(i =>
                 {
                     var batch = batchByItem[i.Id];
+                    var unit = products[i.ProductId].Unit;
                     return new SupplyItemDto(
-                        i.Id, i.LineNo, i.ProductId, i.ProductName, products[i.ProductId].Unit, i.Quantity,
-                        i.ShelfLifeHours, i.ExpiresAt, batch.Id, batch.ExpiresAt, batch.ExpirySource, batch.Status);
+                        i.Id, i.LineNo, i.ProductId, i.ProductName, unit, i.Quantity,
+                        i.ShelfLifeHours, i.ExpiresAt, batch.Id, batch.ExpiresAt, batch.ExpirySource, batch.Status,
+                        i.UnitCost is { } cost ? Prices.ToDisplay(cost, unit) : null,
+                        batch.CostOf(i.Quantity));
                 })
                 .ToList());
     }

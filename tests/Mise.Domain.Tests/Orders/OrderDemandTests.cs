@@ -1,4 +1,5 @@
 using Mise.Domain.Catalog;
+using Mise.Domain.Common;
 using Mise.Domain.Orders;
 
 namespace Mise.Domain.Tests.Orders;
@@ -60,5 +61,39 @@ public class OrderDemandTests
     public void Non_positive_portions_are_rejected(int portions)
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => OrderDemand.Aggregate([(NewDish((Cream, 1m)), portions)]));
+    }
+
+    [Fact]
+    public void Substitution_moves_the_demand_to_the_substitute_with_its_ratio()
+    {
+        var milk = Guid.NewGuid();
+        var carbonara = NewDish((Pasta, 120m), (Cream, 50m));
+        var salmonPasta = NewDish((Salmon, 100m), (Cream, 100m), (milk, 20m));
+
+        // Сливки кончились — повар согласился на молоко 1,5 : 1 для всего заказа.
+        var demand = OrderDemand.Aggregate([(carbonara, 2), (salmonPasta, 1)], [new Substitution(Cream, milk, 1.5m)]);
+
+        Assert.False(demand.ContainsKey(Cream));
+        Assert.Equal(20m + 200m * 1.5m, demand[milk]); // своё молоко + замена сливок, всё — в одну суммарную проверку
+        Assert.Equal(240m, demand[Pasta]);
+    }
+
+    [Fact]
+    public void Substitution_of_a_product_not_in_the_order_is_rejected()
+    {
+        var carbonara = NewDish((Pasta, 120m));
+
+        var error = Assert.Throws<DomainException>(() => OrderDemand.Aggregate([(carbonara, 1)], [new Substitution(Cream, Salmon, 1m)]));
+        Assert.Equal(OrderDemand.Errors.SubstitutionNotUsed, error.Code);
+    }
+
+    [Fact]
+    public void Product_can_be_substituted_only_once_and_not_by_a_substituted_one()
+    {
+        var milk = Guid.NewGuid();
+        var dish = NewDish((Cream, 50m), (milk, 10m));
+
+        Assert.Throws<DomainException>(() => OrderDemand.Aggregate([(dish, 1)], [new Substitution(Cream, milk, 1m), new Substitution(Cream, Salmon, 1m)]));
+        Assert.Throws<DomainException>(() => OrderDemand.Aggregate([(dish, 1)], [new Substitution(Cream, milk, 1m), new Substitution(milk, Salmon, 1m)]));
     }
 }

@@ -1,6 +1,6 @@
 import { ChevronDown, Plus } from 'lucide-react'
 import { useId, useState } from 'react'
-import { useSearchParams } from 'react-router'
+import { useLocation, useSearchParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { useSupplies, useSupply, useSupplySuggestions } from '@/api/queries'
 import type { SupplyListItem, SupplySuggestion } from '@/api/types'
@@ -12,6 +12,7 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/StateBlocks'
 import { StatusMark } from '@/components/StatusMark'
 import { supplyLine } from '@/lib/texts'
 import { useFormat } from '@/lib/useFormat'
+import { SupplierRequestSheet } from './SupplierRequestSheet'
 import { SupplyFormSheet, type PrefillRow } from './SupplyFormSheet'
 import styles from './SuppliesPage.module.scss'
 
@@ -24,7 +25,11 @@ export function SuppliesPage() {
   const { t } = useTranslation('supplies')
   const [params, setParams] = useSearchParams()
   // Ярлык на иконке приложения «Принять поставку» ведёт сюда с ?receive=1 — форма открыта сразу.
-  const [form, setForm] = useState<{ prefill?: PrefillRow[] } | null>(() => (params.get('receive') ? {} : null))
+  // Строки могут прийти с другого экрана (стоп-лист → «В поставку») — в состоянии перехода.
+  const location = useLocation()
+  const [form, setForm] = useState<{ prefill?: PrefillRow[] } | null>(() =>
+    params.get('receive') ? { prefill: (location.state as { prefill?: PrefillRow[] } | null)?.prefill } : null,
+  )
   const open = (prefill?: PrefillRow[]) => setForm({ prefill })
   const close = () => {
     setForm(null)
@@ -59,6 +64,8 @@ function SuggestionsPanel({ onAdd }: { onAdd: (rows: PrefillRow[]) => void }) {
   const items = query.data?.items ?? []
   const urgent = items.filter((i) => i.urgency !== 'Normal')
   const toRow = (item: SupplySuggestion): PrefillRow => ({ productId: item.productId, quantity: item.suggestedQty })
+  // Заявки — у тех, кто видит «Что заказать» (склад, менеджер): сервер пускает с той же политикой.
+  const [requesting, setRequesting] = useState(false)
 
   return (
     <Panel
@@ -66,10 +73,17 @@ function SuggestionsPanel({ onAdd }: { onAdd: (rows: PrefillRow[]) => void }) {
       subtitle={t('suggestions.subtitle', { hours: query.data?.horizonHours ?? 72 })}
       titleId="supplies-suggestions"
       action={
-        urgent.length > 1 && (
-          <Button variant="text" onClick={() => onAdd(urgent.map(toRow))}>
-            {t('suggestions.addUrgent', { count: urgent.length })}
-          </Button>
+        items.length > 0 && (
+          <span className={styles.suggestionActions}>
+            <Button variant="text" onClick={() => setRequesting(true)}>
+              {t('request.open')}
+            </Button>
+            {urgent.length > 1 && (
+              <Button variant="text" onClick={() => onAdd(urgent.map(toRow))}>
+                {t('suggestions.addUrgent', { count: urgent.length })}
+              </Button>
+            )}
+          </span>
         )
       }
     >
@@ -88,13 +102,19 @@ function SuggestionsPanel({ onAdd }: { onAdd: (rows: PrefillRow[]) => void }) {
                 <StatusMark tone={URGENCY_TONE[item.urgency]}>{td('toOrder.quantity', { qty: f.qty(item.suggestedQty, item.unit) })}</StatusMark>
                 <p className={styles.suggestionReason}>{supplyLine(item, f, td)}</p>
               </div>
-              <Button variant="text" className={styles.suggestionAdd} onClick={() => onAdd([toRow(item)])} aria-label={t('suggestions.addLabel', { product: item.productName })}>
+              <Button
+                variant="text"
+                className={styles.suggestionAdd}
+                onClick={() => onAdd([toRow(item)])}
+                aria-label={t('suggestions.addLabel', { product: item.productName })}
+              >
                 {t('suggestions.add')}
               </Button>
             </li>
           ))}
         </ul>
       )}
+      <SupplierRequestSheet key={requesting ? 'open' : 'closed'} open={requesting} items={items} onClose={() => setRequesting(false)} />
     </Panel>
   )
 }
@@ -165,27 +185,36 @@ function SupplyDetails({ id }: { id: string }) {
   if (query.isPending) return <LoadingState lines={2} />
   if (query.isError) return <ErrorState error={query.error} onRetry={() => void query.refetch()} />
 
+  const priced = query.data.items.filter((i) => i.lineCost != null)
+  const total = priced.reduce((sum, i) => sum + (i.lineCost ?? 0), 0)
+
   return (
-    <ul className={styles.items}>
-      {query.data.items.map((item) => {
-        const expired = item.batchStatus === 'Expired' || new Date(item.expiresAt) <= new Date()
-        return (
-          <li key={item.id} className={styles.item}>
-            <span className={styles.itemProduct}>{item.productName}</span>
-            <span className={styles.itemQty}>{f.qty(item.quantity, item.unit)}</span>
-            <span className={styles.itemExpiry}>
-              {expired ? (
-                <StatusMark tone="expired" weight="regular">
-                  {t('details.expired')}
-                </StatusMark>
-              ) : (
-                t('details.until', { when: f.moment(item.expiresAt) })
-              )}
-              <span className={styles.itemSource}>{t(`details.source.${item.expirySource}`, { defaultValue: '' })}</span>
-            </span>
-          </li>
-        )
-      })}
-    </ul>
+    <>
+      <ul className={styles.items}>
+        {query.data.items.map((item) => {
+          const expired = item.batchStatus === 'Expired' || new Date(item.expiresAt) <= new Date()
+          return (
+            <li key={item.id} className={styles.item}>
+              <span className={styles.itemProduct}>{item.productName}</span>
+              <span className={styles.itemQty}>
+                {f.qty(item.quantity, item.unit)}
+                {item.lineCost != null && <span className={styles.itemSource}>{f.money(item.lineCost)}</span>}
+              </span>
+              <span className={styles.itemExpiry}>
+                {expired ? (
+                  <StatusMark tone="expired" weight="regular">
+                    {t('details.expired')}
+                  </StatusMark>
+                ) : (
+                  t('details.until', { when: f.moment(item.expiresAt) })
+                )}
+                <span className={styles.itemSource}>{t(`details.source.${item.expirySource}`, { defaultValue: '' })}</span>
+              </span>
+            </li>
+          )
+        })}
+      </ul>
+      {priced.length > 0 && <p className={styles.total}>{t('details.total', { sum: f.money(total) })}</p>}
+    </>
   )
 }

@@ -19,7 +19,20 @@ export interface ProductForm {
   packSize: string
   category: string
   storageType: string
+  /** Ориентировочная цена закупки, ₽ за кг / л / шт; пусто — неизвестна. */
+  price: string
+  supplier: string
+  substitutes: SubstituteRow[]
 }
+
+/** Замена при нехватке: ratio единиц заменителя на 1 единицу продукта (единицы одинаковые — «1» значит столько же). */
+export interface SubstituteRow {
+  key: string
+  productId: string
+  ratio: string
+}
+
+const MAX_RATIO = 10
 
 export const emptyProductForm = (): ProductForm => ({
   name: '',
@@ -30,12 +43,15 @@ export const emptyProductForm = (): ProductForm => ({
   packSize: '1',
   category: '',
   storageType: '',
+  price: '',
+  supplier: '',
+  substitutes: [],
 })
 
 /** Норма в часах показывается часами, если она короче двух суток или не делится на целые дни. */
 const inHours = (hours: number) => hours < 48 || hours % 24 !== 0
 
-export const productToForm = (p: Product): ProductForm => ({
+export const productToForm = (p: Product, key: () => string = () => crypto.randomUUID()): ProductForm => ({
   name: p.name,
   unit: p.unit,
   shelfLife: p.defaultShelfLifeHours ? show(inHours(p.defaultShelfLifeHours) ? p.defaultShelfLifeHours : p.defaultShelfLifeHours / 24) : '',
@@ -44,6 +60,9 @@ export const productToForm = (p: Product): ProductForm => ({
   packSize: show(p.packSize / factor(p.unit)),
   category: p.category ?? '',
   storageType: p.storageType ?? '',
+  price: p.referencePrice != null ? show(p.referencePrice) : '',
+  supplier: p.supplier ?? '',
+  substitutes: (p.substitutes ?? []).map((s) => ({ key: key(), productId: s.productId, ratio: show(s.ratio) })),
 })
 
 export function productFormToRequest(form: ProductForm) {
@@ -56,6 +75,9 @@ export function productFormToRequest(form: ProductForm) {
     packSize: Math.round(parse(form.packSize) * factor(form.unit) * 1000) / 1000,
     category: form.category.trim() || null,
     storageType: form.storageType.trim() || null,
+    referencePrice: form.price.trim() ? parse(form.price) : null,
+    supplier: form.supplier.trim() || null,
+    substitutes: form.substitutes.map((s) => ({ substituteId: s.productId, ratio: parse(s.ratio) })),
   }
 }
 
@@ -70,6 +92,15 @@ export function validateProduct(form: ProductForm): Record<string, string> {
   }
   if (!(parse(form.minStock) >= 0)) errors.minStock = 'minStock'
   if (!(parse(form.packSize) > 0)) errors.packSize = 'packSize'
+  if (form.price.trim() && !(parse(form.price) >= 0 && parse(form.price) <= 10_000_000)) errors.referencePrice = 'referencePrice'
+  const seen = new Set<string>()
+  for (const row of form.substitutes) {
+    if (!row.productId) errors[`${row.key}.product`] = 'product'
+    else if (seen.has(row.productId)) errors[`${row.key}.product`] = 'duplicateSubstitute'
+    seen.add(row.productId)
+    const ratio = parse(row.ratio)
+    if (!(ratio > 0 && ratio <= MAX_RATIO)) errors[`${row.key}.ratio`] = 'ratio'
+  }
   return errors
 }
 

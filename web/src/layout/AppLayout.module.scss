@@ -2,16 +2,26 @@
 
 @include motion.keyframes;
 
-// Раскладка (DESIGN.md §3): ≥1024 — сайдбар 232px; 768–1023 — верхняя панель; <768 — шапка + нижняя навигация 72px.
+// Раскладка (DESIGN.md §3): ≥1024 — сайдбар 232px (свёрнутый — 72px иконок); 768–1023 — верхняя панель; <768 — шапка + нижняя навигация 72px.
 .splash {
   min-height: 100dvh;
   background: var(--bg);
 }
 
 .shell {
+  --sidebar-collapsed: 72px;
   min-height: 100dvh;
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  transition: grid-template-columns var(--dur-base) var(--ease-out);
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+.collapsed {
+  grid-template-columns: var(--sidebar-collapsed) minmax(0, 1fr);
 }
 
 .skip {
@@ -37,11 +47,58 @@
   padding: var(--space-7) var(--space-5) var(--space-5);
   background: var(--surface);
   border-right: 1px solid var(--border);
+  overflow-x: hidden;
   overflow-y: auto;
+
+  .collapsed & {
+    padding-inline: var(--space-3);
+  }
 }
 
 .brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
   padding: 0 0 var(--space-7);
+
+  .collapsed & {
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+}
+
+// Кнопка «свернуть/развернуть» — тихая иконка, 44 px под палец и курсор.
+.collapse {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  margin-right: calc(var(--space-2) * -1);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+
+  &:hover {
+    background: var(--bg);
+    color: var(--ink);
+  }
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .collapsed & {
+    margin-right: 0;
+  }
 }
 
 .nav {
@@ -69,9 +126,10 @@
 }
 
 .navItem {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: var(--space-3);
   min-height: var(--control-height);
   padding: 0 var(--space-3);
   border-radius: var(--radius-control);
@@ -91,6 +149,41 @@
   &:hover:not(.active) {
     padding-left: var(--space-4);
   }
+
+  .collapsed & {
+    justify-content: center;
+    padding: 0;
+
+    &:hover:not(.active) {
+      padding-left: 0;
+    }
+  }
+}
+
+.navIcon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  color: var(--muted);
+  transition: color var(--dur-base) var(--ease-out);
+
+  .navItem:hover &,
+  .active & {
+    color: currentColor;
+  }
+}
+
+// Подпись свёрнутого пункта остаётся для диктора (и в подсказке title), но не видна.
+.label {
+  .collapsed & {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
 }
 
 .active {
@@ -105,10 +198,20 @@
 
 // Счётчик стоп-листа — красное число текстом, без фона (DESIGN.md §5).
 .count {
+  margin-left: auto;
   color: var(--crit-text);
   font-weight: 600;
   font-size: 14px;
-  margin-left: var(--space-2);
+
+  // Свёрнутый сайдбар: число в углу иконки.
+  .collapsed & {
+    position: absolute;
+    top: 2px;
+    right: 6px;
+    margin: 0;
+    font-size: 11px;
+    line-height: 1;
+  }
 }
 
 .countQuiet {
@@ -128,14 +231,10 @@
   margin: 0;
   font-size: 13px;
   color: var(--ink-2);
-}
 
-.footerControls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
+  .collapsed & {
+    display: none;
+  }
 }
 
 .footerRow {
@@ -143,9 +242,28 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
+
+  .collapsed & {
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+}
+
+// Иконки подвала — только в свёрнутом сайдбаре, где подписи не помещаются.
+.footerIcon {
+  display: none;
+  width: 20px;
+  height: 20px;
+
+  .collapsed & {
+    display: block;
+  }
 }
 
 .footerLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 13px;
   color: var(--ink-2);
   text-decoration: none;
@@ -158,7 +276,9 @@
 }
 
 .logout {
-  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 36px;
   padding: 0;
   border: 0;
@@ -180,14 +300,39 @@
   }
 }
 
+.collapsed .footerLink,
+.collapsed .logout {
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: var(--radius-control);
+  color: var(--muted);
+  text-decoration: none;
+
+  &:hover {
+    background: var(--bg);
+    color: var(--ink);
+  }
+}
+
 .topbar,
 .bottomNav {
   display: none;
 }
 
 .main {
+  --page-top: var(--space-4);
   min-width: 0;
   outline: none;
+}
+
+// Служебная строка десктопа: язык и тема справа сверху, по правому краю страницы (max-width 1280).
+.utility {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-4);
+  max-width: 1280px;
+  padding: var(--space-5) var(--space-10) 0;
 }
 
 .page {
@@ -201,8 +346,13 @@
     grid-template-rows: auto 1fr;
   }
 
-  .sidebar {
+  .sidebar,
+  .utility {
     display: none;
+  }
+
+  .main {
+    --page-top: var(--space-10);
   }
 
   .topbar {
@@ -247,8 +397,12 @@
     }
   }
 
-  .mobileLive {
-    display: none;
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-left: auto;
+    flex: none;
   }
 }
 
@@ -266,8 +420,12 @@
     display: none;
   }
 
-  .mobileLive {
-    display: inline-flex;
+  .main {
+    --page-top: var(--space-5);
+  }
+
+  .controls {
+    gap: var(--space-2);
   }
 
   .bottomNav {
@@ -331,5 +489,44 @@
     &::before {
       transform: scaleX(1);
     }
+  }
+}
+
+// Печать (PDF отчётов): только содержимое экрана — без навигации, во всю ширину листа.
+@media print {
+  .skip,
+  .utility,
+  .sidebar,
+  .topbar,
+  .bottomNav {
+    display: none !important;
+  }
+
+  .shell {
+    display: block;
+    min-height: 0;
+  }
+}
+
+// Ресторан сотрудника: слева в служебной строке и в подвале сайдбара.
+.restaurant {
+  margin-right: auto;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.restaurantLine {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+
+  .collapsed & {
+    display: none;
   }
 }

@@ -2,10 +2,12 @@ using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Mise.Application.Abstractions;
 using Mise.Application.Common;
 using Mise.Application.Menu;
 using Mise.Application.Realtime;
+using Mise.Application.Stock;
 using Mise.Domain.Abstractions;
 using Mise.Domain.Catalog;
 using Mise.Domain.Orders;
@@ -25,6 +27,7 @@ public sealed class OrderService(
     IRealtimeNotifier notifier,
     IValidator<CreateOrderRequest> createValidator,
     IValidator<ChangeOrderStatusRequest> statusValidator,
+    IOptions<StockOptions> stockOptions,
     ILogger<OrderService> logger)
 {
     public static class Errors
@@ -46,11 +49,12 @@ public sealed class OrderService(
 
         var dishes = await LoadDishesAsync(request, ct);
         EnsureDishesAreOn(dishes.Values);
-        var demand = OrderDemand.Aggregate(request.Items.Select(i => (dishes[i.DishId], i.Quantity)));
+        var substitutions = await LoadSubstitutionsAsync(request, dishes, ct);
+        var demand = OrderDemand.Aggregate(request.Items.Select(i => (dishes[i.DishId], i.Quantity)), substitutions);
 
         try
         {
-            var (order, depleted) = await PlaceAsync(request, dishes, demand, key, hash, ct);
+            var (order, depleted) = await PlaceAsync(request, dishes, substitutions, demand, key, hash, ct);
             notifier.OrderCreated(order.Id);
             notifier.StockChanged(demand.Keys);
             notifier.BatchStatusChanged(depleted);
@@ -71,6 +75,7 @@ public sealed class OrderService(
     private async Task<(Order Order, IReadOnlyList<Guid> Depleted)> PlaceAsync(
         CreateOrderRequest request,
         IReadOnlyDictionary<Guid, Dish> dishes,
+        IReadOnlyList<Substitution> substitutions,
         IReadOnlyDictionary<Guid, decimal> demand,
         string? key,
         string hash,
@@ -86,7 +91,7 @@ public sealed class OrderService(
         var shortages = plan.Where(p => !p.Value.IsSatisfied).ToList();
         if (shortages.Count > 0)
         {
-            var refusal = await InsufficientStockAsync(request, dishes, demand, shortages.Select(s => (s.Key, s.Value)), ct);
+            var refusal = await InsufficientStockAsync(request, dishes, substitutions, demand, shortages.Select(s => (s.Key, s.Value)), now, ct);
             // Ничего не списываем (правило 4), блокировки снимаем сразу; факт отказа — для отчёта «чего не хватает».
             await transaction.RollbackAsync(ct);
             await RecordShortagesAsync(shortages.Select(s => (s.Key, demand[s.Key], s.Value.Available)), now, ct);
@@ -100,6 +105,8 @@ public sealed class OrderService(
             var dish = dishes[item.DishId];
             order.AddItem(dish.Id, dish.Name, item.Quantity, dish.Price);
         }
+        foreach (var substitution in substitutions)
+            order.AddSubstitution(substitution);
 
         var batchById = batches.SelectMany(g => g).ToDictionary(b => b.Id);
         var depleted = new List<Guid>();
@@ -107,7 +114,7 @@ public sealed class OrderService(
         {
             var batch = batchById[allocation.BatchId];
             batch.Consume(allocation.Quantity, now);
-            db.StockMovements.Add(StockMovement.OrderConsumption(Guid.CreateVersion7(now), batch, allocation.Quantity, order.Id, now));
+            db.StockMovements.Add(StockMovement.OrderConsumption(Guid.CreateVersion7(now), batch, allocation.Quantity, order.Id, now, stockOptions.Value.RescueWindow));
             if (batch.Status == BatchStatus.Depleted)
                 depleted.Add(batch.Id);
         }
@@ -186,7 +193,7 @@ public sealed class OrderService(
 
     public async Task<OrderDto> GetAsync(Guid id, CancellationToken ct)
     {
-        var order = await db.Orders.AsNoTracking().Include(o => o.Items).FirstOrDefaultAsync(o => o.Id == id, ct)
+        var order = await db.Orders.AsNoTracking().Include(o => o.Items).Include(o => o.Substitutions).FirstOrDefaultAsync(o => o.Id == id, ct)
             ?? throw new NotFoundException("Заказ", id);
 
         var movements = await (
@@ -211,7 +218,52 @@ public sealed class OrderService(
             order.Items.OrderBy(i => i.LineNo)
                 .Select(i => new OrderItemDto(i.LineNo, i.DishId, i.DishName, i.Quantity, i.PriceSnapshot, i.PriceSnapshot * i.Quantity))
                 .ToList(),
-            consumption);
+            consumption,
+            await SubstitutionDtosAsync(order.Substitutions, ct));
+    }
+
+    private async Task<IReadOnlyList<OrderSubstitutionDto>> SubstitutionDtosAsync(IReadOnlyCollection<OrderSubstitution> substitutions, CancellationToken ct)
+    {
+        if (substitutions.Count == 0)
+            return [];
+        var names = await LoadProductNamesAsync(substitutions.SelectMany(s => new[] { s.ProductId, s.SubstituteId }), ct);
+        return substitutions
+            .Select(s => new OrderSubstitutionDto(s.ProductId, names[s.ProductId].Name, s.SubstituteId, names[s.SubstituteId].Name,
+                names[s.SubstituteId].Unit, s.Ratio))
+            .OrderBy(s => s.ProductName)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Замены из запроса — только по правилам справочника и только для продуктов, которые есть в блюдах заказа.
+    /// Коэффициент берётся из справочника на момент заказа и сохраняется в нём.
+    /// </summary>
+    private async Task<IReadOnlyList<Substitution>> LoadSubstitutionsAsync(CreateOrderRequest request, IReadOnlyDictionary<Guid, Dish> dishes, CancellationToken ct)
+    {
+        if (request.Substitutions is not { Count: > 0 } requested)
+            return [];
+        var productIds = requested.Select(s => s.ProductId).ToList();
+        var rules = await db.Products.AsNoTracking()
+            .Where(p => productIds.Contains(p.Id))
+            .SelectMany(p => p.Substitutes)
+            .ToListAsync(ct);
+        var used = request.Items.SelectMany(i => dishes[i.DishId].Ingredients).Select(i => i.ProductId).ToHashSet();
+
+        var failures = new List<ValidationFailure>();
+        var result = new List<Substitution>();
+        foreach (var (s, index) in requested.Select((s, index) => (s, index)))
+        {
+            var rule = rules.FirstOrDefault(r => r.ProductId == s.ProductId && r.SubstituteId == s.SubstituteId);
+            if (!used.Contains(s.ProductId))
+                failures.Add(new ValidationFailure($"Substitutions[{index}].ProductId", "Этого продукта нет в блюдах заказа."));
+            else if (rule is null)
+                failures.Add(new ValidationFailure($"Substitutions[{index}].SubstituteId", "Такой замены нет в справочнике продуктов."));
+            else
+                result.Add(new Substitution(rule.ProductId, rule.SubstituteId, rule.Ratio));
+        }
+        if (failures.Count > 0)
+            throw failures.ToValidationException();
+        return result;
     }
 
     public async Task<PagedResult<OrderListItemDto>> ListAsync(OrderStatus? status, PageRequest page, CancellationToken ct)
@@ -283,20 +335,45 @@ public sealed class OrderService(
     private async Task<BusinessRuleException> InsufficientStockAsync(
         CreateOrderRequest request,
         IReadOnlyDictionary<Guid, Dish> dishes,
+        IReadOnlyList<Substitution> substitutions,
         IReadOnlyDictionary<Guid, decimal> demand,
         IEnumerable<(Guid ProductId, AllocationResult Result)> shortages,
+        DateTimeOffset now,
         CancellationToken ct)
     {
         var list = shortages.ToList();
-        var products = await LoadProductNamesAsync(list.Select(s => s.ProductId), ct);
+        var shortIds = list.Select(s => s.ProductId).ToList();
+        // Заменители для недостающих продуктов — правила справочника; уже использованные в заказе как замена не предлагаем.
+        var rules = await db.Products.AsNoTracking()
+            .Where(p => shortIds.Contains(p.Id))
+            .SelectMany(p => p.Substitutes)
+            .ToListAsync(ct);
+        var replaced = substitutions.Select(s => s.ProductId).ToHashSet();
+        rules = rules.Where(r => !replaced.Contains(r.SubstituteId) && !shortIds.Contains(r.SubstituteId)).ToList();
+        var usable = await MenuSnapshot.LoadUsableAsync(db, now, ct);
+        var products = await LoadProductNamesAsync(shortIds.Concat(rules.Select(r => r.SubstituteId)), ct);
         var orderDishes = request.Items.Select(i => dishes[i.DishId]).DistinctBy(d => d.Id).ToList();
+        // Продукт, вместо которого уже взята замена, — в составе блюд под исходным id.
+        var originals = substitutions.ToLookup(s => s.SubstituteId, s => s.ProductId);
 
         var missing = list
             .Select(s =>
             {
                 var (name, unit) = products[s.ProductId];
-                var usedBy = orderDishes.Where(d => d.Ingredients.Any(i => i.ProductId == s.ProductId)).Select(d => d.Name).ToList();
-                return new MissingIngredientDto(s.ProductId, name, unit, demand[s.ProductId], s.Result.Available, s.Result.Shortage, usedBy);
+                var usedBy = orderDishes
+                    .Where(d => d.Ingredients.Any(i => i.ProductId == s.ProductId || originals[s.ProductId].Contains(i.ProductId)))
+                    .Select(d => d.Name).ToList();
+                var offers = rules.Where(r => r.ProductId == s.ProductId)
+                    .Select(r =>
+                    {
+                        var (subName, subUnit) = products[r.SubstituteId];
+                        var required = demand[s.ProductId] * r.Ratio + demand.GetValueOrDefault(r.SubstituteId);
+                        var available = usable.GetValueOrDefault(r.SubstituteId);
+                        return new SubstituteOfferDto(r.SubstituteId, subName, subUnit, r.Ratio, required, available, available >= required);
+                    })
+                    .OrderByDescending(o => o.Enough).ThenBy(o => o.ProductName)
+                    .ToList();
+                return new MissingIngredientDto(s.ProductId, name, unit, demand[s.ProductId], s.Result.Available, s.Result.Shortage, usedBy, offers);
             })
             .OrderBy(m => m.ProductName)
             .ToList();

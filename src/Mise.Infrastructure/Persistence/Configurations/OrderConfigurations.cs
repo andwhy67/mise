@@ -9,8 +9,6 @@ namespace Mise.Infrastructure.Persistence.Configurations;
 
 internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
 {
-    public const string NumberSequence = "order_number_seq";
-
     public void Configure(EntityTypeBuilder<Order> builder)
     {
         builder.ToTable("orders");
@@ -22,12 +20,27 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(o => o.RequestHash).HasMaxLength(64);
         builder.Ignore(o => o.Total);
         builder.Ignore(o => o.CanBeCancelled);
-        builder.HasIndex(o => o.Number).IsUnique();
-        builder.HasIndex(o => o.IdempotencyKey).IsUnique().HasFilter("idempotency_key IS NOT NULL");
+        // Номер и ключ идемпотентности — уникальны внутри ресторана (номера у каждого свои: ORD-000001…).
+        builder.HasIndex(MiseDbContext.RestaurantIdProperty, nameof(Order.Number)).IsUnique();
+        builder.HasIndex(MiseDbContext.RestaurantIdProperty, nameof(Order.IdempotencyKey)).IsUnique().HasFilter("idempotency_key IS NOT NULL");
         builder.HasIndex(o => new { o.Status, o.CreatedAt });
         builder.HasIndex(o => o.CreatedAt);
         builder.HasMany(o => o.Items).WithOne().HasForeignKey(i => i.OrderId).OnDelete(DeleteBehavior.Cascade);
         builder.Navigation(o => o.Items).UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.HasMany(o => o.Substitutions).WithOne().HasForeignKey(s => s.OrderId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(o => o.Substitutions).UsePropertyAccessMode(PropertyAccessMode.Field);
+    }
+}
+
+internal sealed class OrderSubstitutionConfiguration : IEntityTypeConfiguration<OrderSubstitution>
+{
+    public void Configure(EntityTypeBuilder<OrderSubstitution> builder)
+    {
+        builder.ToTable("order_substitutions", t => t.HasCheckConstraint("ck_order_substitutions_ratio_positive", "ratio > 0"));
+        builder.HasKey(s => new { s.OrderId, s.ProductId });
+        builder.Property(s => s.Ratio).HasPrecision(8, 4);
+        builder.HasOne<Product>().WithMany().HasForeignKey(s => s.ProductId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Product>().WithMany().HasForeignKey(s => s.SubstituteId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 

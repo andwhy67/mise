@@ -1,20 +1,26 @@
 using FluentValidation;
+using FluentValidation.Results;
 using Microsoft.EntityFrameworkCore;
 using Mise.Application.Abstractions;
 using Mise.Application.Common;
 using Mise.Domain.Abstractions;
 using Mise.Domain.Catalog;
+using Mise.Domain.Common;
 
 namespace Mise.Application.Catalog;
 
 public sealed class ProductService(IMiseDbContext db, IClock clock, IValidator<UpsertProductRequest> validator)
 {
-    public async Task<IReadOnlyList<ProductDto>> ListAsync(CancellationToken ct) =>
-        (await db.Products.AsNoTracking().OrderBy(p => p.Name).ToListAsync(ct)).Select(ProductDto.From).ToList();
+    public async Task<IReadOnlyList<ProductDto>> ListAsync(CancellationToken ct)
+    {
+        var products = await db.Products.AsNoTracking().Include(p => p.Substitutes).OrderBy(p => p.Name).ToListAsync(ct);
+        var names = products.ToDictionary(p => p.Id, p => (p.Name, p.Unit));
+        return products.Select(p => ProductDto.From(p, names)).ToList();
+    }
 
     public async Task<ProductDto> GetAsync(Guid id, CancellationToken ct) =>
-        ProductDto.From(await db.Products.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id, ct)
-            ?? throw new NotFoundException("Продукт", id));
+        await ToDtoAsync(await db.Products.AsNoTracking().Include(p => p.Substitutes).FirstOrDefaultAsync(p => p.Id == id, ct)
+            ?? throw new NotFoundException("Продукт", id), ct);
 
     public async Task<ProductDto> CreateAsync(UpsertProductRequest request, CancellationToken ct)
     {
@@ -24,15 +30,17 @@ public sealed class ProductService(IMiseDbContext db, IClock clock, IValidator<U
 
         var product = new Product(Guid.CreateVersion7(clock.UtcNow), name, request.Unit);
         Apply(product, request);
+        await ApplySubstitutesAsync(product, request, ct);
         db.Products.Add(product);
         await SaveAsync(ct);
-        return ProductDto.From(product);
+        return await ToDtoAsync(product, ct);
     }
 
     public async Task<ProductDto> UpdateAsync(Guid id, UpsertProductRequest request, CancellationToken ct)
     {
         await validator.EnsureValidAsync(request, ct);
-        var product = await db.Products.FirstOrDefaultAsync(p => p.Id == id, ct) ?? throw new NotFoundException("Продукт", id);
+        var product = await db.Products.Include(p => p.Substitutes).FirstOrDefaultAsync(p => p.Id == id, ct)
+            ?? throw new NotFoundException("Продукт", id);
         var name = request.Name.Trim();
         await EnsureNameIsFreeAsync(name, exceptId: id, ct);
 
@@ -44,8 +52,9 @@ public sealed class ProductService(IMiseDbContext db, IClock clock, IValidator<U
         product.Name = name;
         product.Unit = request.Unit;
         Apply(product, request);
+        await ApplySubstitutesAsync(product, request, ct);
         await SaveAsync(ct);
-        return ProductDto.From(product);
+        return await ToDtoAsync(product, ct);
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken ct)
@@ -65,7 +74,34 @@ public sealed class ProductService(IMiseDbContext db, IClock clock, IValidator<U
         product.MinStockQty = request.MinStockQty;
         product.PackSize = request.PackSize;
         product.Category = string.IsNullOrWhiteSpace(request.Category) ? null : request.Category.Trim();
+        product.ReferenceUnitCost = request.ReferencePrice is { } price ? Prices.ToBase(price, request.Unit) : null;
+        product.Supplier = string.IsNullOrWhiteSpace(request.Supplier) ? null : request.Supplier.Trim();
         product.StorageType = string.IsNullOrWhiteSpace(request.StorageType) ? null : request.StorageType.Trim();
+    }
+
+    /// <summary>Замены: только существующие продукты и не сам продукт; null в запросе — оставить как есть.</summary>
+    private async Task ApplySubstitutesAsync(Product product, UpsertProductRequest request, CancellationToken ct)
+    {
+        if (request.Substitutes is not { } substitutes)
+            return;
+        var ids = substitutes.Select(s => s.SubstituteId).ToList();
+        var known = await db.Products.Where(p => ids.Contains(p.Id)).Select(p => p.Id).ToListAsync(ct);
+        var failures = substitutes
+            .Select((s, index) => (s, index))
+            .Where(x => x.s.SubstituteId == product.Id || !known.Contains(x.s.SubstituteId))
+            .Select(x => new ValidationFailure($"Substitutes[{x.index}].SubstituteId",
+                x.s.SubstituteId == product.Id ? "Продукт не может заменять сам себя." : "Продукт-заменитель не найден."))
+            .ToList();
+        if (failures.Count > 0)
+            throw failures.ToValidationException();
+        product.SetSubstitutes(substitutes.Select(s => (s.SubstituteId, s.Ratio)));
+    }
+
+    private async Task<ProductDto> ToDtoAsync(Product product, CancellationToken ct)
+    {
+        var ids = product.Substitutes.Select(s => s.SubstituteId).ToList();
+        var names = await db.Products.AsNoTracking().Where(p => ids.Contains(p.Id)).ToDictionaryAsync(p => p.Id, p => (p.Name, p.Unit), ct);
+        return ProductDto.From(product, names);
     }
 
     private async Task EnsureNameIsFreeAsync(string name, Guid? exceptId, CancellationToken ct)

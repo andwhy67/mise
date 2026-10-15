@@ -29,4 +29,6 @@ public static class Limits
     public const decimal MaxQuantity = 1_000_000_000m;
     public const int MaxShelfLifeHours = 24 * 365 * 3;
     public const int NameMaxLength = 200;
+    /// <summary>Цена закупки за кг / л / шт, ₽.</summary>
+    public const decimal MaxPrice = 10_000_000m;
 }

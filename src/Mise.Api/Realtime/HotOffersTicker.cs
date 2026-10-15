@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using Mise.Api.Infrastructure;
 using Mise.Application.HotOffers;
 using Mise.Application.Realtime;
 
@@ -8,7 +9,7 @@ namespace Mise.Api.Realtime;
 /// Пересчёт горячих предложений по таймеру (PLAN §4.4): даже без событий срочность растёт с течением времени.
 /// Само событие HotOffersChanged уходит, только если выдача изменилась.
 /// </summary>
-internal sealed class HotOffersTicker(IRealtimeNotifier notifier, IOptions<HotOfferOptions> options) : BackgroundService
+internal sealed class HotOffersTicker(IRealtimeNotifier notifier, RestaurantRunner restaurants, IOptions<HotOfferOptions> options) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -16,7 +17,11 @@ internal sealed class HotOffersTicker(IRealtimeNotifier notifier, IOptions<HotOf
         try
         {
             while (await timer.WaitForNextTickAsync(stoppingToken))
-                notifier.HotOffersMayHaveChanged();
+                await restaurants.ForEachAsync((_, _) =>
+                {
+                    notifier.HotOffersMayHaveChanged();
+                    return Task.CompletedTask;
+                }, stoppingToken);
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {

@@ -83,7 +83,7 @@ public class BatchConsumptionTests
         var batch = FefoAllocatorTests.NewBatch(100m, 10);
         var orderId = Guid.NewGuid();
 
-        var consumption = StockMovement.OrderConsumption(Guid.NewGuid(), batch, 25m, orderId, Now);
+        var consumption = StockMovement.OrderConsumption(Guid.NewGuid(), batch, 25m, orderId, Now, TimeSpan.FromHours(48));
         var giveBack = StockMovement.OrderCancelReturn(Guid.NewGuid(), batch, 25m, orderId, Now);
 
         Assert.Equal(-25m, consumption.QtyDelta);

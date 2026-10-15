@@ -174,3 +174,45 @@
     padding: var(--space-6) 0 var(--space-10);
   }
 }
+
+// ---------- Регистрация и приглашение ----------
+
+.checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  cursor: pointer;
+  font-size: 15px;
+
+  input {
+    width: 20px;
+    height: 20px;
+    margin: 2px 0 0;
+    flex: none;
+    accent-color: var(--brand);
+  }
+
+  > span {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+}
+
+.checkboxHint {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.invitePreview {
+  margin: calc(var(--space-2) * -1) 0 0;
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--fresh-bar);
+  background: color-mix(in srgb, var(--fresh-bar) 8%, transparent);
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.modes {
+  margin-bottom: var(--space-6);
+}

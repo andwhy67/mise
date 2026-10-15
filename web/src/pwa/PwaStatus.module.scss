@@ -39,3 +39,9 @@
     transform: translateY(-6px);
   }
 }
+
+@media print {
+  .banner {
+    display: none;
+  }
+}

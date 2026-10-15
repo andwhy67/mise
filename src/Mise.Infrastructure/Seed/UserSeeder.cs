@@ -29,7 +29,8 @@ public sealed class UserSeeder(MiseDbContext db, IPasswordHasher hasher, IClock 
             return;
 
         var logins = wanted.Select(w => w.Login).ToList();
-        var existing = (await db.Users.Where(u => logins.Contains(u.Login)).Select(u => u.Login).ToListAsync(ct)).ToHashSet();
+        // Логины уникальны во всей системе — проверяем мимо фильтра ресторана.
+        var existing = (await db.Users.IgnoreQueryFilters().Where(u => logins.Contains(u.Login)).Select(u => u.Login).ToListAsync(ct)).ToHashSet();
         var missing = wanted.Where(w => !existing.Contains(w.Login)).ToList();
         if (missing.Count == 0)
             return;

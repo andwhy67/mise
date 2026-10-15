@@ -19,7 +19,9 @@
     "add": "Add",
     "addLabel": "Add “{{dish}}” to the order",
     "composition": "What's in it",
-    "hideComposition": "Hide recipe"
+    "hideComposition": "Hide recipe",
+    "addWithSubstitute": "With {{substitute}} instead",
+    "addWithSubstituteLabel": "Add {{dish}}: replace {{product}} with {{substitute}}"
   },
   "cart": {
     "title": "Order",
@@ -91,5 +93,12 @@
   "usage": {
     "title": "Are there enough products",
     "value": "order takes {{need}} of {{have}}"
+  },
+  "substitute": {
+    "applied": "Substitutions in the order",
+    "line": "{{product}} → {{substitute}} (×{{ratio}})",
+    "undo": "No substitution",
+    "offer": "Use {{substitute}} instead: need {{need}}, have {{have}}",
+    "short": "{{substitute}} is short too — have {{have}}"
   }
 }

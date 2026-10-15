@@ -41,7 +41,8 @@
     "simulator.scenario": "Changed the simulator scenario",
     "simulator.speed": "Changed the simulator speed",
     "push.subscribe": "Turned on device notifications",
-    "push.unsubscribe": "Turned off device notifications"
+    "push.unsubscribe": "Turned off device notifications",
+    "supply_request.create": "Created a supplier request"
   },
   "system": "System",
   "empty": "No entries",

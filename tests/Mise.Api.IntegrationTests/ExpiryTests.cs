@@ -271,6 +271,7 @@ public sealed class ExpiryTests(MiseApiFactory factory)
     private async Task<Batch> LoadBatchAsync(Guid batchId)
     {
         await using var scope = factory.Services.CreateAsyncScope();
+        using var demo = factory.AsDemoRestaurant();
         var db = scope.ServiceProvider.GetRequiredService<MiseDbContext>();
         return await db.Batches.AsNoTracking().SingleAsync(b => b.Id == batchId);
     }
@@ -278,6 +279,7 @@ public sealed class ExpiryTests(MiseApiFactory factory)
     private async Task<List<StockMovement>> MovementsAsync(Guid batchId)
     {
         await using var scope = factory.Services.CreateAsyncScope();
+        using var demo = factory.AsDemoRestaurant();
         var db = scope.ServiceProvider.GetRequiredService<MiseDbContext>();
         return await db.StockMovements.AsNoTracking().Where(m => m.BatchId == batchId).ToListAsync();
     }

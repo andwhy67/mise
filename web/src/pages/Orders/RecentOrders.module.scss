@@ -148,3 +148,28 @@
   font-size: 15px;
   color: var(--ink-2);
 }
+
+// Только что принятый заказ: мягкая вспышка фона вместо тоста.
+.fresh {
+  animation: order-fresh 2.4s var(--ease-out);
+}
+
+@keyframes order-fresh {
+  0%,
+  35% {
+    background: var(--brand-tint);
+    box-shadow: inset 3px 0 0 var(--brand);
+  }
+
+  100% {
+    background: transparent;
+    box-shadow: inset 3px 0 0 transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fresh {
+    animation: none;
+    box-shadow: inset 3px 0 0 var(--brand);
+  }
+}

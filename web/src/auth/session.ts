@@ -3,17 +3,27 @@ import { ApiError } from '@/api/errors'
 
 export type UserRole = 'Warehouse' | 'Chef' | 'Manager' | 'Simulator'
 
+/** Ресторан сотрудника — граница данных; isDemo — демо-ресторан с симулятором. */
+export interface SessionRestaurant {
+  id: string
+  name: string
+  isDemo: boolean
+}
+
 export interface SessionUser {
   id: string
   login: string
   displayName: string
   role: UserRole
+  /** Нет у запомненного до появления ресторанов пользователя — до первого обновления сессии. */
+  restaurant?: SessionRestaurant
 }
 
 interface LoginResponse {
   accessToken: string
   expiresAt: string
-  user: SessionUser
+  user: Omit<SessionUser, 'restaurant'>
+  restaurant: SessionRestaurant
 }
 
 export type SessionStatus = 'unknown' | 'signedIn' | 'signedOut'
@@ -70,8 +80,9 @@ function createSession() {
   const accept = (response: LoginResponse) => {
     token = response.accessToken
     tokenExpiresAt = Date.parse(response.expiresAt)
-    rememberUser(response.user)
-    set({ status: 'signedIn', user: response.user, reason: null })
+    const user: SessionUser = { ...response.user, restaurant: response.restaurant }
+    rememberUser(user)
+    set({ status: 'signedIn', user, reason: null })
   }
 
   async function post(path: string, body?: unknown): Promise<Response> {
@@ -108,6 +119,10 @@ function createSession() {
 
     login: (login: string, password: string) => signIn('/login', { login, password }),
     demoLogin: (role: Exclude<UserRole, 'Simulator'>) => signIn('/demo', { role }),
+    /** Новый ресторан: регистрирующийся — его менеджер, сразу входит. */
+    register: (body: { restaurantName: string; displayName: string; login: string; password: string; fillDemoCatalog: boolean }) => signIn('/register', body),
+    /** Сотрудник по приглашению: ресторан и роль задаёт код. */
+    join: (body: { code: string; displayName: string; login: string; password: string }) => signIn('/join', body),
 
     /** Обновление по refresh-cookie; параллельные вызовы ждут один запрос. */
     refresh(): Promise<boolean> {

@@ -18,6 +18,7 @@ import { StatusMark } from '@/components/StatusMark'
 import { toast } from '@/lib/toast'
 import { useErrorText } from '@/lib/useErrorText'
 import { useFormat } from '@/lib/useFormat'
+import { InvitesPanel } from './InvitesPanel'
 import styles from './UsersPage.module.scss'
 
 
@@ -85,6 +86,7 @@ export function UsersPage() {
         )}
       </Panel>
       <UserSheet key={editing?.user?.id ?? (editing ? 'new' : 'closed')} open={editing !== null} user={editing?.user ?? null} onClose={() => setEditing(null)} />
+      <InvitesPanel />
     </Page>
   )
 }
@@ -155,7 +157,13 @@ function UserForm({ user, onDone }: { user: User | null; onDone: () => void }) {
     <form className={styles.form} onSubmit={submit} noValidate>
       {!user && <Field label={t('login')} value={login} autoComplete="off" maxLength={32} onChange={(e) => setLogin(e.target.value)} error={errors.login} hint={t('loginHint')} />}
       <Field label={t('displayName')} value={displayName} maxLength={200} onChange={(e) => setDisplayName(e.target.value)} error={errors.displayName} />
-      <Select label={t('role')} options={ROLES.map((r) => ({ value: r, label: t(`roles.${r}`) }))} value={role} onChange={(e) => setRole(e.target.value as UserRole)} />
+      {/* Служебную роль симулятора руками не выдать: только у служебной учётки демо-ресторана она уже есть. */}
+      <Select
+        label={t('role')}
+        options={ROLES.filter((r) => r !== 'Simulator' || user?.role === 'Simulator').map((r) => ({ value: r, label: t(`roles.${r}`) }))}
+        value={role}
+        onChange={(e) => setRole(e.target.value as UserRole)}
+      />
       <p className={styles.note}>{t(`roleHints.${role}`)}</p>
       {!user && (
         <Field

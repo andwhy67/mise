@@ -57,5 +57,79 @@
     "stops": "Put dishes on stop",
     "hours": "Dish-hours on stop",
     "belowMin": "Time below minimum"
+  },
+  "money": {
+    "title": "Money",
+    "margin": "Gross margin",
+    "marginNote": "{{percent}} % of revenue",
+    "noRevenue": "No sales in this period",
+    "costOfSales": "Cost of goods sold",
+    "costOfSalesNote": "on revenue of {{revenue}}",
+    "purchases": "Purchased",
+    "purchasesNote": "at supply prices",
+    "losses": "Write-off losses",
+    "lossesNote": "expired {{expiry}}, manual {{manual}}",
+    "rescued": "Rescued",
+    "rescuedNote": "sold from batches with ≤ 2 days left",
+    "coverage": "Prices are known for {{percent}} % of operations — totals may be understated. Add prices to supplies or the product catalog.",
+    "noPrices": "no purchase prices — cost unknown"
+  },
+  "moneyProducts": {
+    "title": "Where we lose and what we saved",
+    "subtitle": "Written off in rubles vs. sold just before expiry",
+    "empty": "Nothing written off or rescued in this period.",
+    "losses": "Losses",
+    "rescued": "Rescued",
+    "rescuedQty": "Rescued, qty",
+    "purchased": "Purchased"
+  },
+  "compare": {
+    "vs": {
+      "today": "vs yesterday",
+      "week": "vs last week",
+      "month": "vs previous 30 days"
+    },
+    "percent": "{{value}} % {{vs}}",
+    "points": "{{value}} pp {{vs}}",
+    "flat": "no change {{vs}}",
+    "new": "none before"
+  },
+  "print": {
+    "period": "Period: {{period}}"
+  },
+  "export": {
+    "csv": "CSV",
+    "csvLabel": "Download the “{{period}}” report as CSV",
+    "pdf": "PDF",
+    "pdfLabel": "Print the report or save it as PDF"
+  },
+  "csv": {
+    "summary": "Summary: {{period}}",
+    "metric": "Metric",
+    "value": "Value",
+    "orders": "Orders accepted",
+    "cancelled": "Orders cancelled",
+    "revenue": "Revenue, ₽",
+    "averageTicket": "Average ticket, ₽",
+    "writeOffRate": "Write-off share, %",
+    "dishesInStop": "Dishes in stop, average",
+    "margin": "Gross margin, ₽",
+    "costOfSales": "Cost of goods sold, ₽",
+    "purchases": "Purchased, ₽",
+    "losses": "Write-off losses, ₽",
+    "rescued": "Rescued, ₽",
+    "purchasedRub": "Purchased, ₽",
+    "costOfSalesRub": "Cost, ₽",
+    "lossesRub": "Losses, ₽",
+    "rescuedRub": "Rescued, ₽",
+    "rescuedQty": "Rescued, qty",
+    "shortage": "Short, qty",
+    "total": "Total",
+    "unitHead": "Unit",
+    "unit": {
+      "Gram": "g",
+      "Milliliter": "ml",
+      "Piece": "pcs"
+    }
   }
 }

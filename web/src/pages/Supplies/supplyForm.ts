@@ -6,6 +6,7 @@ import type { Product } from '@/api/types'
  */
 const MOSCOW_OFFSET = '+03:00'
 const HOUR_MS = 3_600_000
+const MAX_PRICE = 10_000_000
 const NUMBER_PATTERN = /^[A-Za-zА-Яа-яЁё0-9][A-Za-zА-Яа-яЁё0-9._/-]*$/
 
 export type ExpiryMode = 'default' | 'hours' | 'days' | 'date'
@@ -21,6 +22,8 @@ export interface SupplyRow {
   amount: string
   /** «Годен до»: YYYY-MM-DDTHH:mm по Москве — ровно этот момент; только дата — до конца этого дня. */
   date: string
+  /** Цена, ₽ за кг / л / шт (как в накладной); пусто — ориентировочная цена продукта. */
+  price: string
 }
 
 export interface SupplyFormState {
@@ -31,7 +34,7 @@ export interface SupplyFormState {
   rows: SupplyRow[]
 }
 
-export const emptyRow = (key: string): SupplyRow => ({ key, productId: '', quantity: '', unit: null, expiry: 'default', amount: '', date: '' })
+export const emptyRow = (key: string): SupplyRow => ({ key, productId: '', quantity: '', unit: null, expiry: 'default', amount: '', date: '', price: '' })
 
 export const fromMoscowInput = (value: string) => new Date(`${value.length === 16 ? `${value}:00` : value}${MOSCOW_OFFSET}`)
 
@@ -78,6 +81,24 @@ export function rowFromSuggestion(key: string, product: Product | undefined, bas
   return { ...emptyRow(key), productId: product.id, unit, quantity: String(Math.round(shown * 1000) / 1000).replace('.', ',') }
 }
 
+/** Во сколько раз единица ввода меньше «ценовой» (кг, л, шт): цена за грамм = цена за кг / 1000. */
+const perPriceUnit = (unit: InputUnit) => (unit === 'Gram' || unit === 'Milliliter' ? 1000 : 1)
+
+/** Цена строки за кг / л / шт: введённая, иначе ориентировочная продукта; null — неизвестна. */
+export function rowPrice(row: SupplyRow, product: Product | undefined): { price: number; reference: boolean } | null {
+  const entered = parseNumber(row.price)
+  if (entered >= 0) return { price: entered, reference: false }
+  return product?.referencePrice != null ? { price: product.referencePrice, reference: true } : null
+}
+
+/** Сумма строки, ₽: количество в кг / л / шт × цена. */
+export function lineCost(row: SupplyRow, product: Product | undefined): number | null {
+  const price = rowPrice(row, product)
+  const quantity = parseNumber(row.quantity)
+  if (!price || !(quantity > 0)) return null
+  return Math.round((quantity / perPriceUnit(row.unit ?? 'Piece')) * price.price * 100) / 100
+}
+
 export interface ExpiryPreview {
   expiresAt: Date | null
   source: 'explicit' | 'shelfLife' | 'default' | null
@@ -116,6 +137,7 @@ export function validateSupply(form: SupplyFormState, products: Product[]): Supp
       else if (!errors.createdAt && expiryMoment(row.date) <= fromMoscowInput(form.createdAt)) errors[`${row.key}.date`] = 'dateBeforeDelivery'
     }
     if (product && row.expiry === 'default' && !product.defaultShelfLifeHours) errors[`${row.key}.expiry`] = 'noShelfLife'
+    if (row.price.trim() !== '' && !(parseNumber(row.price) >= 0 && parseNumber(row.price) <= MAX_PRICE)) errors[`${row.key}.price`] = 'price'
   }
   return errors
 }
@@ -126,6 +148,8 @@ export interface SupplyRequestItem {
   unit: InputUnit
   shelfLifeHours?: number
   expiresAt?: string
+  /** ₽ за единицу ввода — сервер сам переведёт в цену за базовую. */
+  price?: number
 }
 
 export function toRequest(form: SupplyFormState) {
@@ -137,6 +161,7 @@ export function toRequest(form: SupplyFormState) {
       const item: SupplyRequestItem = { productId: row.productId, quantity: parseNumber(row.quantity), unit: row.unit ?? 'Piece' }
       if (row.expiry === 'hours' || row.expiry === 'days') item.shelfLifeHours = shelfLifeHours(row) ?? undefined
       if (row.expiry === 'date') item.expiresAt = expiryMoment(row.date).toISOString()
+      if (row.price.trim() !== '') item.price = parseNumber(row.price) / perPriceUnit(item.unit)
       return item
     }),
   }

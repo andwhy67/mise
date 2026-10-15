@@ -19,7 +19,9 @@
     "users": "Users",
     "audit": "Log",
     "more": "More",
-    "main": "Main navigation"
+    "main": "Main navigation",
+    "collapse": "Collapse menu",
+    "expand": "Expand menu"
   },
   "roles": {
     "Warehouse": "storekeeper",

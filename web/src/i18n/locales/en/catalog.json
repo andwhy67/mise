@@ -55,7 +55,18 @@
     "unitLocked": "The unit of an existing product isn't changed — it already has stock and movements.",
     "shelfLifeUnit": "Shelf life unit",
     "hours": "hours",
-    "days": "days"
+    "days": "days",
+    "priceLabel": "Purchase price, ₽ per {{unit}}",
+    "priceHint": "Reference: used for supplies without a price and for dish cost.",
+    "supplier": "Supplier",
+    "price": "{{price}} per {{unit}}",
+    "noPrice": "No price",
+    "substitutes": "Substitutes when short",
+    "substitutesHint": "Products in the same unit. Ratio — how much substitute replaces 1 {{unit}}: 1 is the same amount, 0.8 is less. The cook confirms a substitution in the order.",
+    "substitute": "Substitute",
+    "ratio": "Ratio",
+    "addSubstitute": "Add substitute",
+    "removeSubstitute": "Remove substitute {{name}}"
   },
   "dishes": {
     "add": "Add a dish",
@@ -78,7 +89,11 @@
     "perPortion": "Per portion",
     "perPortionUnit": "Per portion, {{unit}}",
     "addIngredient": "Add a product",
-    "removeIngredient": "Remove from the recipe: {{name}}"
+    "removeIngredient": "Remove from the recipe: {{name}}",
+    "cost": "Cost {{cost}}",
+    "costEstimated": "Cost ≈ {{cost}}",
+    "margin": "Margin {{margin}} ({{percent}} %)",
+    "noCost": "No price: {{products}}"
   },
   "errors": {
     "name": "Enter a name.",
@@ -90,6 +105,9 @@
     "emptyComposition": "Add at least one product to the recipe.",
     "product": "Choose a product.",
     "duplicate": "This product is already in the recipe.",
-    "quantity": "Above zero."
+    "quantity": "Above zero.",
+    "referencePrice": "Price must be a number from 0.",
+    "duplicateSubstitute": "This substitute is already listed.",
+    "ratio": "Above 0 and at most 10."
   }
 }

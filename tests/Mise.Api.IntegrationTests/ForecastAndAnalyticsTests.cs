@@ -207,12 +207,14 @@ public sealed class ForecastAndAnalyticsTests(MiseApiFactory factory)
     private async Task RefreshAggregateAsync()
     {
         await using var scope = factory.Services.CreateAsyncScope();
+        using var demo = factory.AsDemoRestaurant();
         await scope.ServiceProvider.GetRequiredService<IConsumptionAggregator>().RefreshAsync(CancellationToken.None);
     }
 
     private async Task<Dictionary<DateTimeOffset, decimal>> BucketsAsync(Guid productId)
     {
         await using var scope = factory.Services.CreateAsyncScope();
+        using var demo = factory.AsDemoRestaurant();
         var db = scope.ServiceProvider.GetRequiredService<MiseDbContext>();
         return await db.ConsumptionHours.AsNoTracking().Where(c => c.ProductId == productId)
             .ToDictionaryAsync(c => c.HourBucket, c => c.QtyConsumed);

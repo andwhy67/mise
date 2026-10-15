@@ -38,9 +38,10 @@ export function MorePage() {
   return (
     <div className={styles.page}>
       <h1 className={styles.title}>{t('nav.more')}</h1>
+      {user.restaurant && <p className={styles.restaurant}>{user.restaurant.name}</p>}
       <Panel>
         <ul className={styles.list}>
-          {moreFor(user.role).map((item) => (
+          {moreFor(user.role, user.restaurant?.isDemo ?? true).map((item) => (
             <li key={item.id}>
               <NavLink to={item.path} className={styles.link}>
                 <item.icon aria-hidden="true" strokeWidth={1.8} />

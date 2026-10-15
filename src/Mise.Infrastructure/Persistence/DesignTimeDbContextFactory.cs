@@ -13,6 +13,6 @@ internal sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<M
                 npgsql => npgsql.MigrationsHistoryTable("__ef_migrations_history"))
             .UseSnakeCaseNamingConvention()
             .Options;
-        return new MiseDbContext(options);
+        return new MiseDbContext(options, new Tenancy.AmbientTenant());
     }
 }

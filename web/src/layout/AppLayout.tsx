@@ -1,11 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { LogOut, PanelLeftClose, PanelLeftOpen, Settings } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, Navigate, Outlet, useLocation } from 'react-router'
 import { useAlertSummary, useStopList } from '@/api/queries'
 import { NAV, canAccess, mobileTabsFor, navFor } from '@/app/navigation'
 import { session, userLine, useSession, type SessionUser } from '@/auth/session'
-import { LiveIndicator } from '@/components/LiveIndicator'
 import { MiseWordmark } from '@/components/MiseWordmark'
 import { LanguageSwitcher, ThemeSwitcher } from '@/components/Switchers'
 import { Toaster } from '@/components/Toaster'
@@ -15,6 +15,31 @@ import { PullToRefresh } from '@/pwa/PullToRefresh'
 import { syncPushSubscription } from '@/pwa/push'
 import { realtime } from '@/realtime/connection'
 import styles from './AppLayout.module.scss'
+
+/** Свёрнут ли сайдбар — настройка устройства (не синхронизируется: на ноутбуке и мониторе удобно по-разному). */
+const COLLAPSED_KEY = 'mise.sidebarCollapsed'
+
+function readCollapsed() {
+  try {
+    return localStorage.getItem(COLLAPSED_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function useCollapsed() {
+  const [collapsed, setCollapsed] = useState(readCollapsed)
+  const toggle = () =>
+    setCollapsed((current) => {
+      try {
+        localStorage.setItem(COLLAPSED_KEY, current ? '0' : '1')
+      } catch {
+        // Приватный режим или запрет хранилища — состояние живёт до перезагрузки.
+      }
+      return !current
+    })
+  return [collapsed, toggle] as const
+}
 
 /** Путь ведёт в один из разделов навигации (а не в 404). */
 const isSection = (pathname: string) => NAV.some((entry) => entry.path !== '/' && pathname.startsWith(entry.path))
@@ -56,7 +81,10 @@ export function AppLayout() {
 function Shell({ user }: { user: SessionUser }) {
   const { t } = useTranslation()
   const { pathname } = useLocation()
-  const items = navFor(user.role)
+  // Демо-ресторан — с симулятором; у старой запомненной сессии ресторана ещё нет — как раньше, до обновления.
+  const demo = user.restaurant?.isDemo ?? true
+  const items = navFor(user.role, demo)
+  const [collapsed, toggleCollapsed] = useCollapsed()
   const stopCount = useStopList().data?.length ?? 0
   const alerts = useAlertSummary().data
   const attention = alerts?.total ?? 0
@@ -85,15 +113,25 @@ function Shell({ user }: { user: SessionUser }) {
   }
 
   return (
-    <div className={styles.shell}>
+    <div className={`${styles.shell} ${collapsed ? styles.collapsed : ''}`}>
       <a href="#content" className={styles.skip}>
         {t('nav.main')}
       </a>
 
-      {/* Десктоп ≥ 1024: сайдбар без иконок (DESIGN.md §5, NavItem). */}
+      {/* Десктоп ≥ 1024: сайдбар; свёрнутый — полоса иконок с подсказками (подписи остаются для диктора). */}
       <aside className={styles.sidebar}>
         <div className={styles.brand}>
-          <MiseWordmark />
+          <MiseWordmark compact={collapsed} />
+          <button
+            type="button"
+            className={styles.collapse}
+            aria-expanded={!collapsed}
+            aria-label={t(collapsed ? 'nav.expand' : 'nav.collapse')}
+            title={t(collapsed ? 'nav.expand' : 'nav.collapse')}
+            onClick={toggleCollapsed}
+          >
+            {collapsed ? <PanelLeftOpen aria-hidden="true" strokeWidth={1.8} /> : <PanelLeftClose aria-hidden="true" strokeWidth={1.8} />}
+          </button>
         </div>
         <nav aria-label={t('nav.main')} className={styles.nav}>
           {[false, true].map((secondary) => (
@@ -102,8 +140,14 @@ function Shell({ user }: { user: SessionUser }) {
                 .filter((item) => Boolean(item.secondary) === secondary)
                 .map((item) => (
                   <li key={item.id}>
-                    <NavLink to={item.path} end={item.path === '/'} className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}>
-                      <span>{t(item.label)}</span>
+                    <NavLink
+                      to={item.path}
+                      end={item.path === '/'}
+                      title={collapsed ? t(item.label) : undefined}
+                      className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}
+                    >
+                      <item.icon className={styles.navIcon} aria-hidden="true" strokeWidth={1.8} />
+                      <span className={styles.label}>{t(item.label)}</span>
                       {counter(item.id)}
                     </NavLink>
                   </li>
@@ -112,18 +156,17 @@ function Shell({ user }: { user: SessionUser }) {
           ))}
         </nav>
         <footer className={styles.sidebarFooter}>
+          {user.restaurant && <p className={styles.restaurantLine}>{user.restaurant.name}</p>}
           <p className={styles.user}>{userLine(user, t(`roles.${user.role}`))}</p>
-          <div className={styles.footerControls}>
-            <ThemeSwitcher />
-            <LanguageSwitcher />
-          </div>
           {/* Одной строкой: на ноутбуке 1440×900 у менеджера «Выйти» не должен уезжать за край. */}
           <div className={styles.footerRow}>
-            <NavLink to="/more" className={styles.footerLink}>
-              {t('pwa.settingsShort')}
+            <NavLink to="/more" className={styles.footerLink} title={collapsed ? t('pwa.settingsShort') : undefined}>
+              <Settings className={styles.footerIcon} aria-hidden="true" strokeWidth={1.8} />
+              <span className={styles.label}>{t('pwa.settingsShort')}</span>
             </NavLink>
-            <button type="button" className={styles.logout} onClick={() => void session.logout()}>
-              {t('actions.logout')}
+            <button type="button" className={styles.logout} title={collapsed ? t('actions.logout') : undefined} onClick={() => void session.logout()}>
+              <LogOut className={styles.footerIcon} aria-hidden="true" strokeWidth={1.8} />
+              <span className={styles.label}>{t('actions.logout')}</span>
             </button>
           </div>
         </footer>
@@ -140,18 +183,25 @@ function Shell({ user }: { user: SessionUser }) {
             </NavLink>
           ))}
         </nav>
-        <span className={styles.mobileLive}>
-          <LiveIndicator short />
+        <span className={styles.controls}>
+          <ThemeSwitcher />
+          <LanguageSwitcher />
         </span>
       </header>
 
       <main id="content" className={styles.main} tabIndex={-1}>
+        {/* Десктоп: служебная строка справа сверху — язык и тема (на планшете и телефоне они в шапке). */}
+        <div className={styles.utility}>
+          {user.restaurant && <span className={styles.restaurant}>{user.restaurant.name}</span>}
+          <ThemeSwitcher />
+          <LanguageSwitcher />
+        </div>
         <OfflineBanner />
         {/* key по пути: при переходе экран мягко появляется заново. */}
         <PullToRefresh>
           <div key={pathname} className={styles.page}>
             {/* Раздел чужой роли — понятный экран вместо ошибки 403 от API. Неизвестный путь — 404 из роутера. */}
-            {isSection(pathname) && !canAccess(user.role, pathname) ? <NoAccessPage /> : <Outlet />}
+            {isSection(pathname) && !canAccess(user.role, pathname, demo) ? <NoAccessPage /> : <Outlet />}
           </div>
         </PullToRefresh>
       </main>

@@ -27,6 +27,11 @@ public sealed class ForecastOptions
     /// <summary>Страховой запас: скорость × столько часов (но не меньше минимального остатка).</summary>
     public decimal SafetyHours { get; set; } = SupplySuggester.DefaultSafetyHours;
 
+    /// <summary>«Что докупить для блюд из стопа»: горизонт спроса, минимум порций и за сколько дней брать продажи.</summary>
+    public int RestockHorizonHours { get; set; } = 24;
+    public int RestockMinPortions { get; set; } = 5;
+    public int RestockHistoryDays { get; set; } = 7;
+
     /// <summary>Период фонового пересчёта consumption_hourly, секунды.</summary>
     public int AggregationIntervalSeconds { get; set; } = 60;
 
@@ -47,6 +52,7 @@ public sealed class ForecastOptions
             && StopListHorizonHours >= 1 && MaxStopListHorizonHours >= StopListHorizonHours && MaxStopListHorizonHours <= 168
             && SupplyHorizonHours >= 1 && MaxSupplyHorizonHours >= SupplyHorizonHours && MaxSupplyHorizonHours <= 720
             && SafetyHours is >= 0 and <= 168
+            && RestockHorizonHours is >= 1 and <= 168 && RestockMinPortions is >= 1 and <= 100 && RestockHistoryDays is >= 1 and <= 90
             && AggregationIntervalSeconds is >= 5 and <= 3600;
     }
 }

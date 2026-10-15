@@ -291,6 +291,7 @@ public sealed class OrderTests(MiseApiFactory factory)
     private async Task AssertLedgerConsistentAsync(Guid productId)
     {
         await using var scope = factory.Services.CreateAsyncScope();
+        using var demo = factory.AsDemoRestaurant();
         var db = scope.ServiceProvider.GetRequiredService<MiseDbContext>();
         var batches = await db.Batches.AsNoTracking().Where(b => b.ProductId == productId).ToListAsync();
         var ledger = await db.StockMovements.AsNoTracking().Where(m => m.ProductId == productId)

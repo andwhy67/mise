@@ -2,8 +2,8 @@ import { Plus, Search } from 'lucide-react'
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router'
-import { useDishes, useProducts } from '@/api/queries'
-import type { Dish, Product } from '@/api/types'
+import { useDishEconomics, useDishes, useProducts } from '@/api/queries'
+import type { Dish, DishEconomics, Product } from '@/api/types'
 import { Button } from '@/components/Button'
 import { Page } from '@/components/Page'
 import { Panel } from '@/components/Panel'
@@ -100,6 +100,10 @@ function ProductsList({ onOpen }: { onOpen: (product: Product) => void }) {
                     {p.defaultShelfLifeHours ? t('products.shelfLife', { days: f.number(p.defaultShelfLifeHours / 24) }) : t('products.noShelfLife')}
                   </span>
                   <span className={styles.cell}>{t('products.minStock', { qty: f.qty(p.minStockQty, p.unit) })}</span>
+                  <span className={styles.cell}>
+                    {p.referencePrice != null ? t('products.price', { price: f.money(p.referencePrice), unit: t(`units.big.${p.unit}`) }) : t('products.noPrice')}
+                    {p.supplier && <span className={styles.meta}>{p.supplier}</span>}
+                  </span>
                 </button>
               </li>
             ))}
@@ -114,6 +118,8 @@ function DishesList({ onOpen }: { onOpen: (dish: Dish) => void }) {
   const { t } = useTranslation('catalog')
   const f = useFormat()
   const query = useDishes()
+  const economics = useDishEconomics()
+  const economicsById = new Map((economics.data ?? []).map((e) => [e.dishId, e]))
   const [search, setSearch] = useState('')
   const needle = search.trim().toLocaleLowerCase()
   const items = (query.data ?? [])
@@ -140,6 +146,7 @@ function DishesList({ onOpen }: { onOpen: (dish: Dish) => void }) {
                     <span className={styles.meta}>{d.category || t('noCategory')}</span>
                   </span>
                   <span className={styles.cell}>{t('dishes.ingredients', { count: d.ingredients.length })}</span>
+                  <DishMargin economics={economicsById.get(d.id)} />
                   <span className={styles.cell}>
                     <span className={styles.price}>{f.money(d.price)}</span>
                     {!d.isActive && (
@@ -157,3 +164,28 @@ function DishesList({ onOpen }: { onOpen: (dish: Dish) => void }) {
     </Panel>
   )
 }
+
+/** «Себестоимость 90 ₽ · маржа 410 ₽ (82 %)»: по партиям, которые уйдут в работу первыми; «≈» — часть цены справочная. */
+function DishMargin({ economics }: { economics: DishEconomics | undefined }) {
+  const { t } = useTranslation('catalog')
+  const f = useFormat()
+  if (!economics) return <span className={styles.cell} />
+  if (economics.portionCost == null || economics.margin == null)
+    return (
+      <span className={styles.cell}>
+        <span className={styles.meta}>{t('dishes.noCost', { products: economics.unpricedProducts.join(', ') })}</span>
+      </span>
+    )
+  const share = economics.foodCostShare
+  return (
+    <span className={styles.cell}>
+      <span>{t(economics.estimated ? 'dishes.costEstimated' : 'dishes.cost', { cost: f.money(economics.portionCost) })}</span>
+      <span className={styles.meta} data-tone={share != null && share > FOOD_COST_ALARM ? 'crit' : undefined}>
+        {t('dishes.margin', { margin: f.money(economics.margin), percent: share == null ? '—' : f.number((1 - share) * 100, 0) })}
+      </span>
+    </span>
+  )
+}
+
+/** Фудкост выше 40 % — повод пересмотреть цену или рецептуру (ориентир для ресторанов). */
+const FOOD_COST_ALARM = 0.4

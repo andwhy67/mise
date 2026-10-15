@@ -47,12 +47,14 @@ public sealed class SimulatorEngineEndToEndTests(MiseApiFactory factory)
     private async Task<int> CountOrdersAsync()
     {
         await using var scope = factory.Services.CreateAsyncScope();
+        using var demo = factory.AsDemoRestaurant();
         return await scope.ServiceProvider.GetRequiredService<MiseDbContext>().Orders.CountAsync();
     }
 
     private async Task AssertLedgerConsistentAsync()
     {
         await using var scope = factory.Services.CreateAsyncScope();
+        using var demo = factory.AsDemoRestaurant();
         var db = scope.ServiceProvider.GetRequiredService<MiseDbContext>();
         var batches = await db.Batches.AsNoTracking().ToDictionaryAsync(b => b.Id, b => b.RemainingQty);
         var ledger = await db.StockMovements.AsNoTracking()

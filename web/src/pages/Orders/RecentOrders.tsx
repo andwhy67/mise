@@ -1,5 +1,5 @@
 import { ChevronDown } from 'lucide-react'
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCancelOrder, useOrderStatus } from '@/api/mutations'
 import { useOrder, useOrders } from '@/api/queries'
@@ -31,8 +31,16 @@ type View = 'active' | 'all'
  * Заказы в работе — рядом с меню: каждый принятый заказ виден до выдачи, следующий шаг — одной кнопкой.
  * «Все» — история с выданными и отменёнными.
  */
-export function RecentOrders() {
+/** Заказ, только что принятый с этого экрана. */
+export interface PlacedOrder {
+  id: string
+  number: string
+  total: number
+}
+
+export function RecentOrders({ placed }: { placed?: PlacedOrder | null }) {
   const { t } = useTranslation('orders')
+  const f = useFormat()
   const [view, setView] = useState<View>('active')
   const [size, setSize] = useState(PAGE)
   // Активных немного, а API фильтрует по одному статусу — берём свежие заказы и делим на месте.
@@ -44,6 +52,10 @@ export function RecentOrders() {
 
   return (
     <Panel title={t('recent.title')} subtitle={t('recent.subtitle')} titleId="orders-recent">
+      {/* Без всплывающего тоста: зрячий видит подсвеченный заказ, диктор — эту фразу. */}
+      <p role="status" className="visually-hidden">
+        {placed ? t('cart.done', { number: placed.number, total: f.money(placed.total) }) : ''}
+      </p>
       <Segmented
         label={t('recent.view')}
         value={view}
@@ -63,7 +75,7 @@ export function RecentOrders() {
         <ScrollArea label={t('recent.title')} size="half">
           <ul className={styles.list}>
             {items.map((order) => (
-              <OrderRow key={order.id} order={order} onCancel={() => setCancelling(order)} />
+              <OrderRow key={order.id} order={order} fresh={order.id === placed?.id} onCancel={() => setCancelling(order)} />
             ))}
           </ul>
           {view === 'all' && query.data && query.data.total > items.length && size < MAX_PAGE && (
@@ -78,7 +90,12 @@ export function RecentOrders() {
   )
 }
 
-function OrderRow({ order, onCancel }: { order: OrderListItem; onCancel: () => void }) {
+function OrderRow({ order, fresh, onCancel }: { order: OrderListItem; fresh: boolean; onCancel: () => void }) {
+  const row = useRef<HTMLLIElement>(null)
+  // Новый заказ — в поле зрения списка (прокрутка внутри области заказов, без прыжка страницы).
+  useEffect(() => {
+    if (fresh) row.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [fresh])
   const { t } = useTranslation('orders')
   const f = useFormat()
   const errorText = useErrorText()
@@ -91,7 +108,7 @@ function OrderRow({ order, onCancel }: { order: OrderListItem; onCancel: () => v
   const cancellable = order.status === 'Created' || order.status === 'Cooking'
 
   return (
-    <li className={`${styles.row} ${order.status === 'Done' ? styles.ready : ''}`}>
+    <li ref={row} className={`${styles.row} ${order.status === 'Done' ? styles.ready : ''} ${fresh ? styles.fresh : ''}`}>
       <button type="button" className={styles.toggle} aria-expanded={open} aria-controls={detailsId} onClick={() => setOpen(!open)}>
         <span className={styles.number}>{order.number}</span>
         <span className={styles.total}>{f.money(order.total)}</span>
@@ -151,6 +168,16 @@ function OrderDetails({ id }: { id: string }) {
             </li>
           ))}
         </ul>
+        {order.substitutions?.length > 0 && (
+          <>
+            <h4 className={styles.detailTitle}>{t('substitute.applied')}</h4>
+            <ul className={styles.detailList}>
+              {order.substitutions.map((s) => (
+                <li key={s.productId}>{t('substitute.line', { product: s.productName, substitute: s.substituteName, ratio: f.number(s.ratio) })}</li>
+              ))}
+            </ul>
+          </>
+        )}
       </div>
       <div>
         <h4 className={styles.detailTitle}>{t('details.consumption')}</h4>
@@ -187,8 +214,9 @@ function CancelSheet({ order, onClose }: { order: OrderListItem | null; onClose:
               order &&
               mutation.mutate(order.id, {
                 onSuccess: (result) => {
+                  // Отмену человек только что сделал сам — сообщаем только неочевидное: часть продуктов не вернулась.
                   const lost = (result as { lost?: unknown[] }).lost?.length ?? 0
-                  toast.show(lost ? t('cancel.doneLost') : t('cancel.done'), lost ? 'warn' : 'fresh')
+                  if (lost) toast.show(t('cancel.doneLost'), 'warn')
                   onClose()
                 },
                 onError: (cause) => toast.show(errorText(cause), 'crit'),

@@ -146,3 +146,20 @@
     transform: translateY(6px);
   }
 }
+
+.lineCost {
+  margin-left: var(--space-3);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.total {
+  margin: 0;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.totalNote {
+  color: var(--ink-2);
+}

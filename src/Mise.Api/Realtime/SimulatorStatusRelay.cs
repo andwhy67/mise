@@ -1,5 +1,7 @@
+using Mise.Application.Abstractions;
 using Mise.Application.Realtime;
 using Mise.Application.Simulator;
+using Mise.Infrastructure.Seed;
 using StackExchange.Redis;
 
 namespace Mise.Api.Realtime;
@@ -12,6 +14,7 @@ internal sealed class SimulatorStatusRelay(
     IConnectionMultiplexer redis,
     IServiceScopeFactory scopes,
     IRealtimeNotifier notifier,
+    ITenant tenant,
     ILogger<SimulatorStatusRelay> logger) : BackgroundService
 {
     private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(5);
@@ -50,6 +53,8 @@ internal sealed class SimulatorStatusRelay(
     {
         try
         {
+            // Симулятор живёт в демо-ресторане — его состояние видят только там.
+            using var _ = tenant.Use(SeedData.DemoRestaurantId);
             await using var scope = scopes.CreateAsyncScope();
             notifier.SimulatorStateChanged(await scope.ServiceProvider.GetRequiredService<SimulatorService>().GetStateAsync(ct));
         }

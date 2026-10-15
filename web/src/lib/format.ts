@@ -43,6 +43,8 @@ export interface Formatter {
   time(value: Date | string): string
   number(value: number, maxFractionDigits?: number): string
   qty(value: number, unit: MeasureUnit): string
+  /** Без округления до десятых — для заявок и накладных: 1,75 кг, а не 1,8 кг. */
+  qtyExact(value: number, unit: MeasureUnit): string
   portionsUpTo(count: number): string
   portionsEnoughFor(count: number): string
   runway(hours: number): string
@@ -117,6 +119,14 @@ export function createFormatter(i18n: I18n, now: () => Date = () => new Date()):
       // Килограммы и литры — с одним знаком, граммы и миллилитры — целые; без разделителя тысяч в мере.
       const formatted = new Intl.NumberFormat(locale, { maximumFractionDigits: big ? 1 : 0, useGrouping: false }).format(shown)
       return `${formatted} ${t(`unit.${unitKey}`)}`
+    },
+
+    qtyExact(value, unit) {
+      const exact = new Intl.NumberFormat(locale, { maximumFractionDigits: 3, useGrouping: false })
+      if (unit === 'Piece') return `${exact.format(value)} ${t('unit.pcs')}`
+      const big = Math.abs(value) >= 1000
+      const unitKey = unit === 'Gram' ? (big ? 'kg' : 'g') : big ? 'l' : 'ml'
+      return `${exact.format(big ? value / 1000 : value)} ${t(`unit.${unitKey}`)}`
     },
 
     portionsUpTo: (count) => t('portions.upTo', { count }),

@@ -116,6 +116,8 @@
 }
 
 .itemQty {
+  display: flex;
+  flex-direction: column;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
@@ -175,4 +177,19 @@
 
 .more {
   margin-top: var(--space-3);
+}
+
+.total {
+  margin: var(--space-3) 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.suggestionActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-1) var(--space-4);
 }

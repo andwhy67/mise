@@ -34,6 +34,11 @@ public sealed class PushService(
 
         var userId = RequireUser();
         var now = clock.UtcNow;
+        // Адрес подписки уникален во всей системе: устройство, где раньше работал сотрудник другого ресторана,
+        // переходит к новому — старая подписка (чужого ресторана) удаляется, а не перезаписывается.
+        await db.PushSubscriptions.IgnoreQueryFilters()
+            .Where(s => s.Endpoint == request.Endpoint && !db.PushSubscriptions.Any(own => own.Id == s.Id))
+            .ExecuteDeleteAsync(ct);
         var existing = await db.PushSubscriptions.FirstOrDefaultAsync(s => s.Endpoint == request.Endpoint, ct);
         if (existing is null)
             db.PushSubscriptions.Add(PushSubscription.Create(

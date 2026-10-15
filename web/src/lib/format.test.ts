@@ -71,6 +71,15 @@ describe('formatQty — как на кухне', () => {
   })
 })
 
+describe('точное количество — для заявок поставщику', () => {
+  it('килограммы и литры до граммов, без округления до десятых', () => {
+    expect(ru.qtyExact(1750, 'Gram')).toBe('1,75 кг')
+    expect(ru.qtyExact(5250, 'Milliliter')).toBe('5,25 л')
+    expect(ru.qtyExact(200, 'Gram')).toBe('200 г')
+    expect(ru.qtyExact(60, 'Piece')).toBe('60 шт')
+  })
+})
+
 describe('единицы не путаются', () => {
   it('штуки остаются штуками при любом количестве (в «кг» не переводятся)', () => {
     expect(ru.qty(1500, 'Piece').replace(/\s/g, ' ')).toBe('1 500 шт')
