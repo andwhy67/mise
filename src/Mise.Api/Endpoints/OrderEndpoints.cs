@@ -22,6 +22,12 @@ internal static class OrderEndpoints
                 "(продукт, нужно, доступно) и ничего не списывается. При успехе — списание по FEFO. " +
                 "Повтор с тем же Idempotency-Key и тем же телом возвращает прежний заказ (200).")
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+        api.MapGet("/kitchen/orders", (OrderService service, CancellationToken ct) => service.GetKitchenAsync(ct))
+            .WithTags("Заказы")
+            .RequireAuthorization(AuthPolicies.Dashboard)
+            .WithSummary("Экран кухни: заказы в работе с составом и заменами, старые сверху")
+            .WithDescription("statusSince — когда заказ перешёл в текущий статус (таймер колонки). Не больше 100 карточек.");
+
         orders.MapGet("/", (OrderService service, CancellationToken ct, OrderStatus? status = null, int page = 1, int pageSize = 20) =>
                 service.ListAsync(status, new PageRequest(page, pageSize), ct))
             .WithSummary("Список заказов (новые сверху)");

@@ -7,7 +7,7 @@ test.describe('телефон', () => {
 
   test('все разделы менеджера без прокрутки вбок', async ({ page }) => {
     await signIn(page, 'Manager')
-    for (const path of ['/', '/stock', '/supplies', '/orders', '/stoplist', '/hot-offers', '/reports', '/alerts', '/catalog', '/simulator', '/users', '/audit', '/more']) {
+    for (const path of ['/', '/stock', '/supplies', '/orders', '/kitchen', '/stoplist', '/hot-offers', '/reports', '/alerts', '/catalog', '/simulator', '/users', '/audit', '/more']) {
       await page.goto(path)
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
       await expectNoHorizontalScroll(page)

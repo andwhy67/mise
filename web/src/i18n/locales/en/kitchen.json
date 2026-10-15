@@ -1,0 +1,33 @@
+{
+  "title": "Kitchen",
+  "subtitle": "Orders in progress — the longest waiting on top. The timer shows time in this column.",
+  "soundOn": "Sound on",
+  "soundOff": "Muted",
+  "fullscreen": "Full screen",
+  "exitFullscreen": "Exit",
+  "fullscreenFailed": "The browser did not allow full screen.",
+  "inWork_one": "{{count}} order in progress",
+  "inWork_other": "{{count}} orders in progress",
+  "columns": {
+    "Created": "Accepted",
+    "Cooking": "Cooking",
+    "Done": "Ready"
+  },
+  "empty": {
+    "Created": "No new orders",
+    "Cooking": "Nothing cooking",
+    "Done": "Pass is empty"
+  },
+  "timerLabel": "In this column for {{time}}",
+  "substitution": "Substitute: {{product}} → {{substitute}}",
+  "next": {
+    "Cooking": "Start cooking",
+    "Done": "Ready",
+    "Served": "Serve",
+    "label": {
+      "Cooking": "Start cooking {{number}}",
+      "Done": "{{number}} is ready",
+      "Served": "Serve {{number}}"
+    }
+  }
+}

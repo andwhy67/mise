@@ -39,6 +39,22 @@ public sealed record OrderDto(
 
 public sealed record OrderSubstitutionDto(Guid ProductId, string ProductName, Guid SubstituteId, string SubstituteName, MeasureUnit Unit, decimal Ratio);
 
+/// <summary>Карточка экрана кухни: что готовить (блюда и замены) и с какого момента заказ в текущем статусе.</summary>
+/// <param name="StatusSince">Когда заказ перешёл в текущий статус — от него считается таймер колонки.</param>
+public sealed record KitchenOrderDto(
+    Guid Id,
+    string Number,
+    OrderStatus Status,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset StatusSince,
+    int Portions,
+    IReadOnlyList<KitchenItemDto> Items,
+    IReadOnlyList<KitchenSubstitutionDto> Substitutions);
+
+public sealed record KitchenItemDto(string DishName, int Quantity);
+
+public sealed record KitchenSubstitutionDto(string ProductName, string SubstituteName);
+
 public sealed record OrderListItemDto(Guid Id, string Number, OrderStatus Status, DateTimeOffset CreatedAt, int Portions, decimal Total);
 
 public sealed record CreateOrderResult(OrderDto Order, bool Created);

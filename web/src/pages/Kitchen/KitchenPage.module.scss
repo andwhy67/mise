@@ -1,0 +1,227 @@
+@use '../../styles/motion';
+
+// Экран кухни: крупно, читается с расстояния вытянутой руки; цвет — только у таймера и полоски карточки.
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.board {
+  min-width: 0;
+}
+
+// Во весь экран: своя шапка с часами, колонки на всю высоту.
+.fullscreen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  height: 100dvh;
+  padding: var(--space-4) var(--space-5);
+  background: var(--bg);
+  overflow: hidden;
+
+  .columns {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .column {
+    max-height: none;
+    min-height: 0;
+  }
+}
+
+.boardHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.boardTitle {
+  font-family: var(--font-serif);
+  font-size: 30px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.clock {
+  margin-left: auto;
+  font-size: 28px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.boardCount {
+  font-size: 15px;
+  color: var(--ink-2);
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+  align-items: stretch;
+
+  @media (max-width: 1023px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  max-height: calc(100dvh - 240px);
+  min-height: 320px;
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  overflow: hidden;
+
+  @media (max-width: 1023px) {
+    max-height: none;
+    min-height: 0;
+  }
+}
+
+.columnTitle {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 0;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 24px;
+  color: var(--ink);
+}
+
+.columnCount {
+  font-family: var(--font-sans);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.empty {
+  margin: var(--space-4) 0;
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0 2px 2px 0;
+  list-style: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--fresh-bar);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  @include motion.enter(var(--dur-enter));
+
+  &[data-tone='warn'] {
+    border-left-color: var(--warn-bar);
+  }
+
+  &[data-tone='crit'] {
+    border-left-color: var(--crit-bar);
+  }
+}
+
+// Новый заказ: вспышка фоном несколько раз — заметно краем глаза у плиты.
+.fresh {
+  animation: kitchen-new 1.2s ease-in-out 3;
+}
+
+@keyframes kitchen-new {
+  50% {
+    background: var(--brand-tint);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fresh {
+    animation: none;
+    background: var(--brand-tint);
+  }
+}
+
+.cardHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.number {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.timer {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 22px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--fresh-text);
+
+  &[data-tone='warn'] {
+    color: var(--warn-text);
+  }
+
+  &[data-tone='crit'] {
+    color: var(--crit-text);
+  }
+}
+
+.square {
+  width: 10px;
+  height: 10px;
+  background: currentColor;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 18px;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+.qty {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.substitutions {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--warn-bar);
+  font-size: 14px;
+  color: var(--ink);
+}

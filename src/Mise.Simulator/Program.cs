@@ -17,6 +17,20 @@ public static class Program
         await builder.Build().RunAsync();
     }
 
+    /// <summary>Облака отдают Redis URL-ом (<c>redis://user:pass@host:6379</c>) — StackExchange.Redis ждёт «host:port,password=…».</summary>
+    public static string RedisFromUrl(string value)
+    {
+        if (!value.Contains("://") || !Uri.TryCreate(value, UriKind.Absolute, out var uri) || uri.Scheme is not ("redis" or "rediss"))
+            return value;
+        var parts = new List<string> { $"{uri.Host}:{(uri.Port > 0 ? uri.Port : 6379)}" };
+        var info = uri.UserInfo.Split(':', 2);
+        if (info.Length == 2 && info[1].Length > 0)
+            parts.Add($"password={Uri.UnescapeDataString(info[1])}");
+        if (uri.Scheme == "rediss")
+            parts.Add("ssl=true");
+        return string.Join(',', parts);
+    }
+
     public static IServiceCollection AddSimulator(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddOptions<SimulatorOptions>()
@@ -29,7 +43,7 @@ public static class Program
             ?? throw new InvalidOperationException("ConnectionStrings:Redis is not configured.");
         services.AddSingleton<IConnectionMultiplexer>(_ =>
         {
-            var options = ConfigurationOptions.Parse(redis);
+            var options = ConfigurationOptions.Parse(RedisFromUrl(redis));
             options.AbortOnConnectFail = false;
             return ConnectionMultiplexer.Connect(options);
         });

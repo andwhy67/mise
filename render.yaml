@@ -1,0 +1,115 @@
+# Render Blueprint: Dashboard → New → Blueprint → репозиторий → Apply. Пошагово — docs/deploy-render.md.
+# Бесплатный план: сервисы засыпают через 15 мин без запросов (первый запрос будит ~30–60 с), база живёт 30 дней.
+# Grafana и симулятор на Render не поднимаем (симулятор — фоновый worker, только на платном плане; см. внизу).
+
+databases:
+  - name: mise-db
+    plan: free
+    region: frankfurt
+    databaseName: mise
+    user: mise
+    postgresMajorVersion: "16"
+    # Снаружи — только чтобы один раз залить демо-историю (deploy/render/push-demo-data.ps1); потом можно сузить.
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: demo data upload
+
+services:
+  - type: keyvalue
+    name: mise-redis
+    plan: free
+    region: frankfurt
+    # Только внутренняя сеть Render (SignalR backplane и управление симулятором).
+    ipAllowList: []
+    maxmemoryPolicy: noeviction
+
+  - type: web
+    name: mise-api
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./src/Mise.Api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__Postgres
+        fromDatabase:
+          name: mise-db
+          property: connectionString
+      - key: ConnectionStrings__Redis
+        fromService:
+          type: keyvalue
+          name: mise-redis
+          property: connectionString
+      - key: Database__MigrateOnStartup
+        value: "true"
+      - key: Seed__Enabled
+        value: "true"
+      - key: Demo__Enabled
+        value: "true"
+      - key: Swagger__Enabled
+        value: "false"
+      - key: Auth__SigningKey
+        generateValue: true
+      - key: Auth__DemoUsersPassword
+        generateValue: true
+      - key: Auth__SimulatorPassword
+        generateValue: true
+      - key: Auth__CookieSecure
+        value: "true"
+      # Пуши: закрытый ключ VAPID (docker compose run --rm --no-deps api --generate-vapid-keys). Пусто — пуши выключены.
+      - key: Push__PrivateKey
+        sync: false
+      - key: Push__Subject
+        value: mailto:admin@mise.local
+      # Клиент → балансировщик Render → nginx (web) → балансировщик Render → API: доверяем трём звеньям.
+      - key: ForwardedHeaders__TrustAllProxies
+        value: "true"
+      - key: ForwardedHeaders__ForwardLimit
+        value: "3"
+      - key: Security__Hsts
+        value: "true"
+      - key: Expiry__IntervalSeconds
+        value: "60"
+
+  - type: web
+    name: mise-web
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./web/Dockerfile
+    dockerContext: ./web
+    healthCheckPath: /
+    envVars:
+      # Публичный адрес API (бесплатные сервисы не принимают внутренний трафик): https://mise-api.onrender.com
+      # или тот, что Render показал у mise-api, если имя было занято.
+      - key: API_UPSTREAM
+        sync: false
+
+  # Симулятор живых заказов — только на платном плане (background worker). Раскомментировать и выбрать plan: starter.
+  # - type: worker
+  #   name: mise-simulator
+  #   runtime: docker
+  #   plan: starter
+  #   region: frankfurt
+  #   dockerfilePath: ./src/Mise.Simulator/Dockerfile
+  #   dockerContext: .
+  #   envVars:
+  #     - key: ConnectionStrings__Redis
+  #       fromService:
+  #         type: keyvalue
+  #         name: mise-redis
+  #         property: connectionString
+  #     - key: Simulator__ApiBaseUrl
+  #       value: https://mise-api.onrender.com
+  #     - key: Simulator__Login
+  #       value: simulator
+  #     - key: Simulator__Password
+  #       fromService:
+  #         type: web
+  #         name: mise-api
+  #         envVarKey: Auth__SimulatorPassword

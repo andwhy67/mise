@@ -28,12 +28,12 @@ public sealed class CostingTests(MiseApiFactory factory)
     }
 
     /// <summary>Поставка с ценой за кг; возвращает строку поставки.</summary>
-    private async Task<JsonElement> ReceiveAsync(Guid product, decimal kg, decimal? pricePerKg, int shelfLifeHours = 200)
+    private async Task<JsonElement> ReceiveAsync(Guid product, decimal kg, decimal? pricePerKg, int shelfLifeHours = 200, int receivedHoursAgo = 0)
     {
         var supply = await _client.CreateSupplyAsync(new
         {
             number = TestApi.Unique("SUP"),
-            createdAt = factory.Clock.UtcNow,
+            createdAt = factory.Clock.UtcNow.AddHours(-receivedHoursAgo),
             items = new[] { new { productId = product, quantity = kg, unit = "Kilogram", shelfLifeHours, price = pricePerKg } },
         });
         return supply.GetProperty("items")[0];
@@ -72,8 +72,8 @@ public sealed class CostingTests(MiseApiFactory factory)
     {
         var from = factory.Clock.UtcNow;
         var product = await ProductAsync(referencePrice: null);
-        // Старая партия (срок через 24 ч, 900 ₽/кг) уйдёт в заказ первой — она «спасается».
-        await ReceiveAsync(product, 1m, pricePerKg: 900m, shelfLifeHours: 24);
+        // Старая партия (привезли 60 ч назад со сроком 72 ч — осталось 12 ч, 17 % срока; 900 ₽/кг) уйдёт в заказ первой — она «спасается».
+        await ReceiveAsync(product, 1m, pricePerKg: 900m, shelfLifeHours: 72, receivedHoursAgo: 60);
         await ReceiveAsync(product, 1m, pricePerKg: 1000m, shelfLifeHours: 200);
         var dish = await _client.CreateDishAsync((product, 100m)); // цена блюда 500 ₽
 
@@ -100,7 +100,7 @@ public sealed class CostingTests(MiseApiFactory factory)
     {
         var from = factory.Clock.UtcNow;
         var product = await ProductAsync(referencePrice: null);
-        await ReceiveAsync(product, 1m, pricePerKg: 900m, shelfLifeHours: 24);
+        await ReceiveAsync(product, 1m, pricePerKg: 900m, shelfLifeHours: 72, receivedHoursAgo: 60);
         var dish = await _client.CreateDishAsync((product, 100m));
 
         var order = await _client.CreateOrderAsync((dish, 2));

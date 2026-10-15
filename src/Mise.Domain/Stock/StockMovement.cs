@@ -45,7 +45,7 @@ public sealed class StockMovement
         CreatedAt = now,
     };
 
-    public static StockMovement OrderConsumption(Guid id, Batch batch, decimal quantity, Guid orderId, DateTimeOffset now, TimeSpan rescueWindow) => new()
+    public static StockMovement OrderConsumption(Guid id, Batch batch, decimal quantity, Guid orderId, DateTimeOffset now, RescuePolicy rescue) => new()
     {
         Id = id,
         BatchId = batch.Id,
@@ -53,7 +53,7 @@ public sealed class StockMovement
         Type = MovementType.OrderConsumption,
         QtyDelta = -quantity,
         Cost = -batch.CostOf(quantity),
-        Rescued = batch.ExpiresAt - now <= rescueWindow,
+        Rescued = rescue.Applies(batch, now),
         OrderId = orderId,
         CreatedAt = now,
     };
@@ -96,4 +96,19 @@ public sealed class StockMovement
         Reason = reason,
         CreatedAt = now,
     };
+}
+
+/// <summary>
+/// Когда продажа «спасает» продукт: до конца срока осталось не больше <see cref="Window"/> и не больше
+/// <see cref="ShareOfShelfLife"/> всего срока партии. Только по часам продукт с нормой в двое суток
+/// считался бы спасённым всегда — даже в день привоза.
+/// </summary>
+public sealed record RescuePolicy(TimeSpan Window, decimal ShareOfShelfLife)
+{
+    public bool Applies(Batch batch, DateTimeOffset now)
+    {
+        var left = batch.ExpiresAt - now;
+        var total = batch.ExpiresAt - batch.ReceivedAt;
+        return left <= Window && total > TimeSpan.Zero && left.Ticks <= total.Ticks * ShareOfShelfLife;
+    }
 }

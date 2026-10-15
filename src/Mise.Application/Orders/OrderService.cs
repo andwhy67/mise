@@ -114,7 +114,7 @@ public sealed class OrderService(
         {
             var batch = batchById[allocation.BatchId];
             batch.Consume(allocation.Quantity, now);
-            db.StockMovements.Add(StockMovement.OrderConsumption(Guid.CreateVersion7(now), batch, allocation.Quantity, order.Id, now, stockOptions.Value.RescueWindow));
+            db.StockMovements.Add(StockMovement.OrderConsumption(Guid.CreateVersion7(now), batch, allocation.Quantity, order.Id, now, stockOptions.Value.Rescue));
             if (batch.Status == BatchStatus.Depleted)
                 depleted.Add(batch.Id);
         }
@@ -264,6 +264,33 @@ public sealed class OrderService(
         if (failures.Count > 0)
             throw failures.ToValidationException();
         return result;
+    }
+
+    /// <summary>Максимум карточек на экране кухни — больше заказов в работе одновременно не бывает (и не уместится).</summary>
+    public const int KitchenLimit = 100;
+
+    /// <summary>
+    /// Экран кухни: заказы в работе (Принят, Готовится, Готов) с составом — одним запросом, старые сверху.
+    /// UpdatedAt меняется только при смене статуса, поэтому это и есть «с какого момента в этой колонке».
+    /// </summary>
+    public async Task<IReadOnlyList<KitchenOrderDto>> GetKitchenAsync(CancellationToken ct)
+    {
+        var orders = await db.Orders.AsNoTracking()
+            .Where(o => o.Status == OrderStatus.Created || o.Status == OrderStatus.Cooking || o.Status == OrderStatus.Done)
+            // При переполнении отрезаем самые старые, а не новые: новый заказ на кухне важнее зависшего.
+            .OrderByDescending(o => o.CreatedAt).ThenByDescending(o => o.Id)
+            .Take(KitchenLimit)
+            .Include(o => o.Items)
+            .Include(o => o.Substitutions)
+            .ToListAsync(ct);
+        orders.Reverse();
+        var productIds = orders.SelectMany(o => o.Substitutions).SelectMany(s => new[] { s.ProductId, s.SubstituteId }).Distinct().ToList();
+        var names = productIds.Count == 0 ? [] : await LoadProductNamesAsync(productIds, ct);
+        return orders.Select(o => new KitchenOrderDto(
+                o.Id, o.Number, o.Status, o.CreatedAt, o.UpdatedAt, o.Items.Sum(i => i.Quantity),
+                o.Items.OrderBy(i => i.LineNo).Select(i => new KitchenItemDto(i.DishName, i.Quantity)).ToList(),
+                o.Substitutions.Select(s => new KitchenSubstitutionDto(names.GetValueOrDefault(s.ProductId).Name ?? "?", names.GetValueOrDefault(s.SubstituteId).Name ?? "?")).ToList()))
+            .ToList();
     }
 
     public async Task<PagedResult<OrderListItemDto>> ListAsync(OrderStatus? status, PageRequest page, CancellationToken ct)

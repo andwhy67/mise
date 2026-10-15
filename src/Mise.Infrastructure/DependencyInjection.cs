@@ -18,10 +18,10 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        var postgres = configuration.GetConnectionString("Postgres")
-            ?? throw new InvalidOperationException("ConnectionStrings:Postgres is not configured.");
-        var redis = configuration.GetConnectionString("Redis")
-            ?? throw new InvalidOperationException("ConnectionStrings:Redis is not configured.");
+        var postgres = ConnectionStrings.Postgres(configuration.GetConnectionString("Postgres")
+            ?? throw new InvalidOperationException("ConnectionStrings:Postgres is not configured."));
+        var redis = ConnectionStrings.Redis(configuration.GetConnectionString("Redis")
+            ?? throw new InvalidOperationException("ConnectionStrings:Redis is not configured."));
 
         services.AddSingleton<IClock, SystemClock>();
 
@@ -33,6 +33,7 @@ public static class DependencyInjection
         services.AddScoped<IStockLocks, PostgresStockLocks>();
         services.AddScoped<IConsumptionAggregator, PostgresConsumptionAggregator>();
         services.AddScoped<DatabaseSeeder>();
+        services.AddTransient<DemoHistoryGenerator>();
         services.AddSingleton<Mise.Application.Restaurants.ICatalogTemplate, DemoCatalogTemplate>();
         services.AddScoped<DemoStockSeeder>();
         services.AddScoped<UserSeeder>();

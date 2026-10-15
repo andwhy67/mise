@@ -15,6 +15,14 @@ Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .CreateBootstrapLogger();
 
+// Служебная команда: история демо-ресторана за N суток (см. DemoHistoryCommand) — и выход.
+if (args.Contains(DemoHistoryCommand.Flag))
+{
+    Environment.ExitCode = await DemoHistoryCommand.RunAsync(args);
+    await Log.CloseAndFlushAsync();
+    return;
+}
+
 try
 {
     var builder = WebApplication.CreateBuilder(args);

@@ -70,7 +70,7 @@
     "losses": "Write-off losses",
     "lossesNote": "expired {{expiry}}, manual {{manual}}",
     "rescued": "Rescued",
-    "rescuedNote": "sold from batches with ≤ 2 days left",
+    "rescuedNote": "sold in the last 30% of the batch shelf life (≤ 2 days)",
     "coverage": "Prices are known for {{percent}} % of operations — totals may be understated. Add prices to supplies or the product catalog.",
     "noPrices": "no purchase prices — cost unknown"
   },

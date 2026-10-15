@@ -28,6 +28,7 @@ export const router = createBrowserRouter([
       { path: 'stock', ...page(() => import('@/pages/Stock/StockPage').then((m) => ({ default: m.StockPage }))) },
       { path: 'supplies', ...page(() => import('@/pages/Supplies/SuppliesPage').then((m) => ({ default: m.SuppliesPage }))) },
       { path: 'orders', ...page(() => import('@/pages/Orders/OrdersPage').then((m) => ({ default: m.OrdersPage }))) },
+      { path: 'kitchen', ...page(() => import('@/pages/Kitchen/KitchenPage').then((m) => ({ default: m.KitchenPage }))) },
       { path: 'stoplist', ...page(() => import('@/pages/StopList/StopListPage').then((m) => ({ default: m.StopListPage }))) },
       { path: 'hot-offers', ...page(() => import('@/pages/HotOffers/HotOffersPage').then((m) => ({ default: m.HotOffersPage }))) },
       { path: 'reports', ...page(() => import('@/pages/Reports/ReportsPage').then((m) => ({ default: m.ReportsPage }))) },

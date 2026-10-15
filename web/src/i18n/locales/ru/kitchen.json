@@ -1,0 +1,35 @@
+{
+  "title": "Кухня",
+  "subtitle": "Заказы в работе — кто дольше ждёт, тот выше. Таймер — сколько заказ в этой колонке.",
+  "soundOn": "Звук включён",
+  "soundOff": "Без звука",
+  "fullscreen": "Во весь экран",
+  "exitFullscreen": "Выйти",
+  "fullscreenFailed": "Браузер не разрешил полноэкранный режим.",
+  "inWork_one": "{{count}} заказ в работе",
+  "inWork_few": "{{count}} заказа в работе",
+  "inWork_many": "{{count}} заказов в работе",
+  "inWork_other": "{{count}} заказа в работе",
+  "columns": {
+    "Created": "Принят",
+    "Cooking": "Готовится",
+    "Done": "Готов"
+  },
+  "empty": {
+    "Created": "Новых заказов нет",
+    "Cooking": "Ничего не готовится",
+    "Done": "На раздаче пусто"
+  },
+  "timerLabel": "В этой колонке {{time}}",
+  "substitution": "Замена: {{product}} → {{substitute}}",
+  "next": {
+    "Cooking": "Начать готовить",
+    "Done": "Готово",
+    "Served": "Выдать",
+    "label": {
+      "Cooking": "Начать готовить {{number}}",
+      "Done": "{{number}} готов",
+      "Served": "Выдать {{number}}"
+    }
+  }
+}

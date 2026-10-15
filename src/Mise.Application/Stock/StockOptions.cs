@@ -1,4 +1,5 @@
 using Mise.Domain.Expiry;
+using Mise.Domain.Stock;
 
 namespace Mise.Application.Stock;
 
@@ -16,6 +17,11 @@ public sealed class StockOptions
     public decimal RescueWindowHours { get; set; } = 48m;
 
     public TimeSpan RescueWindow => TimeSpan.FromHours((double)RescueWindowHours);
+
+    /// <summary>И не больше этой доли срока партии (0,3 — последние 30 %): иначе короткоживущее «спасается» всегда.</summary>
+    public decimal RescueShareOfShelfLife { get; set; } = 0.3m;
+
+    public RescuePolicy Rescue => new(RescueWindow, RescueShareOfShelfLife);
 
     public sealed class ShelfLifeOptions
     {

@@ -113,8 +113,8 @@ internal static class ApiServiceCollectionExtensions
             .Validate(o => o.IsValid(), "Realtime:DebounceMilliseconds должен быть в [0;10000].")
             .ValidateOnStart();
 
-        var redis = configuration.GetConnectionString("Redis")
-            ?? throw new InvalidOperationException("ConnectionStrings:Redis is not configured.");
+        var redis = Mise.Infrastructure.ConnectionStrings.Redis(configuration.GetConnectionString("Redis")
+            ?? throw new InvalidOperationException("ConnectionStrings:Redis is not configured."));
         services.AddSignalR()
             .AddJsonProtocol(options => options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()))
             .AddStackExchangeRedis(redis, options =>

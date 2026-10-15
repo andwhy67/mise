@@ -11,12 +11,13 @@ namespace Mise.Domain.Tests.Stock;
 public sealed class StockCostTests
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 15, 9, 0, 0, TimeSpan.Zero);
-    private static readonly TimeSpan Window = TimeSpan.FromHours(48);
+    /// <summary>«Спасено»: осталось ≤ 48 ч и не больше 30 % срока партии.</summary>
+    private static readonly RescuePolicy Window = new(TimeSpan.FromHours(48), 0.3m);
 
-    /// <summary>Лосось: 0,9 ₽ за грамм (900 ₽/кг).</summary>
-    private static Batch Salmon(decimal qty = 2000m, double expiresInHours = 72, decimal? unitCost = 0.9m) =>
-        Batch.Receive(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Now.AddDays(-1),
-            new ExpiryResolution(Now.AddHours(expiresInHours), ExpirySource.SupplyItemShelfLife), qty, Now.AddDays(-1), unitCost);
+    /// <summary>Лосось: 0,9 ₽ за грамм (900 ₽/кг), привезён receivedHoursAgo назад.</summary>
+    private static Batch Salmon(decimal qty = 2000m, double expiresInHours = 72, decimal? unitCost = 0.9m, double receivedHoursAgo = 24) =>
+        Batch.Receive(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Now.AddHours(-receivedHoursAgo),
+            new ExpiryResolution(Now.AddHours(expiresInHours), ExpirySource.SupplyItemShelfLife), qty, Now.AddHours(-receivedHoursAgo), unitCost);
 
     [Fact]
     public void Receipt_costs_the_whole_batch()
@@ -35,13 +36,20 @@ public sealed class StockCostTests
         Assert.Equal(-225m, movement.Cost);
     }
 
+    /// <summary>
+    /// Спасено — продано из партии, которой оставалось мало и в часах, и в доле срока: иначе продукт с нормой
+    /// в двое суток считался бы «спасённым» всегда, даже в день привоза.
+    /// </summary>
     [Theory]
-    [InlineData(47.9, true)]
-    [InlineData(48, true)]
-    [InlineData(48.1, false)]
-    public void Consumption_from_a_batch_close_to_expiry_counts_as_rescued(double hoursLeft, bool rescued)
+    [InlineData(10, 24, true)]     // 10 ч из 34 — 29 % срока
+    [InlineData(12, 24, false)]    // 12 ч из 36 — 33 %: ещё в обычной ротации
+    [InlineData(48, 240, true)]    // 48 ч из 288 — 17 %
+    [InlineData(48.1, 240, false)] // больше окна в часах
+    [InlineData(30, 20, false)]    // двухдневная зелень в день привоза — не «спасение»
+    public void Consumption_counts_as_rescued_when_little_is_left_in_hours_and_in_share(double hoursLeft, double receivedHoursAgo, bool rescued)
     {
-        var movement = StockMovement.OrderConsumption(Guid.NewGuid(), Salmon(expiresInHours: hoursLeft), 100m, Guid.NewGuid(), Now, Window);
+        var movement = StockMovement.OrderConsumption(Guid.NewGuid(), Salmon(expiresInHours: hoursLeft, receivedHoursAgo: receivedHoursAgo), 100m,
+            Guid.NewGuid(), Now, Window);
 
         Assert.Equal(rescued, movement.Rescued);
     }

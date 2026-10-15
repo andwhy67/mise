@@ -38,3 +38,6 @@ appsettings.*.local.json
 web/test-results/
 web/playwright-report/
 web/blob-report/
+
+# Дамп демо-истории (deploy/render/push-demo-data.ps1)
+*.dump

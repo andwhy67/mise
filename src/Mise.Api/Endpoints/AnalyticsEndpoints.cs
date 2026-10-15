@@ -67,7 +67,7 @@ internal static class AnalyticsEndpoints
                 await service.GetMoneyAsync(periods.ResolvePeriod(from, to), ct))
             .WithSummary("Деньги за период: закуплено, себестоимость проданного, выручка, валовая маржа, потери, «спасено» (₽)")
             .WithDescription("Суммы — из стоимости, записанной в движении в момент операции. rescued — расход в заказы из партий, " +
-                             "которым оставалось ≤ Stock:RescueWindowHours до срока, за вычетом возвратов по отменам.")
+                             "которым оставалось ≤ Stock:RescueWindowHours и ≤ Stock:RescueShareOfShelfLife срока, за вычетом возвратов по отменам.")
             .RequireAuthorization(AuthPolicies.Manager);
 
         analytics.MapGet("/dish-economics", async (CostingService service, CancellationToken ct) =>

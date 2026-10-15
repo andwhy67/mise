@@ -6,7 +6,7 @@ import { signIn } from './helpers'
  * Доступность (DESIGN.md §11): axe-core по WCAG 2.1 A/AA на основных экранах в обеих темах.
  * Падение — любое нарушение уровня serious/critical (контраст, подписи, роли, порядок заголовков).
  */
-const PAGES = ['/', '/stock', '/orders', '/stoplist', '/hot-offers', '/supplies', '/reports', '/alerts', '/more']
+const PAGES = ['/', '/stock', '/orders', '/kitchen', '/stoplist', '/hot-offers', '/supplies', '/reports', '/alerts', '/more']
 
 // Без анимаций: проверяем итоговый вид (во время появления текст полупрозрачный), заодно — режим «уменьшить движение».
 test.use({ reducedMotion: 'reduce' })
