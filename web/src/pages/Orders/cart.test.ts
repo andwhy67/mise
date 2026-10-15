@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { DishAvailability } from '@/api/types'
 import type { MeasureUnit } from '@/lib/format'
-import { activeSubstitutions, cartShortages, cartTotals, cartUsage, type CartSubstitution } from './cart'
+import { activeSubstitutions, cartShortages, cartTotals, cartUsage, lineKey, orderItems, parseLine, type CartSubstitution } from './cart'
 
 interface Product {
   productId: string
@@ -23,7 +23,8 @@ const dish = (dishId: string, price: number, ingredients: [Product, number][]): 
   status: 'Available',
   inStopList: false,
   limitingProduct: null,
-  ingredients: ingredients.map(([p, qtyPerPortion]) => ({ ...p, qtyPerPortion, portions: Math.floor(p.usable / qtyPerPortion) })),
+  ingredients: ingredients.map(([p, qtyPerPortion]) => ({ ...p, qtyPerPortion, portions: Math.floor(p.usable / qtyPerPortion), removable: false, substitutes: [] })),
+  alternative: null,
 })
 
 const menu = [dish('Блины', 320, [[milk, 200], [eggs, 2]]), dish('Омлет', 280, [[milk, 100], [eggs, 3]])]
@@ -107,5 +108,40 @@ describe('замены, на которые согласился повар', ()
     const toSoy = { ...creamToMilk, substituteId: 'soy', substituteName: 'Соевые сливки' }
     expect(cartShortages(new Map([['Паста', 2]]), withCream, [toSoy])).toEqual([])
     expect(cartUsage(new Map([['Паста', 2]]), withCream, [toSoy]).map((u) => u.productId)).toEqual(['milk'])
+  })
+})
+
+describe('строки с изменениями: «без лимона», «шпинат → руккола»', () => {
+  const lemon: Product = { productId: 'lemon', productName: 'Лимон', unit: 'Piece', usable: 0 }
+  const spinach: Product = { productId: 'spinach', productName: 'Шпинат', unit: 'Gram', usable: 0 }
+  const fish = dish('Лосось', 1190, [[lemon, 1], [spinach, 80]])
+  fish.ingredients[0]!.removable = true
+  fish.ingredients[1]!.substitutes = [{ productId: 'arugula', productName: 'Руккола', unit: 'Gram', ratio: 1, usable: 300 }]
+  const withFish = [...menu, fish]
+
+  it('ключ строки кодирует изменения и разбирается обратно; порядок изменений не важен', () => {
+    const key = lineKey('Лосось', [{ productId: 'spinach', kind: 'Replace', substituteId: 'arugula' }, { productId: 'lemon', kind: 'Remove' }])
+    expect(key).toBe(lineKey('Лосось', [{ productId: 'lemon', kind: 'Remove' }, { productId: 'spinach', kind: 'Replace', substituteId: 'arugula' }]))
+    expect(parseLine(key)).toEqual({
+      dishId: 'Лосось',
+      changes: [{ productId: 'lemon', kind: 'Remove' }, { productId: 'spinach', kind: 'Replace', substituteId: 'arugula' }],
+    })
+    expect(parseLine('Блины')).toEqual({ dishId: 'Блины', changes: [] })
+  })
+
+  it('убранное не нужно, заменённое — из заменителя: лимонов и шпината нет, а заказ проходит', () => {
+    const key = lineKey('Лосось', [{ productId: 'lemon', kind: 'Remove' }, { productId: 'spinach', kind: 'Replace', substituteId: 'arugula' }])
+    const cart = new Map([[key, 2]])
+    expect(cartShortages(cart, withFish)).toEqual([])
+    expect(cartUsage(cart, withFish).map((u) => [u.productId, u.required])).toEqual([['arugula', 160]])
+    expect(cartTotals(cart, withFish)).toEqual({ portions: 2, total: 2380, lines: 1 })
+  })
+
+  it('в запрос — блюдо и изменения', () => {
+    const key = lineKey('Лосось', [{ productId: 'lemon', kind: 'Remove' }])
+    expect(orderItems(new Map([[key, 1], ['Блины', 2]]))).toEqual([
+      { dishId: 'Лосось', quantity: 1, modifications: [{ productId: 'lemon', kind: 'Remove' }] },
+      { dishId: 'Блины', quantity: 2 },
+    ])
   })
 })

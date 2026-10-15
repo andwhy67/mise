@@ -109,6 +109,8 @@ export interface IngredientRow {
   productId: string
   /** На одну порцию, в базовой единице продукта (г, мл, шт). */
   quantity: string
+  /** Можно убрать по просьбе гостя или когда кончился (гарнир, посыпка). */
+  removable?: boolean
 }
 
 export interface DishForm {
@@ -142,5 +144,5 @@ export const dishFormToRequest = (form: DishForm) => ({
   category: form.category.trim() || null,
   price: parse(form.price),
   isActive: form.isActive,
-  ingredients: form.ingredients.map((row) => ({ productId: row.productId, quantity: parse(row.quantity) })),
+  ingredients: form.ingredients.map((row) => ({ productId: row.productId, quantity: parse(row.quantity), removable: row.removable ?? false })),
 })

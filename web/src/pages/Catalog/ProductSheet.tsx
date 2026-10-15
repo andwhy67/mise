@@ -238,7 +238,7 @@ function SubstitutesEditor({
           {form.substitutes.map((row, index) => {
             const name = products?.find((p) => p.id === row.productId)?.name
             return (
-              <li key={row.key} className={styles.ingredient}>
+              <li key={row.key} className={`${styles.ingredient} ${styles.ingredientPlain}`}>
                 <Combobox
                   label={t('products.substitute')}
                   hideLabel={index > 0}

@@ -4,7 +4,13 @@ using Mise.Domain.Orders;
 
 namespace Mise.Application.Orders;
 
-public sealed record CreateOrderItemRequest(Guid DishId, int Quantity);
+/// <param name="Modifications">«Без лимона» (Remove), «шпинат → руккола» (Replace + SubstituteId по правилу справочника).</param>
+public sealed record CreateOrderItemRequest(Guid DishId, int Quantity, IReadOnlyList<ItemModificationRequest>? Modifications = null);
+
+public sealed record ItemModificationRequest(Guid ProductId, ModificationKind Kind, Guid? SubstituteId = null);
+
+/// <summary>Изменение строки заказа — с именами для кухни и чека.</summary>
+public sealed record OrderItemModificationDto(Guid ProductId, string ProductName, ModificationKind Kind, Guid? SubstituteId, string? SubstituteName);
 
 /// <summary>Повар согласился: весь <see cref="ProductId"/> заказа взять из <see cref="SubstituteId"/> (по правилу из справочника).</summary>
 public sealed record OrderSubstitutionRequest(Guid ProductId, Guid SubstituteId);
@@ -13,7 +19,8 @@ public sealed record CreateOrderRequest(IReadOnlyList<CreateOrderItemRequest> It
 
 public sealed record ChangeOrderStatusRequest(OrderStatus Status);
 
-public sealed record OrderItemDto(int LineNo, Guid DishId, string DishName, int Quantity, decimal Price, decimal Amount);
+public sealed record OrderItemDto(int LineNo, Guid DishId, string DishName, int Quantity, decimal Price, decimal Amount,
+    IReadOnlyList<OrderItemModificationDto> Modifications);
 
 /// <summary>Из какой партии сколько списано (или возвращено) по заказу.</summary>
 public sealed record OrderConsumptionDto(
@@ -49,13 +56,20 @@ public sealed record KitchenOrderDto(
     DateTimeOffset StatusSince,
     int Portions,
     IReadOnlyList<KitchenItemDto> Items,
-    IReadOnlyList<KitchenSubstitutionDto> Substitutions);
+    IReadOnlyList<KitchenSubstitutionDto> Substitutions,
+    OrderSource Source = OrderSource.Staff,
+    int? TableNumber = null,
+    PaymentMethod? Payment = null);
 
-public sealed record KitchenItemDto(string DishName, int Quantity);
+public sealed record KitchenItemDto(string DishName, int Quantity, IReadOnlyList<OrderItemModificationDto> Modifications);
 
 public sealed record KitchenSubstitutionDto(string ProductName, string SubstituteName);
 
-public sealed record OrderListItemDto(Guid Id, string Number, OrderStatus Status, DateTimeOffset CreatedAt, int Portions, decimal Total);
+public sealed record OrderListItemDto(Guid Id, string Number, OrderStatus Status, DateTimeOffset CreatedAt, int Portions, decimal Total,
+    OrderSource Source = OrderSource.Staff, int? TableNumber = null);
+
+/// <summary>Заказ гостя из QR-меню: стол (null — общий QR), как заплатит, токен ссылки на статус.</summary>
+public sealed record GuestOrigin(int? TableNumber, PaymentMethod Payment, string Token);
 
 public sealed record CreateOrderResult(OrderDto Order, bool Created);
 
@@ -95,6 +109,14 @@ internal sealed class CreateOrderRequestValidator : AbstractValidator<CreateOrde
         {
             item.RuleFor(i => i.DishId).NotEmpty();
             item.RuleFor(i => i.Quantity).InclusiveBetween(1, MaxPortionsPerLine);
+            item.RuleFor(i => i.Modifications).Must(m => m is null || m.Count <= 20).WithMessage("Не больше 20 изменений в блюде.");
+            item.RuleForEach(i => i.Modifications).ChildRules(m =>
+            {
+                m.RuleFor(x => x.ProductId).NotEmpty();
+                m.RuleFor(x => x.Kind).IsInEnum();
+                m.RuleFor(x => x.SubstituteId).NotEmpty().When(x => x.Kind == ModificationKind.Replace)
+                    .WithMessage("Для замены нужен заменитель.");
+            });
         });
         RuleFor(x => x.Substitutions)
             .Must(s => s is null || s.Count <= MaxLines).WithMessage($"Не больше {MaxLines} замен.")

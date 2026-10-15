@@ -1,0 +1,362 @@
+// QR-меню: как меню на бумаге — разделы, тонкие линии между блюдами, цена справа. Цвет — только у статусов.
+
+.viewOnly {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--warn-bar);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.myOrder {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--brand-strong);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+// Разделы меню — прилипают сверху, листаются вбок на телефоне.
+.categories {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  gap: var(--space-1);
+  margin: 0 calc(-1 * var(--space-4)) var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  overflow-x: auto;
+  background: var(--bg);
+  border-bottom: 1px solid var(--hairline);
+  scrollbar-width: none;
+}
+
+.categoryLink {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 15px;
+  color: var(--ink-2);
+  text-decoration: none;
+  white-space: nowrap;
+
+  &:hover {
+    border-color: var(--brand);
+    color: var(--ink);
+  }
+}
+
+.section {
+  padding-top: var(--space-4);
+  scroll-margin-top: 64px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 28px;
+  font-weight: 500;
+}
+
+.sectionHint {
+  margin: var(--space-1) 0 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.dishes {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+}
+
+.dish {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-4);
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--hairline);
+
+  &[data-state='Unavailable'] .dishName,
+  &[data-state='Unavailable'] .price {
+    color: var(--muted);
+  }
+}
+
+.dishMain {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.dishHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.dishName {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.price {
+  flex: none;
+  font-size: 17px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.composition {
+  margin: var(--space-1) 0 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.unavailable {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--crit-text);
+}
+
+.square {
+  width: 8px;
+  height: 8px;
+  background: var(--crit-bar);
+}
+
+.withChanges {
+  margin: var(--space-2) 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--warn-text);
+}
+
+.dishActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.customize {
+  min-height: var(--control-height);
+  padding: 0 var(--space-2);
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 15px;
+  color: var(--brand-strong);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+// Корзина — прилипает к низу экрана, над «домашней» полоской iPhone.
+.cartBar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  padding: var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+
+  > * {
+    max-width: 728px;
+    margin: 0 auto;
+  }
+}
+
+// ---------- Оформление ----------
+
+.checkout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.line {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--hairline);
+
+  > :last-child {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
+
+.lineName {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-weight: 600;
+}
+
+.lineChanges {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.lineBlocked {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--crit-text);
+}
+
+.lineAmount {
+  font-variant-numeric: tabular-nums;
+}
+
+.total {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  font-size: 18px;
+}
+
+.tableNote {
+  margin: 0;
+  font-weight: 600;
+}
+
+.payment {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.paymentTitle {
+  margin-bottom: var(--space-2);
+  padding: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.paymentOption {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  cursor: pointer;
+
+  &:has(input:checked) {
+    border-color: var(--brand);
+    box-shadow: inset 0 0 0 1px var(--brand);
+  }
+
+  input {
+    width: 20px;
+    height: 20px;
+    margin: 2px 0 0;
+    accent-color: var(--brand);
+  }
+
+  > span {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+}
+
+.paymentName {
+  font-weight: 600;
+}
+
+.paymentHint {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.error {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--crit-bar);
+  border-radius: var(--radius-panel);
+  color: var(--crit-text);
+  font-weight: 600;
+}
+
+.sbp {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: center;
+}
+
+.sbpQr {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+}
+
+.sbpAmount {
+  margin: 0;
+  font-size: 18px;
+
+  strong {
+    font-size: 24px;
+  }
+}
+
+.sbpHint,
+.sbpDemo {
+  margin: 0;
+  font-size: 15px;
+  color: var(--ink-2);
+}
+
+.sbpDemo {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.sbpActions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+}

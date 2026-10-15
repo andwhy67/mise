@@ -251,6 +251,10 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .HasColumnType("numeric(14,3)")
                         .HasColumnName("quantity");
 
+                    b.Property<bool>("Removable")
+                        .HasColumnType("boolean")
+                        .HasColumnName("removable");
+
                     b.HasKey("DishId", "ProductId")
                         .HasName("pk_dish_ingredients");
 
@@ -437,6 +441,11 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<string>("GuestToken")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("guest_token");
+
                     b.Property<string>("IdempotencyKey")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
@@ -448,6 +457,11 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(32)")
                         .HasColumnName("number");
 
+                    b.Property<string>("Payment")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("payment");
+
                     b.Property<string>("RequestHash")
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)")
@@ -457,11 +471,21 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("restaurant_id");
 
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("source");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(16)
                         .HasColumnType("character varying(16)")
                         .HasColumnName("status");
+
+                    b.Property<int?>("TableNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("table_number");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -472,6 +496,11 @@ namespace Mise.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CreatedAt")
                         .HasDatabaseName("ix_orders_created_at");
+
+                    b.HasIndex("GuestToken")
+                        .IsUnique()
+                        .HasDatabaseName("ix_orders_guest_token")
+                        .HasFilter("guest_token IS NOT NULL");
 
                     b.HasIndex("RestaurantId")
                         .HasDatabaseName("ix_orders_restaurant_id");
@@ -755,6 +784,14 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<bool>("GuestOrdering")
+                        .HasColumnType("boolean")
+                        .HasColumnName("guest_ordering");
+
+                    b.Property<int>("GuestTables")
+                        .HasColumnType("integer")
+                        .HasColumnName("guest_tables");
+
                     b.Property<bool>("IsDemo")
                         .HasColumnType("boolean")
                         .HasColumnName("is_demo");
@@ -762,6 +799,11 @@ namespace Mise.Infrastructure.Persistence.Migrations
                     b.Property<long>("LastOrderNumber")
                         .HasColumnType("bigint")
                         .HasColumnName("last_order_number");
+
+                    b.Property<string>("MenuKey")
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)")
+                        .HasColumnName("menu_key");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -771,6 +813,11 @@ namespace Mise.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_restaurants");
+
+                    b.HasIndex("MenuKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_restaurants_menu_key")
+                        .HasFilter("menu_key IS NOT NULL");
 
                     b.ToTable("restaurants", null, t =>
                         {
@@ -1354,6 +1401,48 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_order_items_orders_order_id");
+
+                    b.OwnsMany("Mise.Domain.Orders.OrderItemModification", "Modifications", b1 =>
+                        {
+                            b1.Property<Guid>("OrderItemOrderId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<int>("OrderItemLineNo")
+                                .HasColumnType("integer");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("integer");
+
+                            b1.Property<string>("Kind")
+                                .IsRequired()
+                                .HasColumnType("text");
+
+                            b1.Property<Guid>("ProductId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<decimal>("Ratio")
+                                .HasPrecision(14, 3)
+                                .HasColumnType("numeric(14,3)");
+
+                            b1.Property<Guid?>("SubstituteId")
+                                .HasColumnType("uuid");
+
+                            b1.HasKey("OrderItemOrderId", "OrderItemLineNo", "__synthesizedOrdinal")
+                                .HasName("pk_order_items");
+
+                            b1.ToTable("order_items");
+
+                            b1
+                                .ToJson("modifications")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("OrderItemOrderId", "OrderItemLineNo")
+                                .HasConstraintName("fk_order_items_order_items_order_item_order_id_order_item_line_no");
+                        });
+
+                    b.Navigation("Modifications");
                 });
 
             modelBuilder.Entity("Mise.Domain.Orders.OrderShortage", b =>

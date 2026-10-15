@@ -195,6 +195,7 @@ function Column({ status, orders, fresh }: { status: KitchenStatus; orders: Kitc
 
 function OrderCard({ order, fresh }: { order: KitchenOrder; fresh: boolean }) {
   const { t } = useTranslation('kitchen')
+  const { t: to } = useTranslation('orders')
   const errorText = useErrorText()
   const mutation = useOrderStatus()
   const now = useNow(1000)
@@ -210,10 +211,24 @@ function OrderCard({ order, fresh }: { order: KitchenOrder; fresh: boolean }) {
           {formatTimer(elapsedMs(order.statusSince, now))}
         </span>
       </div>
+      {order.source === 'Guest' && (
+        <p className={styles.guest}>
+          {[order.tableNumber ? t('guest.table', { table: order.tableNumber }) : t('guest.noTable'), order.payment ? t(`guest.payment.${order.payment}`) : null]
+            .filter(Boolean)
+            .join(' · ')}
+        </p>
+      )}
       <ul className={styles.items}>
         {order.items.map((item, index) => (
           <li key={index}>
             <span className={styles.qty}>{item.quantity}×</span> {item.dishName}
+            {item.modifications.length > 0 && (
+              <span className={styles.changes}>
+                {item.modifications
+                  .map((m) => (m.kind === 'Remove' ? to('change.remove', { product: m.productName }) : to('change.replace', { product: m.productName, substitute: m.substituteName })))
+                  .join(' · ')}
+              </span>
+            )}
           </li>
         ))}
       </ul>

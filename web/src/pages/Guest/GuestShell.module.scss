@@ -1,0 +1,68 @@
+// Каркас гостевых страниц: узкая колонка как у меню на бумаге; на телефоне — во всю ширину с отступом 16.
+
+.shell {
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  max-width: 760px;
+  margin: 0 auto;
+  padding: calc(var(--space-6) + env(safe-area-inset-top)) var(--space-4) var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.heading {
+  min-width: 0;
+}
+
+.kicker {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.title {
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-serif);
+  font-size: 36px;
+  font-weight: 500;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.main {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-4) calc(120px + env(safe-area-inset-bottom));
+}
+
+@media (max-width: 520px) {
+  .header {
+    flex-direction: column;
+  }
+
+  .tools {
+    justify-content: flex-start;
+  }
+
+  .title {
+    font-size: 30px;
+  }
+}

@@ -12,8 +12,12 @@ export interface KitchenOrder {
   /** С какого момента заказ в текущей колонке. */
   statusSince: string
   portions: number
-  items: { dishName: string; quantity: number }[]
+  items: { dishName: string; quantity: number; modifications: { productName: string; kind: 'Remove' | 'Replace'; substituteName: string | null }[] }[]
   substitutions: { productName: string; substituteName: string }[]
+  /** Заказ гостя из QR-меню: стол и как он заплатит. */
+  source?: 'Staff' | 'Guest'
+  tableNumber?: number | null
+  payment?: 'Sbp' | 'Cash' | null
 }
 
 export const COLUMNS: KitchenStatus[] = ['Created', 'Cooking', 'Done']

@@ -1,0 +1,121 @@
+{
+  "menu": "Menu",
+  "table": "Table {{table}}",
+  "myOrder": "My order",
+  "chefRecommends": "Chef recommends",
+  "chefRecommendsHint": "Made with today's freshest produce",
+  "otherCategory": "Other",
+  "categories": "Menu sections",
+  "composition": "Ingredients: {{list}}",
+  "unavailable": "Sold out",
+  "withChanges": "Available today: {{changes}}",
+  "add": "Add",
+  "addLabel": "Add {{dish}}",
+  "customize": "Customize",
+  "customizeLabel": "Customize {{dish}}: remove or replace ingredients",
+  "customizeSubtitle": "For example, because of an allergy. The price stays the same.",
+  "addWithChanges": "With changes",
+  "addWithChangesLabel": "Add {{dish}} ({{changes}})",
+  "viewOnly": {
+    "title": "View only.",
+    "text": "Ordering from the menu is paused right now — please call a waiter."
+  },
+  "cart": {
+    "button": "Cart · {{count}} · {{total}}",
+    "buttonLabel": "Open cart: {{count}} portions, {{total}}",
+    "title": "Your order",
+    "empty": "Your cart is empty — add dishes from the menu.",
+    "total": "Total",
+    "blocked": "sold out — remove or customize the dish",
+    "max": "Up to {{count}} portions per order — for a bigger order please call a waiter."
+  },
+  "tableField": "Table",
+  "noTable": "No table — I'll pick it up",
+  "payment": {
+    "title": "Payment",
+    "Sbp": "SBP",
+    "SbpHint": "Bank transfer via QR code",
+    "Cash": "Cash",
+    "CashHint": "To the waiter on delivery"
+  },
+  "place": "Checkout · {{total}}",
+  "placeCash": "Order · {{total}}",
+  "sbp": {
+    "title": "Pay with SBP",
+    "demo": "Demo: no money is charged.",
+    "scan": "Scan the QR code in your banking app or tap “I've paid”.",
+    "amount": "Amount due",
+    "paid": "I've paid",
+    "back": "Back to order",
+    "qrAlt": "SBP payment QR code (demo)"
+  },
+  "errors": {
+    "unavailable": "While you were choosing, we ran out of: {{dishes}}. Remove them or choose changes.",
+    "unavailableGeneric": "While you were choosing, some dishes ran out — please check your cart.",
+    "orderingOff": "The restaurant isn't taking menu orders right now — please call a waiter.",
+    "rateLimited": "Too many orders from this phone — wait a few minutes or call a waiter.",
+    "invalidTable": "There is no such table — scan the QR code on your table again.",
+    "unknown": "Couldn't send the order. Check your connection and try again."
+  },
+  "notFound": {
+    "title": "Menu not found",
+    "text": "The QR code is outdated or the link is broken. Ask a waiter for the current code."
+  },
+  "order": {
+    "title": "Order {{number}}",
+    "subtitle": "This page updates by itself — just keep it open.",
+    "progress": "Order status",
+    "status": {
+      "Created": "Received",
+      "Cooking": "Cooking",
+      "Done": "Ready",
+      "Served": "Served",
+      "Cancelled": "Cancelled"
+    },
+    "hint": {
+      "Created": "The kitchen has your order and will start soon.",
+      "Cooking": "The chef is cooking your order.",
+      "Done": "Ready — the waiter is on the way.",
+      "Served": "Enjoy your meal!",
+      "Cancelled": "The order was cancelled — please ask a waiter."
+    },
+    "items": "Order items",
+    "total": "Total",
+    "paymentLabel": "Payment: {{method}}",
+    "back": "Back to menu",
+    "notFound": {
+      "title": "Order not found",
+      "text": "The link is outdated or broken."
+    }
+  },
+  "admin": {
+    "title": "QR menu",
+    "subtitle": "Guests scan the QR on the table, see the live menu with prices and order — the order goes straight to the kitchen screen.",
+    "settings": "Settings",
+    "ordering": "Accept guest orders",
+    "orderingHint": "When off, the menu is view-only.",
+    "tables": "Tables",
+    "tablesHint": "A QR is printed for every table; the table number goes to the kitchen.",
+    "save": "Save",
+    "saved": "Settings saved",
+    "link": "Menu link",
+    "linkHint": "The menu updates itself: no need to reprint QR codes when dishes change or something runs out.",
+    "open": "Open menu",
+    "copy": "Copy link",
+    "copied": "Link copied",
+    "regenerate": "Reissue QR codes",
+    "regenerateHint": "Old QR codes will stop working — you'll need to print new ones.",
+    "regenerateConfirm": "Yes, reissue",
+    "cancel": "Cancel",
+    "regenerated": "New key issued — print the QR codes again.",
+    "print": "Print QR codes",
+    "printHint": "A general QR for the entrance and a card for each table. “Save as PDF” is in the print dialog.",
+    "general": "General QR",
+    "generalHint": "Entrance, window, social media",
+    "tableCard": "Table {{table}}",
+    "scanOrder": "Scan with your phone camera — menu and ordering, no app needed",
+    "scanView": "Scan with your phone camera to open the menu",
+    "qrAlt": "QR code: {{label}}",
+    "preview": "Cards to print"
+  }
+}

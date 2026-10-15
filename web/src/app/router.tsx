@@ -20,6 +20,9 @@ export const router = createBrowserRouter([
   { path: '/join/:code?', element: <LoginPage mode="join" /> },
   // Демо компонентов (DESIGN.md §12): без входа, для проверки тем, языков и вёрстки.
   { path: '/ui', ...page(() => import('@/pages/Ui/UiPage').then((m) => ({ default: m.UiPage }))) },
+  // QR-меню гостя: без входа и без каркаса сотрудников; ключ ресторана — из QR на столе.
+  { path: '/m/:key', ...page(() => import('@/pages/Guest/GuestMenuPage').then((m) => ({ default: m.GuestMenuPage }))) },
+  { path: '/m/:key/order/:token', ...page(() => import('@/pages/Guest/GuestOrderPage').then((m) => ({ default: m.GuestOrderPage }))) },
   {
     path: '/',
     element: <AppLayout />,
@@ -35,6 +38,7 @@ export const router = createBrowserRouter([
       { path: 'alerts', ...page(() => import('@/pages/Alerts/AlertsPage').then((m) => ({ default: m.AlertsPage }))) },
       { path: 'catalog', ...page(() => import('@/pages/Catalog/CatalogPage').then((m) => ({ default: m.CatalogPage }))) },
       { path: 'simulator', ...page(() => import('@/pages/Simulator/SimulatorPage').then((m) => ({ default: m.SimulatorPage }))) },
+      { path: 'qr-menu', ...page(() => import('@/pages/QrMenu/QrMenuPage').then((m) => ({ default: m.QrMenuPage }))) },
       { path: 'users', ...page(() => import('@/pages/Users/UsersPage').then((m) => ({ default: m.UsersPage }))) },
       { path: 'audit', ...page(() => import('@/pages/Audit/AuditPage').then((m) => ({ default: m.AuditPage }))) },
       { path: 'more', element: <MorePage /> },

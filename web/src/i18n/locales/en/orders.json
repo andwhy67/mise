@@ -21,7 +21,12 @@
     "composition": "What's in it",
     "hideComposition": "Hide recipe",
     "addWithSubstitute": "With {{substitute}} instead",
-    "addWithSubstituteLabel": "Add {{dish}}: replace {{product}} with {{substitute}}"
+    "addWithSubstituteLabel": "Add {{dish}}: replace {{product}} with {{substitute}}",
+    "customize": "Customize",
+    "customizeLabel": "Customize: {{dish}}",
+    "alternative": "Possible: {{changes}} — {{portions}}",
+    "addWithChanges": "With changes",
+    "addWithChangesLabel": "Add {{dish}}: {{changes}}"
   },
   "cart": {
     "title": "Order",
@@ -100,5 +105,20 @@
     "undo": "No substitution",
     "offer": "Use {{substitute}} instead: need {{need}}, have {{have}}",
     "short": "{{substitute}} is short too — have {{have}}"
+  },
+  "change": {
+    "remove": "no {{product}}",
+    "replace": "{{product}} → {{substitute}}"
+  },
+  "customize": {
+    "subtitle": "Remove or replace ingredients. The price stays the same.",
+    "composition": "Ingredients",
+    "out": "out of stock",
+    "keep": "As is",
+    "remove": "Remove",
+    "replace": "Replace: {{substitute}}",
+    "noOption": "no substitute",
+    "needChange": "Out of stock: {{products}} — remove or replace.",
+    "add": "Add · {{price}}"
   }
 }

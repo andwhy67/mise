@@ -104,6 +104,6 @@ describe('блюдо', () => {
   it('в API', () => {
     expect(
       dishFormToRequest({ name: ' Блины ', category: 'Завтраки', price: '320,5', isActive: true, ingredients: [{ key: 'a', productId: 'milk', quantity: '200' }] }),
-    ).toEqual({ name: 'Блины', category: 'Завтраки', price: 320.5, isActive: true, ingredients: [{ productId: 'milk', quantity: 200 }] })
+    ).toEqual({ name: 'Блины', category: 'Завтраки', price: 320.5, isActive: true, ingredients: [{ productId: 'milk', quantity: 200, removable: false }] })
   })
 })

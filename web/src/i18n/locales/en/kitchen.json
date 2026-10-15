@@ -29,5 +29,13 @@
       "Done": "{{number}} is ready",
       "Served": "Serve {{number}}"
     }
+  },
+  "guest": {
+    "table": "Guest · table {{table}}",
+    "noTable": "Guest · no table",
+    "payment": {
+      "Sbp": "SBP",
+      "Cash": "cash"
+    }
   }
 }

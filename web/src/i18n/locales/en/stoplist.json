@@ -8,7 +8,9 @@
     "manual": "Taken off manually",
     "since": "In the stop list since {{when}}",
     "empty": "Everything can be ordered",
-    "emptyHint": "There are enough products for every dish on the menu."
+    "emptyHint": "There are enough products for every dish on the menu.",
+    "alternative": "Can be served: {{changes}} — {{portions}}",
+    "noAlternative": "No substitute — set it up in the catalog"
   },
   "soon": {
     "title": "Running low",

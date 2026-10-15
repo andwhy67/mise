@@ -8,7 +8,7 @@ const order = (id: string, status: KitchenOrder['status'], statusSince: string):
   createdAt: '2026-10-15T10:00:00Z',
   statusSince,
   portions: 1,
-  items: [{ dishName: 'Паста', quantity: 1 }],
+  items: [{ dishName: 'Паста', quantity: 1, modifications: [] }],
   substitutions: [],
 })
 

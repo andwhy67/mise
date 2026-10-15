@@ -31,5 +31,13 @@
       "Done": "{{number}} готов",
       "Served": "Выдать {{number}}"
     }
+  },
+  "guest": {
+    "table": "Гость · стол {{table}}",
+    "noTable": "Гость · без стола",
+    "payment": {
+      "Sbp": "СБП",
+      "Cash": "наличные"
+    }
   }
 }

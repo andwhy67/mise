@@ -47,7 +47,7 @@ function DishFormBody({ dish, onDone }: { dish: Dish | null; onDone: () => void 
           category: dish.category ?? '',
           price: String(dish.price).replace('.', ','),
           isActive: dish.isActive,
-          ingredients: dish.ingredients.map((i) => ({ key: nextKey(), productId: i.productId, quantity: String(i.quantity).replace('.', ',') })),
+          ingredients: dish.ingredients.map((i) => ({ key: nextKey(), productId: i.productId, quantity: String(i.quantity).replace('.', ','), removable: i.removable })),
         }
       : { ...emptyDishForm(), ingredients: [{ key: nextKey(), productId: '', quantity: '' }] },
   )
@@ -132,6 +132,11 @@ function DishFormBody({ dish, onDone }: { dish: Dish | null; onDone: () => void 
                 />
                 {/* Единица — у каждой строки своя: молоко в мл, яйца в штуках. */}
                 <span className={`${styles.unit} ${index === 0 ? styles.offsetFirst : ''}`}>{product ? tf(`unit.${unitShort[product.unit]}`) : ''}</span>
+                {/* «Можно убрать»: гость и повар смогут заказать «без …», а когда продукт кончился — блюдо подадут без него. */}
+                <label className={`${styles.removable} ${index === 0 ? styles.offsetFirst : ''}`} title={t('dishes.removableHint')} aria-label={t('dishes.removable')}>
+                  <input type="checkbox" checked={row.removable ?? false} onChange={(e) => setRow(row.key, { removable: e.target.checked })} />
+                  <span>{t('dishes.removable')}</span>
+                </label>
                 <button
                   type="button"
                   className={`${styles.remove} ${index === 0 ? styles.offsetFirst : ''}`}

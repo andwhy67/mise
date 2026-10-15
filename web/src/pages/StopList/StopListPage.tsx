@@ -1,7 +1,7 @@
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSetDishActive } from '@/api/mutations'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { useMenu, useRestock, useStopList, useStopListForecast, useStopListHistory } from '@/api/queries'
 import { canAccess } from '@/app/navigation'
 import type { StopListForecastItem, StopListItem } from '@/api/types'
@@ -54,6 +54,7 @@ export function StopListPage() {
 function NowPanel() {
   const { t } = useTranslation('stoplist')
   const { t: td } = useTranslation('dashboard')
+  const { t: to } = useTranslation('orders')
   const f = useFormat()
   const query = useStopList()
   const isManager = useSession().user?.role === 'Manager'
@@ -74,6 +75,21 @@ function NowPanel() {
               <p className={`${styles.group} ${styles.out}`}>{item.reason === 'Manual' ? t('now.manual') : t('now.shortage')}</p>
               <h3 className={styles.dish}>{item.dishName}</h3>
               {item.reason !== 'Manual' && <p className={styles.reason}>{stopReason(item, f, td)}</p>}
+              {item.reason !== 'Manual' && item.alternative && (
+                <p className={styles.alternative}>
+                  {t('now.alternative', {
+                    changes: item.alternative.changes
+                      .map((c) => (c.kind === 'Remove' ? to('change.remove', { product: c.productName }) : to('change.replace', { product: c.productName, substitute: c.substituteName })))
+                      .join(' · '),
+                    portions: f.portionsUpTo(item.alternative.portions),
+                  })}
+                </p>
+              )}
+              {item.reason !== 'Manual' && !item.alternative && isManager && (
+                <Link className={styles.configure} to="/catalog">
+                  {t('now.noAlternative')}
+                </Link>
+              )}
               {item.since && <p className={styles.meta}>{t('now.since', { when: f.moment(item.since) })}</p>}
               {isManager && item.reason === 'Manual' && <ReturnButton item={item} />}
             </li>

@@ -3,7 +3,7 @@ import { apiAs, createDish, createProduct, receive, signIn } from './helpers'
 
 /**
  * Замена ингредиента при нехватке — только с согласия повара:
- * 1) блюдо в стопе, но у продукта есть замена → «С заменой: …» в меню, замена видна в корзине;
+ * 1) блюдо в стопе, но у продукта есть замена → «С изменениями» в меню, замена видна в строке корзины;
  * 2) общая нехватка → отказ предлагает замену кнопкой → после согласия заказ принят, в деталях видна замена.
  */
 test('замена ингредиента: блюдо из стопа с заменой и замена по отказу', async ({ page }) => {
@@ -24,10 +24,11 @@ test('замена ингредиента: блюдо из стопа с зам�
   const menu = page.locator('section[aria-labelledby=orders-menu]')
   await menu.getByRole('searchbox', { name: 'Найти блюдо' }).fill(dish.name)
 
-  // 1. Шпината нет — блюдо в стопе, но можно с рукколой.
-  await menu.getByRole('button', { name: `Добавить ${dish.name}: ${spinach.name} заменить на ${arugula.name}` }).click()
+  // 1. Шпината нет — блюдо в стопе, но сервер предлагает подать его с рукколой («С изменениями»).
+  await expect(menu).toContainText(`Можно: ${spinach.name} → ${arugula.name}`)
+  await menu.getByRole('button', { name: `Добавить ${dish.name}: ${spinach.name} → ${arugula.name}` }).click()
   const cart = page.locator('section[aria-labelledby=orders-cart]')
-  await expect(cart.getByRole('list', { name: 'Замены в заказе' })).toContainText(`${spinach.name} → ${arugula.name}`)
+  await expect(cart.getByRole('listitem').filter({ hasText: dish.name })).toContainText(`${spinach.name} → ${arugula.name}`)
   await cart.getByRole('button', { name: 'Принять заказ' }).click()
   // Тоста нет: принятый заказ подсвечен в «Заказах в работе», диктору — объявление role=status.
   const placed = page.locator('section[aria-labelledby=orders-recent]').getByRole('status')

@@ -39,7 +39,7 @@ internal sealed class DemoCatalogTemplate : ICatalogTemplate
                 Price = source.Price,
                 IsActive = source.IsActive,
             };
-            copy.SetIngredients(source.Ingredients.Select(i => (ids[i.ProductId], i.Quantity)));
+            copy.SetIngredients(source.Ingredients.Select(i => (ids[i.ProductId], i.Quantity, i.Removable)));
             db.Dishes.Add(copy);
         }
     }

@@ -207,3 +207,15 @@
     align-items: center;
   }
 }
+
+.alternative {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--warn-text);
+}
+
+.configure {
+  font-size: 13px;
+  color: var(--brand-strong);
+}

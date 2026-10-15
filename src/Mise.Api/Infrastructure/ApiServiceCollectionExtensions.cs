@@ -188,6 +188,7 @@ internal static class ApiServiceCollectionExtensions
         v1.MapForecastEndpoints();
         v1.MapAnalyticsEndpoints();
         v1.MapSimulatorEndpoints();
+        v1.MapGuestMenuEndpoints();
         if (app.Configuration.GetValue("Demo:Enabled", false))
             v1.MapDemoEndpoints();
 

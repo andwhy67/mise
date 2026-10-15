@@ -10,6 +10,7 @@ import {
   Home,
   Menu,
   Package,
+  QrCode,
   ScrollText,
   Truck,
   Users,
@@ -47,6 +48,7 @@ export const NAV: NavEntry[] = [
   { id: 'alerts', path: '/alerts', label: 'nav.alerts', icon: Bell, roles: ALL, secondary: true },
   { id: 'catalog', path: '/catalog', label: 'nav.catalog', icon: BookOpen, roles: ['Manager'], secondary: true },
   { id: 'simulator', path: '/simulator', label: 'nav.simulator', icon: Gauge, roles: ['Manager'], secondary: true, demoOnly: true },
+  { id: 'qr-menu', path: '/qr-menu', label: 'nav.qrMenu', icon: QrCode, roles: ['Manager'], secondary: true },
   { id: 'users', path: '/users', label: 'nav.users', icon: Users, roles: ['Manager'], secondary: true },
   { id: 'audit', path: '/audit', label: 'nav.audit', icon: ScrollText, roles: ['Manager'], secondary: true },
 ]

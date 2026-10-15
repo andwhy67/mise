@@ -93,7 +93,9 @@
     "cost": "Cost {{cost}}",
     "costEstimated": "Cost ≈ {{cost}}",
     "margin": "Margin {{margin}} ({{percent}} %)",
-    "noCost": "No price: {{products}}"
+    "noCost": "No price: {{products}}",
+    "removable": "optional",
+    "removableHint": "Guests and cooks can order without it; when it runs out the dish is served without it"
   },
   "errors": {
     "name": "Enter a name.",

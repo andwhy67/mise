@@ -51,7 +51,8 @@ public sealed class MenuQueryService(IMiseDbContext db, IClock clock)
                     dto.DishId, dto.DishName, dto.Category,
                     x.Availability.Status == DishAvailabilityStatus.StopManual ? StopReason.Manual : StopReason.Shortage,
                     x.Availability.Status == DishAvailabilityStatus.StopShortage ? dto.LimitingProduct : null,
-                    openSince.TryGetValue(dto.DishId, out var since) ? since : null);
+                    openSince.TryGetValue(dto.DishId, out var since) ? since : null,
+                    dto.Alternative);
             })
             .OrderBy(s => s.DishName)
             .ToList();
@@ -93,7 +94,7 @@ internal sealed record MenuSnapshot(
     public static async Task<MenuSnapshot> LoadAsync(IMiseDbContext db, DateTimeOffset now, CancellationToken ct)
     {
         var dishes = await db.Dishes.AsNoTracking().Include(d => d.Ingredients).ToListAsync(ct);
-        var products = await db.Products.AsNoTracking().ToDictionaryAsync(p => p.Id, ct);
+        var products = await db.Products.AsNoTracking().Include(p => p.Substitutes).ToDictionaryAsync(p => p.Id, ct);
         var usable = await LoadUsableAsync(db, now, ct);
         return new MenuSnapshot(dishes, products, usable);
     }
@@ -106,19 +107,42 @@ internal sealed record MenuSnapshot(
             .Select(g => new { ProductId = g.Key, Qty = g.Sum(b => b.RemainingQty) })
             .ToDictionaryAsync(x => x.ProductId, x => x.Qty, ct);
 
+    /// <summary>Правила замен из справочника: продукт → чем заменить.</summary>
+    public IReadOnlyDictionary<Guid, IReadOnlyList<SubstituteRule>> Rules => _rules ??= Products.Values.ToDictionary(
+        p => p.Id, p => (IReadOnlyList<SubstituteRule>)p.Substitutes.Select(s => new SubstituteRule(s.SubstituteId, s.Ratio)).ToList());
+
+    private IReadOnlyDictionary<Guid, IReadOnlyList<SubstituteRule>>? _rules;
+
     public DishAvailabilityDto ToDto(Dish dish, DishAvailability availability)
     {
-        var ingredients = availability.Ingredients.Select(ToDto).ToList();
+        var removable = dish.Ingredients.Where(i => i.Removable).Select(i => i.ProductId).ToHashSet();
+        var ingredients = availability.Ingredients.Select(i => ToDto(i, removable.Contains(i.ProductId))).ToList();
+        // Блюдо в стопе из-за нехватки — можно ли подать с изменениями (без гарнира, с заменой).
+        var alternative = availability.Status == DishAvailabilityStatus.StopShortage ? MenuAvailability.Alternative(dish, Usable, Rules) : null;
         return new DishAvailabilityDto(
             dish.Id, dish.Name, dish.Category, dish.Price, dish.IsActive,
             availability.MaxPortions, availability.Status, availability.InStopList,
             ingredients.FirstOrDefault(i => i.ProductId == availability.LimitingProductId),
-            ingredients);
+            ingredients,
+            alternative is null ? null : new DishAlternativeDto(alternative.Portions, alternative.Changes.Select(ToDto).ToList()));
     }
 
-    private IngredientAvailabilityDto ToDto(IngredientAvailability i)
+    public ModificationDto ToDto(Mise.Domain.Orders.ItemModification change) => new(
+        change.ProductId, NameOf(change.ProductId), change.Kind, change.SubstituteId,
+        change.SubstituteId is { } id ? NameOf(id) : null, change.Ratio);
+
+    private string NameOf(Guid productId) => Products.GetValueOrDefault(productId)?.Name ?? "?";
+
+    private IngredientAvailabilityDto ToDto(IngredientAvailability i, bool removable)
     {
         var product = Products.GetValueOrDefault(i.ProductId);
-        return new IngredientAvailabilityDto(i.ProductId, product?.Name ?? "?", product?.Unit ?? default, i.QtyPerPortion, i.Usable, i.Portions);
+        var options = (product?.Substitutes ?? [])
+            .Where(s => Products.ContainsKey(s.SubstituteId))
+            .Select(s => new SubstituteOptionDto(s.SubstituteId, Products[s.SubstituteId].Name, Products[s.SubstituteId].Unit, s.Ratio,
+                Usable.GetValueOrDefault(s.SubstituteId)))
+            .OrderByDescending(o => o.Usable).ThenBy(o => o.ProductName)
+            .ToList();
+        return new IngredientAvailabilityDto(i.ProductId, product?.Name ?? "?", product?.Unit ?? default, i.QtyPerPortion, i.Usable, i.Portions,
+            removable, options);
     }
 }

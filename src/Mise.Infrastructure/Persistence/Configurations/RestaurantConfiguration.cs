@@ -12,6 +12,9 @@ internal sealed class RestaurantConfiguration : IEntityTypeConfiguration<Restaur
         builder.HasKey(r => r.Id);
         builder.Property(r => r.Id).ValueGeneratedNever();
         builder.Property(r => r.Name).HasMaxLength(Restaurant.NameMaxLength).IsRequired();
+        // По ключу гостевое меню находит ресторан до всякого входа — уникален во всей системе.
+        builder.Property(r => r.MenuKey).HasMaxLength(Restaurant.MenuKeyLength);
+        builder.HasIndex(r => r.MenuKey).IsUnique().HasFilter("menu_key IS NOT NULL");
     }
 }
 

@@ -54,6 +54,7 @@ public static class DependencyInjection
         services.AddScoped<InviteService>();
         services.AddScoped<AnalyticsService>();
         services.AddScoped<CostingService>();
+        services.AddScoped<GuestMenu.GuestMenuService>();
         services.AddOptions<ForecastOptions>();
         services.AddScoped<AuthService>();
         services.AddScoped<UserService>();

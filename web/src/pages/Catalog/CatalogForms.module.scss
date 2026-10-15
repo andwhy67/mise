@@ -103,13 +103,13 @@
 
 .ingredient {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(0, 0.8fr) 32px 44px;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 0.8fr) 32px auto 44px;
   gap: var(--space-3);
   align-items: start;
   animation: row-in var(--dur-base) var(--ease-out) backwards;
 
   @media (max-width: 767px) {
-    grid-template-columns: minmax(0, 1fr) 80px 28px 44px;
+    grid-template-columns: minmax(0, 1fr) 80px 28px auto 44px;
     gap: var(--space-2);
   }
 }
@@ -188,5 +188,44 @@
   from {
     opacity: 0;
     transform: translateY(4px);
+  }
+}
+
+.removable {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 48px;
+  font-size: 13px;
+  color: var(--ink-2);
+  white-space: nowrap;
+  cursor: pointer;
+
+  input {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--brand);
+  }
+}
+
+// Телефон: у «можно убрать» — только галочка (подпись остаётся для диктора), иначе названию продукта не хватит места.
+@media (max-width: 767px) {
+  .removable span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
+// Строка без флага (замены продукта): прежние 4 колонки.
+.ingredientPlain {
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 0.8fr) 32px 44px;
+
+  @media (max-width: 767px) {
+    grid-template-columns: minmax(0, 1fr) 80px 28px 44px;
   }
 }

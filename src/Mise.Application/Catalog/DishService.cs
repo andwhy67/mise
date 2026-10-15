@@ -46,7 +46,7 @@ public sealed class DishService(
             Price = request.Price,
             IsActive = request.IsActive,
         };
-        dish.SetIngredients(request.Ingredients.Select(i => (i.ProductId, i.Quantity)));
+        dish.SetIngredients(request.Ingredients.Select(i => (i.ProductId, i.Quantity, i.Removable)));
         db.Dishes.Add(dish);
         await SaveAsync(ct);
         notifier.DishesChanged([dish.Id]);
@@ -79,7 +79,7 @@ public sealed class DishService(
             ?? throw new NotFoundException("Блюдо", id);
         var products = await RequireProductsAsync(request.Ingredients, ct);
 
-        dish.SetIngredients(request.Ingredients.Select(i => (i.ProductId, i.Quantity)));
+        dish.SetIngredients(request.Ingredients.Select(i => (i.ProductId, i.Quantity, i.Removable)));
         await db.SaveChangesAsync(ct);
         notifier.DishesChanged([dish.Id]);
         await stopList.TryRefreshAsync(ct);
@@ -123,8 +123,8 @@ public sealed class DishService(
         dish.IsActive,
         dish.Ingredients
             .Select(i => products.TryGetValue(i.ProductId, out var p)
-                ? new DishIngredientDto(i.ProductId, p.Name, p.Unit, i.Quantity)
-                : new DishIngredientDto(i.ProductId, "?", default, i.Quantity))
+                ? new DishIngredientDto(i.ProductId, p.Name, p.Unit, i.Quantity, i.Removable)
+                : new DishIngredientDto(i.ProductId, "?", default, i.Quantity, i.Removable))
             .OrderBy(i => i.ProductName)
             .ToList());
 

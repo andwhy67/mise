@@ -165,6 +165,13 @@ function OrderDetails({ id }: { id: string }) {
           {order.items.map((item) => (
             <li key={item.lineNo}>
               {t('details.item', { dish: item.dishName, count: item.quantity, amount: f.money(item.amount) })}
+              {item.modifications?.length > 0 && (
+                <span className={styles.itemChanges}>
+                  {item.modifications
+                    .map((m) => (m.kind === 'Remove' ? t('change.remove', { product: m.productName }) : t('change.replace', { product: m.productName, substitute: m.substituteName })))
+                    .join(' · ')}
+                </span>
+              )}
             </li>
           ))}
         </ul>

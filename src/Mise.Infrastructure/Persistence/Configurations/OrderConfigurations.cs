@@ -18,6 +18,10 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(o => o.Status).HasConversion<string>().HasMaxLength(16);
         builder.Property(o => o.IdempotencyKey).HasMaxLength(200);
         builder.Property(o => o.RequestHash).HasMaxLength(64);
+        builder.Property(o => o.Source).HasConversion<string>().HasMaxLength(16);
+        builder.Property(o => o.Payment).HasConversion<string>().HasMaxLength(16);
+        builder.Property(o => o.GuestToken).HasMaxLength(32);
+        builder.HasIndex(o => o.GuestToken).IsUnique().HasFilter("guest_token IS NOT NULL");
         builder.Ignore(o => o.Total);
         builder.Ignore(o => o.CanBeCancelled);
         // Номер и ключ идемпотентности — уникальны внутри ресторана (номера у каждого свои: ORD-000001…).
@@ -58,6 +62,12 @@ internal sealed class OrderItemConfiguration : IEntityTypeConfiguration<OrderIte
         builder.Property(i => i.PriceSnapshot).HasPrecision(12, 2);
         builder.HasIndex(i => i.DishId);
         builder.HasOne<Dish>().WithMany().HasForeignKey(i => i.DishId).OnDelete(DeleteBehavior.Restrict);
+        // «Без лимона», «шпинат → руккола» — вместе со строкой (jsonb): читаются только с заказом.
+        builder.OwnsMany(i => i.Modifications, m =>
+        {
+            m.ToJson("modifications");
+            m.Property(x => x.Kind).HasConversion<string>();
+        });
     }
 }
 

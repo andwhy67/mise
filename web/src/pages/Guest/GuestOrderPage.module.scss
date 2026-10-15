@@ -1,0 +1,126 @@
+// Статус заказа гостя: номер — крупно (его называют официанту), шаги — квадратные маркеры, как статусы в приложении.
+
+.order {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.number {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 38px;
+  font-weight: 500;
+  font-variant-numeric: var(--numerals-serif);
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--muted);
+}
+
+.steps {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-2);
+  width: 100%;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 3px solid var(--hairline);
+  font-size: 14px;
+  color: var(--muted);
+
+  &[data-state='done'] {
+    border-top-color: var(--fresh-bar);
+    color: var(--ink-2);
+  }
+
+  &[data-state='current'] {
+    border-top-color: var(--brand);
+    color: var(--ink);
+    font-weight: 700;
+  }
+}
+
+.marker {
+  width: 10px;
+  height: 10px;
+  background: var(--hairline);
+
+  [data-state='done'] > & {
+    background: var(--fresh-bar);
+  }
+
+  [data-state='current'] > & {
+    background: var(--brand);
+  }
+}
+
+.hint {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.cancelled {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--crit-bar);
+  border-radius: var(--radius-panel);
+  color: var(--crit-text);
+}
+
+.itemsTitle {
+  margin: var(--space-4) 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.items {
+  list-style: none;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.changes {
+  display: block;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.amount {
+  font-variant-numeric: tabular-nums;
+}
+
+.total {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin: 0;
+  font-size: 18px;
+}
+
+.payment {
+  margin: 0 0 var(--space-3);
+  color: var(--ink-2);
+}

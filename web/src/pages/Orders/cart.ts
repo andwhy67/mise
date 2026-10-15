@@ -1,8 +1,60 @@
 import type { DishAvailability, MissingIngredient } from '@/api/types'
 import type { MeasureUnit } from '@/lib/format'
 
-/** Корзина: блюдо → сколько порций. */
+/**
+ * Корзина: строка → сколько порций. Ключ строки — блюдо и его изменения: «dishId» — как в меню,
+ * «dishId|-лимон|~шпинат>руккола» — без лимона и с заменой шпината. Одно блюдо может лежать несколькими строками.
+ */
 export type Cart = Map<string, number>
+
+/** Изменение строки: убрать продукт или заменить его заменителем из правил справочника. */
+export type LineChange = { productId: string; kind: 'Remove' } | { productId: string; kind: 'Replace'; substituteId: string }
+
+/** Ключ строки: изменения в порядке productId — одинаковые наборы дают одну строку. */
+export function lineKey(dishId: string, changes: LineChange[]): string {
+  if (changes.length === 0) return dishId
+  const parts = [...changes]
+    .sort((a, b) => a.productId.localeCompare(b.productId))
+    .map((c) => (c.kind === 'Remove' ? `-${c.productId}` : `~${c.productId}>${c.substituteId}`))
+  return `${dishId}|${parts.join('|')}`
+}
+
+export function parseLine(key: string): { dishId: string; changes: LineChange[] } {
+  const [dishId, ...parts] = key.split('|')
+  const changes = parts.map((part): LineChange => {
+    if (part.startsWith('-')) return { productId: part.slice(1), kind: 'Remove' }
+    const [productId, substituteId] = part.slice(1).split('>')
+    return { productId: productId!, kind: 'Replace', substituteId: substituteId! }
+  })
+  return { dishId: dishId!, changes }
+}
+
+/** «без лимона», «шпинат → руккола» — с именами из меню (для корзины и подписей). */
+export function describeChanges(dish: DishAvailability | undefined, changes: LineChange[]) {
+  return changes.map((c) => {
+    const ingredient = dish?.ingredients.find((i) => i.productId === c.productId)
+    const productName = ingredient?.productName ?? '?'
+    if (c.kind === 'Remove') return { productId: c.productId, kind: c.kind, productName, substituteName: null }
+    const option = ingredient?.substitutes.find((s) => s.productId === c.substituteId)
+    return { productId: c.productId, kind: c.kind, productName, substituteName: option?.productName ?? '?' }
+  })
+}
+
+/** Строки корзины для запроса: блюдо, порции, изменения. */
+export function orderItems(cart: Cart) {
+  return [...cart.entries()]
+    .filter(([, quantity]) => quantity > 0)
+    .map(([key, quantity]) => {
+      const { dishId, changes } = parseLine(key)
+      return {
+        dishId,
+        quantity,
+        ...(changes.length
+          ? { modifications: changes.map((c) => (c.kind === 'Remove' ? { productId: c.productId, kind: c.kind } : { ...c })) }
+          : {}),
+      }
+    })
+}
 
 /** Замена, на которую согласился повар: весь продукт заказа берётся из заменителя × ratio. */
 export interface CartSubstitution {
@@ -15,17 +67,22 @@ export interface CartSubstitution {
   ratio: number
 }
 
-/** Пригодный остаток продуктов, известный из меню (все ингредиенты всех блюд). */
+/** Пригодный остаток продуктов, известный из меню: ингредиенты всех блюд и их заменители. */
 function usableFromMenu(menu: DishAvailability[]) {
   const usable = new Map<string, number>()
-  for (const dish of menu) for (const i of dish.ingredients) usable.set(i.productId, i.usable)
+  for (const dish of menu)
+    for (const i of dish.ingredients) {
+      usable.set(i.productId, i.usable)
+      for (const s of i.substitutes ?? []) if (!usable.has(s.productId)) usable.set(s.productId, s.usable)
+    }
   return usable
 }
 
 /** Какие продукты использует корзина — замену отправляем только для них (иначе сервер ответит 400). */
 export function activeSubstitutions(cart: Cart, menu: DishAvailability[], substitutions: CartSubstitution[]) {
   const used = new Set<string>()
-  for (const [dishId, quantity] of cart) {
+  for (const [key, quantity] of cart) {
+    const { dishId } = parseLine(key)
     if (quantity <= 0) continue
     for (const i of menu.find((d) => d.dishId === dishId)?.ingredients ?? []) used.add(i.productId)
   }
@@ -47,24 +104,30 @@ interface Need {
  */
 function cartNeeds(cart: Cart, menu: DishAvailability[], substitutions: CartSubstitution[]): Need[] {
   const needs = new Map<string, Need>()
-  for (const [dishId, quantity] of cart) {
+  const usable = usableFromMenu(menu)
+  const add = (productId: string, productName: string, unit: MeasureUnit, available: number, qty: number, dishName: string) => {
+    const need = needs.get(productId) ?? { productId, productName, unit, required: 0, available, dishes: [] }
+    need.required += qty
+    if (!need.dishes.includes(dishName)) need.dishes.push(dishName)
+    needs.set(productId, need)
+  }
+  for (const [key, quantity] of cart) {
+    const { dishId, changes } = parseLine(key)
     const dish = menu.find((d) => d.dishId === dishId)
     if (!dish || quantity <= 0) continue
     for (const ingredient of dish.ingredients) {
-      const need = needs.get(ingredient.productId) ?? {
-        productId: ingredient.productId,
-        productName: ingredient.productName,
-        unit: ingredient.unit,
-        required: 0,
-        available: ingredient.usable,
-        dishes: [],
+      const change = changes.find((c) => c.productId === ingredient.productId)
+      const qty = ingredient.qtyPerPortion * quantity
+      // Как на сервере: убранное не нужно, заменённое берётся из заменителя × коэффициент.
+      if (change?.kind === 'Remove') continue
+      if (change?.kind === 'Replace') {
+        const option = ingredient.substitutes.find((s) => s.productId === change.substituteId)
+        if (option) add(option.productId, option.productName, option.unit, usable.get(option.productId) ?? option.usable, qty * option.ratio, dish.dishName)
+        continue
       }
-      need.required += ingredient.qtyPerPortion * quantity
-      if (!need.dishes.includes(dish.dishName)) need.dishes.push(dish.dishName)
-      needs.set(ingredient.productId, need)
+      add(ingredient.productId, ingredient.productName, ingredient.unit, ingredient.usable, qty, dish.dishName)
     }
   }
-  const usable = usableFromMenu(menu)
   for (const s of substitutions) {
     const original = needs.get(s.productId)
     if (!original) continue
@@ -123,8 +186,8 @@ export function cartTotals(cart: Cart, menu: DishAvailability[]) {
   let portions = 0
   let total = 0
   let lines = 0
-  for (const [dishId, quantity] of cart) {
-    const dish = menu.find((d) => d.dishId === dishId)
+  for (const [key, quantity] of cart) {
+    const dish = menu.find((d) => d.dishId === parseLine(key).dishId)
     if (!dish || quantity <= 0) continue
     portions += quantity
     total += dish.price * quantity
@@ -132,3 +195,19 @@ export function cartTotals(cart: Cart, menu: DishAvailability[]) {
   }
   return { portions, total, lines }
 }
+
+/** Изменения, при которых блюдо можно приготовить: каждый недостающий продукт убран или заменён. */
+export function missingWithout(dish: DishAvailability, changes: LineChange[]) {
+  return dish.ingredients
+    .filter((i) => i.usable < i.qtyPerPortion)
+    .filter((i) => !changes.some((c) => c.productId === i.productId))
+    .map((i) => i.productName)
+}
+
+/** Заменители, которых хватит хотя бы на порцию. */
+export const fittingSubstitutes = (ingredient: DishAvailability['ingredients'][number]) =>
+  ingredient.substitutes.filter((s) => s.usable >= ingredient.qtyPerPortion * s.ratio)
+
+/** Есть ли что менять в блюде: убрать гарнир или заменить продукт. */
+export const isCustomizable = (dish: DishAvailability) =>
+  dish.ingredients.some((i) => i.removable || fittingSubstitutes(i).length > 0)

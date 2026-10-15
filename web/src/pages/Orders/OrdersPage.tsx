@@ -3,8 +3,8 @@ import { useId, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ApiError } from '@/api/errors'
 import { useCreateOrder } from '@/api/mutations'
-import { useMenu, useProducts } from '@/api/queries'
-import type { DishAvailability, MissingIngredient, Product } from '@/api/types'
+import { useMenu } from '@/api/queries'
+import type { DishAvailability, MissingIngredient } from '@/api/types'
 import { Button } from '@/components/Button'
 import { Meter } from '@/components/Meter'
 import { Page } from '@/components/Page'
@@ -20,7 +20,8 @@ import { useFormat } from '@/lib/useFormat'
 import { uuid } from '@/lib/uuid'
 import { vibrate } from '@/pwa/haptics'
 import { useOnline } from '@/pwa/network'
-import { activeSubstitutions, cartShortages, cartTotals, cartUsage, type Cart, type CartSubstitution } from './cart'
+import { activeSubstitutions, cartShortages, cartTotals, cartUsage, describeChanges, isCustomizable, lineKey, orderItems, parseLine, type Cart, type CartSubstitution } from './cart'
+import { DishCustomizer } from './DishCustomizer'
 import { RecentOrders, type PlacedOrder } from './RecentOrders'
 import styles from './OrdersPage.module.scss'
 
@@ -42,7 +43,8 @@ export function OrdersPage() {
   const [cartOpen, setCartOpen] = useState(false)
   // Только что принятый заказ: подсвечивается в «Заказах в работе» вместо тоста — повар и так знает, что нажал.
   const [placed, setPlaced] = useState<PlacedOrder | null>(null)
-  const products = useProducts().data ?? []
+  // Блюдо, которое повар меняет («без лимона», «шпинат → руккола»), и с какими изменениями лист открылся.
+  const [customizing, setCustomizing] = useState<{ dish: DishAvailability; initial: ReturnType<typeof parseLine>['changes'] } | null>(null)
   const substitution = {
     list: substitutions,
     add: (s: CartSubstitution) => setSubstitutions((current) => [...current.filter((c) => c.productId !== s.productId), s]),
@@ -53,13 +55,17 @@ export function OrdersPage() {
     setSubstitutions([])
   }
 
-  const setQuantity = (dishId: string, quantity: number) =>
+  /** Порции строки корзины (строка — блюдо с его изменениями). */
+  const setQuantity = (key: string, quantity: number) =>
     setCart((current) => {
       const next = new Map(current)
-      if (quantity > 0) next.set(dishId, quantity)
-      else next.delete(dishId)
+      if (quantity > 0) next.set(key, quantity)
+      else next.delete(key)
       return next
     })
+  const addToLine = (key: string, quantity: number) => setQuantity(key, (cart.get(key) ?? 0) + quantity)
+  const customize = (dish: DishAvailability) =>
+    setCustomizing({ dish, initial: dish.inStopList && dish.alternative ? dish.alternative.changes.map(toLineChange) : [] })
 
   const dishes = menu.data ?? []
   const totals = cartTotals(cart, dishes)
@@ -75,7 +81,7 @@ export function OrdersPage() {
           ) : dishes.length === 0 ? (
             <EmptyState title={t('menu.empty')}>{t('menu.emptyHint')}</EmptyState>
           ) : (
-            <MenuList dishes={dishes} cart={cart} products={products} substitution={substitution} onChange={setQuantity} />
+            <MenuList dishes={dishes} cart={cart} onChange={setQuantity} onAddLine={addToLine} onCustomize={customize} />
           )}
         </Panel>
 
@@ -99,6 +105,24 @@ export function OrdersPage() {
           <Button onClick={() => setCartOpen(true)}>{t('cart.open')}</Button>
         </div>
       )}
+      <Sheet
+        open={customizing !== null}
+        onClose={() => setCustomizing(null)}
+        title={customizing?.dish.dishName ?? ''}
+        subtitle={t('customize.subtitle')}
+      >
+        {customizing && (
+          <DishCustomizer
+            key={customizing.dish.dishId}
+            dish={customizing.dish}
+            initial={customizing.initial}
+            onAdd={(key, quantity) => {
+              addToLine(key, quantity)
+              setCustomizing(null)
+            }}
+          />
+        )}
+      </Sheet>
       <Sheet open={cartOpen} onClose={() => setCartOpen(false)} title={t('cart.title')}>
         <CartContent
           cart={cart}
@@ -127,34 +151,22 @@ interface SubstitutionState {
   remove: (productId: string) => void
 }
 
-/**
- * Чем заменить продукт, на котором блюдо в стопе: первое правило справочника, заменителя которого хватает
- * хотя бы на порцию (по остаткам меню); если остаток заменителя неизвестен — всё равно предлагаем, решит сервер.
- */
-function substituteFor(dish: DishAvailability, products: Product[], menu: DishAvailability[]): CartSubstitution | null {
-  const limiting = dish.limitingProduct
-  if (dish.status !== 'StopShortage' || !limiting) return null
-  const rules = products.find((p) => p.id === limiting.productId)?.substitutes ?? []
-  const usable = new Map(menu.flatMap((d) => d.ingredients.map((i) => [i.productId, i.usable] as const)))
-  const fits = rules.filter((r) => (usable.get(r.productId) ?? Infinity) >= limiting.qtyPerPortion * r.ratio)
-  const rule = fits[0]
-  return rule
-    ? { productId: limiting.productId, productName: limiting.productName, substituteId: rule.productId, substituteName: rule.productName, unit: rule.unit, ratio: rule.ratio }
-    : null
-}
+/** Изменение из варианта сервера → изменение строки корзины. */
+const toLineChange = (c: { productId: string; kind: 'Remove' | 'Replace'; substituteId: string | null }) =>
+  c.kind === 'Remove' ? ({ productId: c.productId, kind: 'Remove' } as const) : ({ productId: c.productId, kind: 'Replace', substituteId: c.substituteId! } as const)
 
 function MenuList({
   dishes,
   cart,
-  products,
-  substitution,
   onChange,
+  onAddLine,
+  onCustomize,
 }: {
   dishes: DishAvailability[]
   cart: Cart
-  products: Product[]
-  substitution: SubstitutionState
-  onChange: (dishId: string, quantity: number) => void
+  onChange: (key: string, quantity: number) => void
+  onAddLine: (key: string, quantity: number) => void
+  onCustomize: (dish: DishAvailability) => void
 }) {
   const { t } = useTranslation('orders')
   const [search, setSearch] = useState('')
@@ -196,9 +208,9 @@ function MenuList({
                     key={dish.dishId}
                     dish={dish}
                     quantity={cart.get(dish.dishId) ?? 0}
-                    offer={substituteFor(dish, products, dishes)}
-                    substitution={substitution}
                     onChange={(q) => onChange(dish.dishId, q)}
+                    onAddLine={onAddLine}
+                    onCustomize={() => onCustomize(dish)}
                   />
                 ))}
               </ul>
@@ -213,22 +225,23 @@ function MenuList({
 function DishRow({
   dish,
   quantity,
-  offer,
-  substitution,
   onChange,
+  onAddLine,
+  onCustomize,
 }: {
   dish: DishAvailability
+  /** Порций «как в меню» (без изменений). */
   quantity: number
-  /** Блюдо в стопе, но ограничивающий продукт можно заменить. */
-  offer: CartSubstitution | null
-  substitution: SubstitutionState
   onChange: (quantity: number) => void
+  onAddLine: (key: string, quantity: number) => void
+  onCustomize: () => void
 }) {
   const { t } = useTranslation('orders')
   const f = useFormat()
-  // Повар уже согласился на замену продукта, из-за которого блюдо в стопе, — блюдо можно добавлять (сколько — решит сервер).
-  const substituted = offer !== null && substitution.list.some((s) => s.productId === offer.productId)
-  const stopped = (dish.inStopList || dish.maxPortions <= 0) && !substituted
+  const stopped = dish.inStopList || dish.maxPortions <= 0
+  // В стопе, но можно подать с изменениями: «без лимона», «шпинат → руккола» — сервер посчитал, на сколько порций.
+  const alternative = dish.status === 'StopShortage' ? dish.alternative : null
+  const changesText = alternative ? changeSummary(describeChanges(dish, alternative.changes.map(toLineChange)), t) : ''
   const [open, setOpen] = useState(false)
   const compositionId = useId()
 
@@ -255,22 +268,27 @@ function DishRow({
           <span className={styles.price}>{f.money(dish.price)}</span>
           {status}
         </span>
-        <button type="button" className={styles.compositionToggle} aria-expanded={open} aria-controls={compositionId} onClick={() => setOpen(!open)}>
-          {open ? t('menu.hideComposition') : t('menu.composition')}
-          <ChevronDown aria-hidden="true" strokeWidth={1.8} />
-        </button>
+        <span className={styles.dishLinks}>
+          <button type="button" className={styles.compositionToggle} aria-expanded={open} aria-controls={compositionId} onClick={() => setOpen(!open)}>
+            {open ? t('menu.hideComposition') : t('menu.composition')}
+            <ChevronDown aria-hidden="true" strokeWidth={1.8} />
+          </button>
+          {dish.isActive && (!stopped || alternative) && isCustomizable(dish) && (
+            <button type="button" className={styles.compositionToggle} onClick={onCustomize} aria-label={t('menu.customizeLabel', { dish: dish.dishName })}>
+              {t('menu.customize')}
+            </button>
+          )}
+        </span>
+        {alternative && <span className={styles.alternativeNote}>{t('menu.alternative', { changes: changesText, portions: f.portionsUpTo(alternative.portions) })}</span>}
       </div>
-      {stopped && offer ? (
+      {stopped && alternative ? (
         <Button
           variant="secondary"
           className={styles.add}
-          onClick={() => {
-            substitution.add(offer)
-            onChange(1)
-          }}
-          aria-label={t('menu.addWithSubstituteLabel', { dish: dish.dishName, product: offer.productName, substitute: offer.substituteName })}
+          onClick={() => onAddLine(lineKey(dish.dishId, alternative.changes.map(toLineChange)), 1)}
+          aria-label={t('menu.addWithChangesLabel', { dish: dish.dishName, changes: changesText })}
         >
-          {t('menu.addWithSubstitute', { substitute: offer.substituteName })}
+          {t('menu.addWithChanges')}
         </Button>
       ) : stopped ? (
         <span className={styles.stopNote}>{t('menu.stop')}</span>
@@ -279,7 +297,7 @@ function DishRow({
           {t('menu.add')}
         </Button>
       ) : (
-        <Stepper value={quantity} label={dish.dishName} max={substituted ? MAX_PER_LINE : Math.min(MAX_PER_LINE, dish.maxPortions)} onChange={onChange} />
+        <Stepper value={quantity} label={dish.dishName} max={Math.min(MAX_PER_LINE, dish.maxPortions)} onChange={onChange} />
       )}
       {open && (
         <div id={compositionId} className={styles.composition}>
@@ -342,7 +360,7 @@ function CartContent({
   cart: Cart
   dishes: DishAvailability[]
   substitution: SubstitutionState
-  onChange: (dishId: string, quantity: number) => void
+  onChange: (key: string, quantity: number) => void
   onPlaced: (order: PlacedOrder) => void
   onDone: () => void
 }) {
@@ -360,7 +378,13 @@ function CartContent({
   // Один ключ на один состав: повтор той же отправки (обрыв связи, двойной клик) не создаст второй заказ.
   const idempotency = useRef<{ basis: string; key: string } | null>(null)
 
-  const lines = [...cart.entries()].map(([dishId, quantity]) => ({ dish: dishes.find((d) => d.dishId === dishId), quantity })).filter((l) => l.dish)
+  const lines = [...cart.entries()]
+    .map(([key, quantity]) => {
+      const { dishId, changes } = parseLine(key)
+      const dish = dishes.find((d) => d.dishId === dishId)
+      return { key, dish, quantity, changes: changeSummary(describeChanges(dish, changes), t), modified: changes.length > 0 }
+    })
+    .filter((l) => l.dish)
   const totals = cartTotals(cart, dishes)
   const shortages = cartShortages(cart, dishes, active)
   const usage = cartUsage(cart, dishes, active)
@@ -372,7 +396,7 @@ function CartContent({
     if (idempotency.current?.basis !== basis) idempotency.current = { basis, key: uuid() }
     mutation.mutate(
       {
-        items: lines.map((l) => ({ dishId: l.dish!.dishId, quantity: l.quantity })),
+        items: orderItems(cart),
         substitutions: active.length ? active.map((s) => ({ productId: s.productId, substituteId: s.substituteId })) : undefined,
         idempotencyKey: idempotency.current.key,
       },
@@ -395,10 +419,19 @@ function CartContent({
   return (
     <div className={styles.cart}>
       <ul className={styles.lines}>
-        {lines.map(({ dish, quantity }) => (
-          <li key={dish!.dishId} className={styles.line}>
-            <span className={styles.lineName}>{dish!.dishName}</span>
-            <Stepper value={quantity} label={dish!.dishName} max={Math.min(MAX_PER_LINE, Math.max(quantity, dish!.maxPortions))} onChange={(q) => onChange(dish!.dishId, q)} />
+        {lines.map(({ key, dish, quantity, changes, modified }) => (
+          <li key={key} className={styles.line}>
+            <span className={styles.lineName}>
+              {dish!.dishName}
+              {changes && <span className={styles.lineChanges}>{changes}</span>}
+            </span>
+            {/* С изменениями — сколько можно, решит сервер (суммарная проверка); без — не больше, чем позволяет склад. */}
+            <Stepper
+              value={quantity}
+              label={changes ? `${dish!.dishName} (${changes})` : dish!.dishName}
+              max={modified ? MAX_PER_LINE : Math.min(MAX_PER_LINE, Math.max(quantity, dish!.maxPortions))}
+              onChange={(q) => onChange(key, q)}
+            />
             <span className={styles.lineAmount}>{f.money(dish!.price * quantity)}</span>
           </li>
         ))}
@@ -489,4 +522,11 @@ function CartContent({
       </Button>
     </div>
   )
+}
+
+/** «без лимона · шпинат → руккола». */
+function changeSummary(changes: { kind: 'Remove' | 'Replace'; productName: string; substituteName: string | null }[], t: (key: string, options?: Record<string, unknown>) => string) {
+  return changes
+    .map((c) => (c.kind === 'Remove' ? t('change.remove', { product: c.productName }) : t('change.replace', { product: c.productName, substitute: c.substituteName })))
+    .join(' · ')
 }

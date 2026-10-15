@@ -80,6 +80,8 @@ public static class SeedData
         (Products.Romaine, Products.Arugula, 1m),
         (Products.Mozzarella, Products.Feta, 0.8m),
         (Products.Shrimp, Products.Salmon, 1m),
+        (Products.Cream, Products.Milk, 1.2m),
+        (Products.Basil, Products.Arugula, 1m),
     ];
 
     public static IReadOnlyList<Product> CreateProducts() => WithSubstitutes(
@@ -174,10 +176,13 @@ public static class SeedData
         Supplier = supplier,
     };
 
+    /// <summary>Гарниры и добавки: их можно убрать из блюда («без лимона», «без лука») — по просьбе гостя или когда кончились.</summary>
+    public static readonly IReadOnlySet<Guid> Optional = new HashSet<Guid> { Products.Lemons, Products.Basil, Products.Parmesan, Products.Garlic, Products.Onion };
+
     private static Dish Dish(Guid id, string name, string category, decimal price, params (Guid ProductId, decimal Quantity)[] ingredients)
     {
         var dish = new Dish(id, name) { Category = category, Price = price };
-        dish.SetIngredients(ingredients);
+        dish.SetIngredients(ingredients.Select(i => (i.ProductId, i.Quantity, Optional.Contains(i.ProductId))));
         return dish;
     }
 }

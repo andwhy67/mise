@@ -11,9 +11,12 @@ public sealed class Restaurant
     public static class Errors
     {
         public const string InvalidName = "restaurant.invalid_name";
+        public const string InvalidTables = "restaurant.invalid_tables";
     }
 
     public const int NameMaxLength = 120;
+    public const int MenuKeyLength = 12;
+    public const int MaxTables = 200;
 
     private Restaurant() { }
 
@@ -32,6 +35,26 @@ public sealed class Restaurant
     public bool IsDemo { get; private set; }
     /// <summary>Последний выданный номер заказа — нумерация своя у каждого ресторана.</summary>
     public long LastOrderNumber { get; private set; }
+
+    /// <summary>
+    /// Ключ гостевого меню (QR на столах ведёт на /m/{ключ}): постоянный, чтобы не перепечатывать QR при смене меню.
+    /// null — меню ещё не включали. Перевыпуск делает старые QR недействительными.
+    /// </summary>
+    public string? MenuKey { get; private set; }
+    /// <summary>Гости могут не только смотреть меню, но и заказывать.</summary>
+    public bool GuestOrdering { get; private set; } = true;
+    /// <summary>Сколько столов: QR печатается для каждого, номер стола приходит на кухню.</summary>
+    public int GuestTables { get; private set; } = 10;
+
+    public void SetMenuKey(string key) => MenuKey = key;
+
+    public void ConfigureGuestMenu(bool ordering, int tables)
+    {
+        if (tables is < 0 or > MaxTables)
+            throw new DomainException(Errors.InvalidTables, $"Столов — от 0 до {MaxTables}.");
+        GuestOrdering = ordering;
+        GuestTables = tables;
+    }
 
     public void Rename(string name)
     {

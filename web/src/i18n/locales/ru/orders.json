@@ -23,7 +23,12 @@
     "composition": "Из чего",
     "hideComposition": "Скрыть состав",
     "addWithSubstitute": "С заменой: {{substitute}}",
-    "addWithSubstituteLabel": "Добавить {{dish}}: {{product}} заменить на {{substitute}}"
+    "addWithSubstituteLabel": "Добавить {{dish}}: {{product}} заменить на {{substitute}}",
+    "customize": "Изменить",
+    "customizeLabel": "Изменить состав: {{dish}}",
+    "alternative": "Можно: {{changes}} — {{portions}}",
+    "addWithChanges": "С изменениями",
+    "addWithChangesLabel": "Добавить {{dish}}: {{changes}}"
   },
   "cart": {
     "title": "Заказ",
@@ -108,5 +113,20 @@
     "undo": "Без замены",
     "offer": "Заменить на «{{substitute}}»: нужно {{need}}, есть {{have}}",
     "short": "«{{substitute}}» тоже мало — есть {{have}}"
+  },
+  "change": {
+    "remove": "без: {{product}}",
+    "replace": "{{product}} → {{substitute}}"
+  },
+  "customize": {
+    "subtitle": "Убрать или заменить ингредиенты. Цена блюда не меняется.",
+    "composition": "Состав",
+    "out": "закончилось",
+    "keep": "Как есть",
+    "remove": "Убрать",
+    "replace": "Заменить: {{substitute}}",
+    "noOption": "замены нет",
+    "needChange": "Закончилось: {{products}} — уберите или замените.",
+    "add": "Добавить · {{price}}"
   }
 }

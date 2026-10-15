@@ -10,6 +10,35 @@ export interface IngredientAvailability {
   qtyPerPortion: number
   usable: number
   portions: number
+  /** Можно убрать («без лимона»). */
+  removable: boolean
+  /** Чем можно заменить (правила справочника) и сколько заменителя есть. */
+  substitutes: SubstituteOption[]
+}
+
+export interface SubstituteOption {
+  productId: string
+  productName: string
+  unit: MeasureUnit
+  ratio: number
+  usable: number
+}
+
+export type ModificationKind = 'Remove' | 'Replace'
+
+/** Изменение блюда с именами: «без лимона», «шпинат → руккола». */
+export interface Modification {
+  productId: string
+  productName: string
+  kind: ModificationKind
+  substituteId: string | null
+  substituteName: string | null
+}
+
+/** Блюдо в стопе, но его можно подать с изменениями — столько порций. */
+export interface DishAlternative {
+  portions: number
+  changes: (Modification & { ratio: number })[]
 }
 
 export interface StopListItem {
@@ -19,6 +48,7 @@ export interface StopListItem {
   reason: 'Shortage' | 'Manual'
   limitingProduct: IngredientAvailability | null
   since: string | null
+  alternative: DishAlternative | null
 }
 
 export interface StopListForecastItem {
@@ -162,6 +192,7 @@ export interface DishAvailability {
   inStopList: boolean
   limitingProduct: IngredientAvailability | null
   ingredients: IngredientAvailability[]
+  alternative: DishAlternative | null
 }
 
 export interface StopListHistoryItem {
@@ -195,7 +226,7 @@ export interface Order {
   updatedAt: string
   cancelledAt: string | null
   total: number
-  items: { lineNo: number; dishId: string; dishName: string; quantity: number; price: number; amount: number }[]
+  items: { lineNo: number; dishId: string; dishName: string; quantity: number; price: number; amount: number; modifications: Modification[] }[]
   consumption: { productId: string; productName: string; unit: MeasureUnit; batchId: string; batchExpiresAt: string; consumed: number; returned: number }[]
   /** Замены, на которые согласился повар. */
   substitutions: { productId: string; productName: string; substituteId: string; substituteName: string; unit: MeasureUnit; ratio: number }[]
@@ -251,7 +282,7 @@ export interface Dish {
   category: string | null
   price: number
   isActive: boolean
-  ingredients: { productId: string; productName: string; unit: MeasureUnit; quantity: number }[]
+  ingredients: { productId: string; productName: string; unit: MeasureUnit; quantity: number; removable: boolean }[]
 }
 
 export interface Product {

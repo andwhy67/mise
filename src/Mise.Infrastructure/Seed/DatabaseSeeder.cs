@@ -40,7 +40,15 @@ public sealed class DatabaseSeeder(MiseDbContext db, ILogger<DatabaseSeeder> log
         var newDishes = dishes.Where(d => !existingDishes.Contains(d.Id)).ToList();
         db.Dishes.AddRange(newDishes);
 
-        if (newProducts.Count + newDishes.Count + unpriced.Count == 0 && !rulesAdded)
+        var optional = SeedData.Optional.ToList();
+        // База, засеянная до флага «можно убрать»: если ни у одного ингредиента демо-блюд его нет — ставим по стартовому словарю.
+        var unflagged = await db.DishIngredients.AnyAsync(i => dishIds.Contains(i.DishId) && i.Removable, ct)
+            ? []
+            : await db.DishIngredients.Where(i => dishIds.Contains(i.DishId) && optional.Contains(i.ProductId)).ToListAsync(ct);
+        foreach (var ingredient in unflagged)
+            db.Entry(ingredient).Property(i => i.Removable).CurrentValue = true;
+
+        if (newProducts.Count + newDishes.Count + unpriced.Count + unflagged.Count == 0 && !rulesAdded)
             return;
 
         try

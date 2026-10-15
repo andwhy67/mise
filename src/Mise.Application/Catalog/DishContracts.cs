@@ -4,7 +4,8 @@ using Mise.Domain.Common;
 
 namespace Mise.Application.Catalog;
 
-public sealed record DishIngredientDto(Guid ProductId, string ProductName, MeasureUnit Unit, decimal Quantity);
+/// <param name="Removable">Можно убрать по просьбе гостя или когда продукт закончился (гарнир, посыпка).</param>
+public sealed record DishIngredientDto(Guid ProductId, string ProductName, MeasureUnit Unit, decimal Quantity, bool Removable);
 
 public sealed record DishDto(
     Guid Id,
@@ -14,7 +15,7 @@ public sealed record DishDto(
     bool IsActive,
     IReadOnlyList<DishIngredientDto> Ingredients);
 
-public sealed record DishIngredientRequest(Guid ProductId, decimal Quantity);
+public sealed record DishIngredientRequest(Guid ProductId, decimal Quantity, bool Removable = false);
 
 public sealed record CreateDishRequest(
     string Name,

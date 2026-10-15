@@ -43,6 +43,7 @@ public sealed class RateLimitingOptions
 {
     public const string SectionName = "RateLimiting";
     public const string LoginPolicy = "login";
+    public const string GuestOrderPolicy = "guest-order";
 
     /// <summary>Попыток входа в минуту с одного IP.</summary>
     public int LoginPerMinute { get; set; } = 10;
@@ -50,7 +51,12 @@ public sealed class RateLimitingOptions
     /// <summary>Запросов в минуту на пользователя (или IP без входа); служебная роль Simulator не ограничивается.</summary>
     public int GlobalPerMinute { get; set; } = 600;
 
-    public bool IsValid() => LoginPerMinute >= 1 && GlobalPerMinute >= 1;
+    /// <summary>Заказов гостя (QR-меню) с одного IP за <see cref="GuestOrderWindowMinutes"/> минут — защита кухни от спама.</summary>
+    public int GuestOrdersPerWindow { get; set; } = 3;
+
+    public int GuestOrderWindowMinutes { get; set; } = 10;
+
+    public bool IsValid() => LoginPerMinute >= 1 && GlobalPerMinute >= 1 && GuestOrdersPerWindow >= 1 && GuestOrderWindowMinutes >= 1;
 }
 
 internal sealed class HttpCurrentUser(IHttpContextAccessor accessor) : ICurrentUser
@@ -147,6 +153,15 @@ internal static class SecuritySetup
                 {
                     PermitLimit = limits.LoginPerMinute,
                     Window = TimeSpan.FromMinutes(1),
+                });
+            });
+            options.AddPolicy(RateLimitingOptions.GuestOrderPolicy, context =>
+            {
+                var limits = context.RequestServices.GetRequiredService<IOptions<RateLimitingOptions>>().Value;
+                return RateLimitPartition.GetFixedWindowLimiter("guest:" + context.Connection.RemoteIpAddress, _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = limits.GuestOrdersPerWindow,
+                    Window = TimeSpan.FromMinutes(limits.GuestOrderWindowMinutes),
                 });
             });
         });

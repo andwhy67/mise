@@ -177,6 +177,14 @@
   font-variant-numeric: tabular-nums;
 }
 
+// Заказ гостя из QR-меню: стол — главное, чтобы отнести заказ.
+.guest {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--brand-strong);
+}
+
 .timer {
   display: inline-flex;
   align-items: center;
@@ -224,4 +232,12 @@
   border-left: 3px solid var(--warn-bar);
   font-size: 14px;
   color: var(--ink);
+}
+
+// Изменения блюда — заметно, жирным янтарным: «без лука» нельзя пропустить у плиты.
+.changes {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--warn-text);
 }

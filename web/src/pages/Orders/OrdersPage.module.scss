@@ -438,3 +438,24 @@
   font-size: 13px;
   color: var(--ink-2);
 }
+
+// ---------- Изменения блюда ----------
+
+.dishLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+}
+
+.alternativeNote {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--warn-text);
+}
+
+.lineChanges {
+  display: block;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--ink-2);
+}

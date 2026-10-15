@@ -1,0 +1,186 @@
+// QR-меню (менеджер): настройки и ссылка рядом, карточки для печати — ниже на всю ширину.
+
+.layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+
+  @media (max-width: 960px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+.setting {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.settingName {
+  margin: 0;
+  font-weight: 600;
+}
+
+.settingHint {
+  margin: var(--space-1) 0 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.tablesForm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+
+  > :first-child {
+    flex: 1 1 200px;
+  }
+
+  > button {
+    margin-top: 26px;
+  }
+}
+
+.linkRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+
+.qr {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+}
+
+.linkBody {
+  display: flex;
+  flex: 1 1 220px;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.url {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-control);
+  background: var(--bg);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.textLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  padding: 0 var(--space-2);
+  color: var(--brand-strong);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.regenerate {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--hairline);
+}
+
+.cards {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+
+  img,
+  span[role='img'] {
+    border-radius: var(--radius-control);
+  }
+}
+
+.cardTitle {
+  font-weight: 600;
+}
+
+.more {
+  align-self: center;
+  padding: 0 var(--space-3);
+  font-size: 18px;
+  color: var(--muted);
+}
+
+// ---------- Печать: две карточки в ряд, карточка не разрывается между страницами ----------
+
+.printSheet {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10mm;
+  color: #12263a;
+  font-family: var(--font-sans);
+}
+
+.printCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4mm;
+  padding: 8mm 6mm;
+  border: 0.4mm solid #12263a;
+  break-inside: avoid;
+  text-align: center;
+}
+
+.printTitle {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 26pt;
+  font-weight: 500;
+}
+
+.printQr {
+  width: 60mm;
+  height: 60mm;
+}
+
+.printText {
+  margin: 0;
+  font-size: 11pt;
+  line-height: 1.4;
+}

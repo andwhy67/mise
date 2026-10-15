@@ -38,7 +38,8 @@ public sealed class OrderService(
         public const string NotCancellable = "order.not_cancellable";
     }
 
-    public async Task<CreateOrderResult> CreateAsync(CreateOrderRequest request, string? idempotencyKey, CancellationToken ct)
+    /// <param name="guest">Заказ гостя из QR-меню: стол, способ оплаты, токен ссылки на статус. Проверки — те же.</param>
+    public async Task<CreateOrderResult> CreateAsync(CreateOrderRequest request, string? idempotencyKey, CancellationToken ct, GuestOrigin? guest = null)
     {
         await createValidator.EnsureValidAsync(request, ct);
         var key = RequestHash.NormalizeKey(idempotencyKey);
@@ -50,11 +51,13 @@ public sealed class OrderService(
         var dishes = await LoadDishesAsync(request, ct);
         EnsureDishesAreOn(dishes.Values);
         var substitutions = await LoadSubstitutionsAsync(request, dishes, ct);
-        var demand = OrderDemand.Aggregate(request.Items.Select(i => (dishes[i.DishId], i.Quantity)), substitutions);
+        var modifications = await ResolveModificationsAsync(request, ct);
+        var demand = OrderDemand.Aggregate(
+            request.Items.Select((i, index) => new DemandLine(dishes[i.DishId], i.Quantity, modifications[index])), substitutions);
 
         try
         {
-            var (order, depleted) = await PlaceAsync(request, dishes, substitutions, demand, key, hash, ct);
+            var (order, depleted) = await PlaceAsync(request, dishes, modifications, substitutions, demand, key, hash, guest, ct);
             notifier.OrderCreated(order.Id);
             notifier.StockChanged(demand.Keys);
             notifier.BatchStatusChanged(depleted);
@@ -75,10 +78,12 @@ public sealed class OrderService(
     private async Task<(Order Order, IReadOnlyList<Guid> Depleted)> PlaceAsync(
         CreateOrderRequest request,
         IReadOnlyDictionary<Guid, Dish> dishes,
+        IReadOnlyList<IReadOnlyList<ItemModification>> modifications,
         IReadOnlyList<Substitution> substitutions,
         IReadOnlyDictionary<Guid, decimal> demand,
         string? key,
         string hash,
+        GuestOrigin? guest,
         CancellationToken ct)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
@@ -100,10 +105,12 @@ public sealed class OrderService(
 
         var number = await locks.NextOrderNumberAsync(ct);
         var order = new Order(Guid.CreateVersion7(now), $"ORD-{number:D6}", now) { IdempotencyKey = key, RequestHash = hash };
-        foreach (var item in request.Items)
+        if (guest is not null)
+            order.MarkGuest(guest.TableNumber, guest.Payment, guest.Token);
+        foreach (var (item, index) in request.Items.Select((item, index) => (item, index)))
         {
             var dish = dishes[item.DishId];
-            order.AddItem(dish.Id, dish.Name, item.Quantity, dish.Price);
+            order.AddItem(dish.Id, dish.Name, item.Quantity, dish.Price, modifications[index]);
         }
         foreach (var substitution in substitutions)
             order.AddSubstitution(substitution);
@@ -213,10 +220,12 @@ public sealed class OrderService(
             .OrderBy(c => c.ProductName).ThenBy(c => c.BatchExpiresAt)
             .ToList();
 
+        var names = await LoadProductNamesAsync(order.Items.SelectMany(ModifiedProducts), ct);
         return new OrderDto(
             order.Id, order.Number, order.Status, order.CreatedAt, order.UpdatedAt, order.CancelledAt, order.Total,
             order.Items.OrderBy(i => i.LineNo)
-                .Select(i => new OrderItemDto(i.LineNo, i.DishId, i.DishName, i.Quantity, i.PriceSnapshot, i.PriceSnapshot * i.Quantity))
+                .Select(i => new OrderItemDto(i.LineNo, i.DishId, i.DishName, i.Quantity, i.PriceSnapshot, i.PriceSnapshot * i.Quantity,
+                    ModificationDtos(i.Modifications, names)))
                 .ToList(),
             consumption,
             await SubstitutionDtosAsync(order.Substitutions, ct));
@@ -232,6 +241,41 @@ public sealed class OrderService(
                 names[s.SubstituteId].Unit, s.Ratio))
             .OrderBy(s => s.ProductName)
             .ToList();
+    }
+
+    private static IEnumerable<Guid> ModifiedProducts(OrderItem item) =>
+        item.Modifications.SelectMany(m => m.SubstituteId is { } s ? new[] { m.ProductId, s } : [m.ProductId]);
+
+    private static IReadOnlyList<OrderItemModificationDto> ModificationDtos(
+        IReadOnlyCollection<OrderItemModification> modifications, IReadOnlyDictionary<Guid, (string Name, Domain.Common.MeasureUnit Unit)> names) =>
+        modifications.Select(m => new OrderItemModificationDto(m.ProductId, names.GetValueOrDefault(m.ProductId).Name ?? "?", m.Kind, m.SubstituteId,
+            m.SubstituteId is { } s ? names.GetValueOrDefault(s).Name ?? "?" : null)).ToList();
+
+    /// <summary>
+    /// Изменения строк заказа: «убрать» — домен проверит, что ингредиент «можно убрать»; «заменить» — только по правилу
+    /// справочника, коэффициент берётся оттуда (клиент его не задаёт).
+    /// </summary>
+    private async Task<IReadOnlyList<IReadOnlyList<ItemModification>>> ResolveModificationsAsync(CreateOrderRequest request, CancellationToken ct)
+    {
+        var replaced = request.Items.SelectMany(i => i.Modifications ?? []).Where(m => m.Kind == ModificationKind.Replace)
+            .Select(m => m.ProductId).Distinct().ToList();
+        var rules = replaced.Count == 0
+            ? []
+            : await db.Products.AsNoTracking().Where(p => replaced.Contains(p.Id)).SelectMany(p => p.Substitutes).ToListAsync(ct);
+
+        var failures = new List<ValidationFailure>();
+        var result = request.Items.Select((item, index) => (IReadOnlyList<ItemModification>)(item.Modifications ?? []).Select((m, mi) =>
+        {
+            if (m.Kind == ModificationKind.Remove)
+                return new ItemModification(m.ProductId, ModificationKind.Remove);
+            var rule = rules.FirstOrDefault(r => r.ProductId == m.ProductId && r.SubstituteId == m.SubstituteId);
+            if (rule is null)
+                failures.Add(new ValidationFailure($"Items[{index}].Modifications[{mi}].SubstituteId", "Такой замены нет в справочнике продуктов."));
+            return new ItemModification(m.ProductId, ModificationKind.Replace, m.SubstituteId, rule?.Ratio ?? 1m);
+        }).ToList()).ToList();
+        if (failures.Count > 0)
+            throw failures.ToValidationException();
+        return result;
     }
 
     /// <summary>
@@ -284,12 +328,14 @@ public sealed class OrderService(
             .Include(o => o.Substitutions)
             .ToListAsync(ct);
         orders.Reverse();
-        var productIds = orders.SelectMany(o => o.Substitutions).SelectMany(s => new[] { s.ProductId, s.SubstituteId }).Distinct().ToList();
+        var productIds = orders.SelectMany(o => o.Substitutions).SelectMany(s => new[] { s.ProductId, s.SubstituteId })
+            .Concat(orders.SelectMany(o => o.Items).SelectMany(ModifiedProducts)).Distinct().ToList();
         var names = productIds.Count == 0 ? [] : await LoadProductNamesAsync(productIds, ct);
         return orders.Select(o => new KitchenOrderDto(
                 o.Id, o.Number, o.Status, o.CreatedAt, o.UpdatedAt, o.Items.Sum(i => i.Quantity),
-                o.Items.OrderBy(i => i.LineNo).Select(i => new KitchenItemDto(i.DishName, i.Quantity)).ToList(),
-                o.Substitutions.Select(s => new KitchenSubstitutionDto(names.GetValueOrDefault(s.ProductId).Name ?? "?", names.GetValueOrDefault(s.SubstituteId).Name ?? "?")).ToList()))
+                o.Items.OrderBy(i => i.LineNo).Select(i => new KitchenItemDto(i.DishName, i.Quantity, ModificationDtos(i.Modifications, names))).ToList(),
+                o.Substitutions.Select(s => new KitchenSubstitutionDto(names.GetValueOrDefault(s.ProductId).Name ?? "?", names.GetValueOrDefault(s.SubstituteId).Name ?? "?")).ToList(),
+                o.Source, o.TableNumber, o.Payment))
             .ToList();
     }
 
@@ -317,7 +363,8 @@ public sealed class OrderService(
         orders.Select(o => new OrderListItemDto(
             o.Id, o.Number, o.Status, o.CreatedAt,
             o.Items.Sum(i => i.Quantity),
-            o.Items.Sum(i => i.PriceSnapshot * i.Quantity)));
+            o.Items.Sum(i => i.PriceSnapshot * i.Quantity),
+            o.Source, o.TableNumber));
 
     private async Task<Dictionary<Guid, Dish>> LoadDishesAsync(CreateOrderRequest request, CancellationToken ct)
     {
