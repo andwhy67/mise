@@ -5,28 +5,15 @@ import type { Batch } from '@/api/types'
 import { Button } from '@/components/Button'
 import { Field } from '@/components/Field'
 import { Sheet } from '@/components/Sheet'
-import type { MeasureUnit } from '@/lib/format'
 import { toast } from '@/lib/toast'
 import { useErrorText } from '@/lib/useErrorText'
 import { useFormat } from '@/lib/useFormat'
 import { useOnline } from '@/pwa/network'
+import { INPUT_UNITS } from './inputUnits'
 import styles from './WriteOffSheet.module.scss'
 
 const REASONS = ['spoiled', 'damaged', 'inventory', 'other'] as const
 type Reason = (typeof REASONS)[number]
-
-/** Единицы ввода: на кухне считают и в граммах, и в килограммах (API пересчитает в базовую). */
-const INPUT_UNITS: Record<MeasureUnit, { value: string; factor: number; key: string }[]> = {
-  Gram: [
-    { value: 'Kilogram', factor: 1000, key: 'kg' },
-    { value: 'Gram', factor: 1, key: 'g' },
-  ],
-  Milliliter: [
-    { value: 'Liter', factor: 1000, key: 'l' },
-    { value: 'Milliliter', factor: 1, key: 'ml' },
-  ],
-  Piece: [{ value: 'Piece', factor: 1, key: 'pcs' }],
-}
 
 /** Ручное списание поставки: сколько (пусто — всё) и почему. Причина обязательна — она попадёт в журнал. */
 export function WriteOffSheet({ batch, onClose }: { batch: Batch | null; onClose: () => void }) {

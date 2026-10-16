@@ -22,6 +22,9 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.HasIndex(MiseDbContext.RestaurantIdProperty, nameof(Product.Name)).IsUnique();
         builder.HasMany(p => p.Substitutes).WithOne().HasForeignKey(s => s.ProductId).OnDelete(DeleteBehavior.Cascade);
         builder.Navigation(p => p.Substitutes).UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.Property(p => p.PrepYield).HasPrecision(14, 3);
+        builder.HasMany(p => p.PrepIngredients).WithOne().HasForeignKey(i => i.ProductId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(p => p.PrepIngredients).UsePropertyAccessMode(PropertyAccessMode.Field);
         builder.ToTable(t =>
         {
             t.HasCheckConstraint("ck_products_default_shelf_life_positive", "default_shelf_life_hours IS NULL OR default_shelf_life_hours > 0");
@@ -45,6 +48,22 @@ internal sealed class ProductSubstituteConfiguration : IEntityTypeConfiguration<
         // Удалили заменитель — правило замены теряет смысл и уходит вместе с ним.
         builder.HasOne<Product>().WithMany().HasForeignKey(s => s.SubstituteId).OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(s => s.SubstituteId);
+    }
+}
+
+internal sealed class PrepIngredientConfiguration : IEntityTypeConfiguration<PrepIngredient>
+{
+    public void Configure(EntityTypeBuilder<PrepIngredient> builder)
+    {
+        builder.ToTable("product_prep_ingredients", t =>
+        {
+            t.HasCheckConstraint("ck_product_prep_ingredients_quantity_positive", "quantity > 0");
+            t.HasCheckConstraint("ck_product_prep_ingredients_not_self", "product_id <> ingredient_id");
+        });
+        builder.HasKey(i => new { i.ProductId, i.IngredientId });
+        // Продукт из рецепта заготовки удалить нельзя — как и продукт из состава блюда.
+        builder.HasOne<Product>().WithMany().HasForeignKey(i => i.IngredientId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(i => i.IngredientId);
     }
 }
 

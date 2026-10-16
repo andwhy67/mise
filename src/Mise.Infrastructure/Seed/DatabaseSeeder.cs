@@ -17,7 +17,7 @@ public sealed class DatabaseSeeder(MiseDbContext db, ILogger<DatabaseSeeder> log
         db.Products.AddRange(newProducts);
 
         // База, засеянная до появления цен: заполняем цену и поставщика, только если их ещё нет (правки менеджера не трогаем).
-        var unpriced = await db.Products.Where(p => existingProducts.Contains(p.Id) && p.ReferenceUnitCost == null).ToListAsync(ct);
+        var unpriced = await db.Products.Where(p => existingProducts.Contains(p.Id) && p.ReferenceUnitCost == null && p.PrepYield == null).ToListAsync(ct);
         foreach (var product in unpriced)
         {
             var seed = products.First(p => p.Id == product.Id);

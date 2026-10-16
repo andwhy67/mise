@@ -28,6 +28,8 @@ internal sealed class DemoCatalogTemplate : ICatalogTemplate
                 Supplier = source.Supplier,
             };
             copy.SetSubstitutes(source.Substitutes.Select(s => (ids[s.SubstituteId], s.Ratio)));
+            if (source.PrepYield is { } yield)
+                copy.SetPrepRecipe(yield, source.PrepIngredients.Select(i => (ids[i.IngredientId], i.Quantity)));
             db.Products.Add(copy);
         }
 

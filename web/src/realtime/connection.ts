@@ -15,7 +15,7 @@ const HOT_MENU: QueryKey = [...queryKeys.hotOffers, 'menu']
 
 /** Какие данные устарели после события хаба (PLAN §7). REST — источник истины: события только инвалидируют кэш. */
 const EVENT_KEYS: Record<string, QueryKey[]> = {
-  StockChanged: [queryKeys.stock, queryKeys.batches, queryKeys.supplySuggestions, queryKeys.stopListForecast, HOT_MENU],
+  StockChanged: [queryKeys.stock, queryKeys.preps, queryKeys.batches, queryKeys.supplySuggestions, queryKeys.stopListForecast, HOT_MENU],
   AvailabilityChanged: [queryKeys.menu, HOT_MENU],
   StopListChanged: [queryKeys.stopList, queryKeys.menu, queryKeys.kpi],
   AlertRaised: [queryKeys.alerts],

@@ -18,7 +18,8 @@
     "source": {
       "ExplicitDate": "date from the supplier",
       "SupplyItemShelfLife": "shelf life from the delivery",
-      "ProductDefault": "product standard shelf life"
+      "ProductDefault": "product standard shelf life",
+      "Prep": "prep: no longer than its products"
     },
     "total": "Total: {{sum}}"
   },

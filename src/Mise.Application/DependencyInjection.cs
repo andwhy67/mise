@@ -48,6 +48,7 @@ public static class DependencyInjection
         services.AddScoped<HotOfferService>();
         services.AddScoped<ConsumptionRates>();
         services.AddScoped<ForecastService>();
+        services.AddScoped<EventPlanningService>();
         services.AddScoped<RestockService>();
         services.AddScoped<SupplyRequestService>();
         services.AddScoped<OnboardingService>();
@@ -55,6 +56,7 @@ public static class DependencyInjection
         services.AddScoped<AnalyticsService>();
         services.AddScoped<CostingService>();
         services.AddScoped<GuestMenu.GuestMenuService>();
+        services.AddScoped<Prep.PrepService>();
         services.AddOptions<ForecastOptions>();
         services.AddScoped<AuthService>();
         services.AddScoped<UserService>();

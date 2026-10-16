@@ -107,6 +107,8 @@ export interface Batch {
   supplyNumber: string
   receivedAt: string
   expiresAt: string
+  /** Prep — партия заготовки, приготовленная на кухне. */
+  expirySource?: 'ExplicitDate' | 'SupplyItemShelfLife' | 'ProductDefault' | 'Prep'
   initialQty: number
   remainingQty: number
   status: 'Active' | 'Depleted' | 'Expired' | 'WrittenOff'

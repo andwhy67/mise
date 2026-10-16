@@ -267,6 +267,35 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Mise.Domain.Catalog.PrepIngredient", b =>
+                {
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("product_id");
+
+                    b.Property<Guid>("IngredientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ingredient_id");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(14, 3)
+                        .HasColumnType("numeric(14,3)")
+                        .HasColumnName("quantity");
+
+                    b.HasKey("ProductId", "IngredientId")
+                        .HasName("pk_product_prep_ingredients");
+
+                    b.HasIndex("IngredientId")
+                        .HasDatabaseName("ix_product_prep_ingredients_ingredient_id");
+
+                    b.ToTable("product_prep_ingredients", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_product_prep_ingredients_not_self", "product_id <> ingredient_id");
+
+                            t.HasCheckConstraint("ck_product_prep_ingredients_quantity_positive", "quantity > 0");
+                        });
+                });
+
             modelBuilder.Entity("Mise.Domain.Catalog.Product", b =>
                 {
                     b.Property<Guid>("Id")
@@ -297,6 +326,11 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .HasPrecision(14, 3)
                         .HasColumnType("numeric(14,3)")
                         .HasColumnName("pack_size");
+
+                    b.Property<decimal?>("PrepYield")
+                        .HasPrecision(14, 3)
+                        .HasColumnType("numeric(14,3)")
+                        .HasColumnName("prep_yield");
 
                     b.Property<decimal?>("ReferenceUnitCost")
                         .HasPrecision(18, 6)
@@ -1326,6 +1360,23 @@ namespace Mise.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_dish_ingredients_products_product_id");
                 });
 
+            modelBuilder.Entity("Mise.Domain.Catalog.PrepIngredient", b =>
+                {
+                    b.HasOne("Mise.Domain.Catalog.Product", null)
+                        .WithMany()
+                        .HasForeignKey("IngredientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_product_prep_ingredients_products_ingredient_id");
+
+                    b.HasOne("Mise.Domain.Catalog.Product", null)
+                        .WithMany("PrepIngredients")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_product_prep_ingredients_products_product_id");
+                });
+
             modelBuilder.Entity("Mise.Domain.Catalog.Product", b =>
                 {
                     b.HasOne("Mise.Domain.Restaurants.Restaurant", null)
@@ -1644,6 +1695,8 @@ namespace Mise.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Mise.Domain.Catalog.Product", b =>
                 {
+                    b.Navigation("PrepIngredients");
+
                     b.Navigation("Substitutes");
                 });
 

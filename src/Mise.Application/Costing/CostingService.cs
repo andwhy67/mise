@@ -113,7 +113,8 @@ public sealed class CostingService(IMiseDbContext db, IClock clock)
                 var costOfSales = -Sum(g.Where(m => m.Type is MovementType.OrderConsumption or MovementType.OrderCancelReturn).Select(m => m.Cost));
                 var expiry = -Sum(g.Where(m => m.Type == MovementType.ExpiryWriteOff).Select(m => m.Cost));
                 var manual = -Sum(g.Where(m => m.Type == MovementType.ManualWriteOff).Select(m => m.Cost));
-                var rescuedMoves = g.Where(m => (m.Type == MovementType.OrderConsumption && m.Rescued)
+                // Продукт на грани срока, пущенный в заготовку, тоже спасён: он не ушёл в списание.
+                var rescuedMoves = g.Where(m => (m.Type is MovementType.OrderConsumption or MovementType.PrepConsumption && m.Rescued)
                                                 || (m.Type == MovementType.OrderCancelReturn && rescuedPairs.Contains((m.OrderId, m.BatchId))))
                     .ToList();
                 var rescued = -Sum(rescuedMoves.Select(m => m.Cost));

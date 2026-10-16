@@ -44,6 +44,7 @@ public sealed class MiseDbContext(DbContextOptions<MiseDbContext> options, ITena
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Dish> Dishes => Set<Dish>();
     public DbSet<DishIngredient> DishIngredients => Set<DishIngredient>();
+    public DbSet<PrepIngredient> PrepIngredients => Set<PrepIngredient>();
     public DbSet<Supply> Supplies => Set<Supply>();
     public DbSet<SupplyItem> SupplyItems => Set<SupplyItem>();
     public DbSet<Batch> Batches => Set<Batch>();

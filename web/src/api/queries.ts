@@ -71,7 +71,14 @@ export const useAuthConfig = () =>
     queryKey: ['auth', 'config'],
     queryFn: ({ signal }) => api.get<AuthConfig>('/api/v1/auth/config', { signal, anonymous: true }),
     staleTime: Infinity,
+    // Сервер мог «спать» (бесплатный хостинг) или перезапускаться после деплоя — просыпается до минуты.
+    // Ждём его ~1,5 мин, а не сдаёмся после трёх быстрых попыток: иначе демо-вход не появится до перезагрузки.
+    retry: CONFIG_RETRIES,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10_000),
+    refetchOnWindowFocus: (query) => query.state.status === 'error',
   })
+
+const CONFIG_RETRIES = 12
 
 export const useStock = () =>
   useQuery({ queryKey: queryKeys.stock, queryFn: ({ signal }) => api.get<StockItem[]>('/api/v1/stock', { signal }) })

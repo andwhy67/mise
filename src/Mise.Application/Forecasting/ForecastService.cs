@@ -87,7 +87,9 @@ public sealed class ForecastService(
         var horizon = ValidateHorizon(horizonHours ?? settings.SupplyHorizonHours, settings.MaxSupplyHorizonHours);
         var model = await LoadAsync(horizon, ct);
 
+        // Заготовку не заказывают у поставщика — её готовят на кухне.
         var items = model.Products.Values
+            .Where(p => !p.IsPrep)
             .Select(p => (Product: p, Suggestion: SupplySuggester.Suggest(
                 new ForecastProduct(p.Id, p.Name, p.Unit, p.MinStockQty, p.PackSize, p.DefaultShelfLifeHours),
                 model.Projections[p.Id], model.RateOf(p.Id), model.Now, TimeSpan.FromHours(horizon), settings.SafetyHours)))

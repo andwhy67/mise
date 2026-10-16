@@ -32,7 +32,8 @@
     "notUsable": "won't be used",
     "empty": "Nothing left from deliveries.",
     "remaining": "Left",
-    "expiry": "Expiry"
+    "expiry": "Expiry",
+    "cooked": "Cooked on {{date}}"
   },
   "writeOff": {
     "action": "Write off",
@@ -59,5 +60,33 @@
       "reason": "Describe the reason — it goes into the log."
     },
     "offline": "No connection — can't write off now"
+  },
+  "prep": {
+    "title": "Preps",
+    "subtitle": "Sauces and stocks are cooked from warehouse products. A prep never keeps longer than the products in it.",
+    "canMake": "Enough products for {{qty}}",
+    "nothingToMake": "Nothing to cook it from",
+    "keeps": "Keeps {{hours}} h",
+    "cook": "Cook",
+    "sheetTitle": "Cook: {{name}}",
+    "recipe": "Recipe for {{yield}} · keeps {{hours}} h",
+    "quantity": "How much to cook",
+    "quantityHint": "Enough products for {{max}}.",
+    "resultExpiry": "The prep will be good until",
+    "limitedBy": "Limited by “{{product}}”: a prep never keeps longer than the products it is made of.",
+    "fullShelfLife": "Full prep shelf life — {{hours}} h.",
+    "cost": "Cost {{cost}}",
+    "rescued": "Rescuing {{cost}} of products: they are about to expire, and the prep puts them to use.",
+    "takes": "What leaves the warehouse (what expires first goes first)",
+    "fromBatch": "{{qty}} from a delivery that expires {{when}}",
+    "rescuedBatch": "rescued",
+    "short": "Have {{have}}, short by {{short}}",
+    "submit": "Cook",
+    "submitting": "Cooking…",
+    "done": "Cooked: {{name}}, {{qty}} — good until {{when}}",
+    "offline": "No connection — cannot cook",
+    "errors": {
+      "quantity": "Enter a quantity greater than zero."
+    }
   }
 }

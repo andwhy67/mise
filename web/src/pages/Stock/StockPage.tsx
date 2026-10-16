@@ -16,6 +16,7 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/StateBlocks'
 import { StatusMark } from '@/components/StatusMark'
 import type { Formatter } from '@/lib/format'
 import { useFormat } from '@/lib/useFormat'
+import { PrepPanel } from './PrepPanel'
 import { WriteOffSheet } from './WriteOffSheet'
 import styles from './StockPage.module.scss'
 
@@ -47,6 +48,8 @@ export function StockPage() {
   const filter: StockFilter = shown && FILTERS.includes(shown) ? shown : 'all'
   const [search, setSearch] = useState('')
   const searchId = useId()
+  const role = useSession().user?.role
+  const canCook = role === 'Chef' || role === 'Manager'
 
   const all = useMemo(() => query.data ?? [], [query.data])
   const needle = search.trim().toLocaleLowerCase()
@@ -76,6 +79,8 @@ export function StockPage() {
           <input id={searchId} type="search" placeholder={t('search')} value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
       </div>
+
+      {canCook && <PrepPanel />}
 
       <Panel>
         {query.isPending ? (
@@ -157,7 +162,9 @@ function ProductDetails({ item }: { item: StockItem }) {
         {batches.map((batch) => (
           <li key={batch.id} className={styles.batch}>
             <div className={styles.batchHead}>
-              <span className={styles.batchTitle}>{t('details.supply', { date: f.date(batch.receivedAt) })}</span>
+              <span className={styles.batchTitle}>
+                {t(batch.expirySource === 'Prep' ? 'details.cooked' : 'details.supply', { date: f.date(batch.receivedAt) })}
+              </span>
               <span className={styles.batchMeta}>{batch.supplyNumber}</span>
             </div>
             <p className={styles.batchQty}>{queueText(batch, f, t)}</p>

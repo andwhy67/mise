@@ -9,17 +9,18 @@ using Mise.Domain.Common;
 
 namespace Mise.Application.Catalog;
 
-public sealed class ProductService(IMiseDbContext db, IClock clock, IValidator<UpsertProductRequest> validator)
+public sealed class ProductService(IMiseDbContext db, IClock clock, IValidator<UpsertProductRequest> validator,
+    IValidator<SetPrepRecipeRequest> prepValidator)
 {
     public async Task<IReadOnlyList<ProductDto>> ListAsync(CancellationToken ct)
     {
-        var products = await db.Products.AsNoTracking().Include(p => p.Substitutes).OrderBy(p => p.Name).ToListAsync(ct);
+        var products = await db.Products.AsNoTracking().Include(p => p.Substitutes).Include(p => p.PrepIngredients).OrderBy(p => p.Name).ToListAsync(ct);
         var names = products.ToDictionary(p => p.Id, p => (p.Name, p.Unit));
         return products.Select(p => ProductDto.From(p, names)).ToList();
     }
 
     public async Task<ProductDto> GetAsync(Guid id, CancellationToken ct) =>
-        await ToDtoAsync(await db.Products.AsNoTracking().Include(p => p.Substitutes).FirstOrDefaultAsync(p => p.Id == id, ct)
+        await ToDtoAsync(await db.Products.AsNoTracking().Include(p => p.Substitutes).Include(p => p.PrepIngredients).FirstOrDefaultAsync(p => p.Id == id, ct)
             ?? throw new NotFoundException("Продукт", id), ct);
 
     public async Task<ProductDto> CreateAsync(UpsertProductRequest request, CancellationToken ct)
@@ -39,7 +40,7 @@ public sealed class ProductService(IMiseDbContext db, IClock clock, IValidator<U
     public async Task<ProductDto> UpdateAsync(Guid id, UpsertProductRequest request, CancellationToken ct)
     {
         await validator.EnsureValidAsync(request, ct);
-        var product = await db.Products.Include(p => p.Substitutes).FirstOrDefaultAsync(p => p.Id == id, ct)
+        var product = await db.Products.Include(p => p.Substitutes).Include(p => p.PrepIngredients).FirstOrDefaultAsync(p => p.Id == id, ct)
             ?? throw new NotFoundException("Продукт", id);
         var name = request.Name.Trim();
         await EnsureNameIsFreeAsync(name, exceptId: id, ct);
@@ -66,6 +67,40 @@ public sealed class ProductService(IMiseDbContext db, IClock clock, IValidator<U
 
         db.Products.Remove(product);
         await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Рецепт заготовки: ингредиенты — существующие продукты, не заготовки и не она сама.</summary>
+    public async Task<ProductDto> SetPrepRecipeAsync(Guid id, SetPrepRecipeRequest request, CancellationToken ct)
+    {
+        await prepValidator.EnsureValidAsync(request, ct);
+        var product = await db.Products.Include(p => p.Substitutes).Include(p => p.PrepIngredients).FirstOrDefaultAsync(p => p.Id == id, ct)
+            ?? throw new NotFoundException("Продукт", id);
+        var ids = request.Ingredients.Select(i => i.ProductId).ToList();
+        var known = await db.Products.Where(p => ids.Contains(p.Id)).Select(p => new { p.Id, p.PrepYield }).ToListAsync(ct);
+        var failures = request.Ingredients
+            .Select((i, index) => (i, index))
+            .Where(x => known.All(k => k.Id != x.i.ProductId))
+            .Select(x => new ValidationFailure($"Ingredients[{x.index}].ProductId", "Продукт не найден."))
+            .ToList();
+        if (failures.Count > 0)
+            throw failures.ToValidationException();
+
+        try
+        {
+            product.SetPrepRecipe(request.Yield, request.Ingredients.Select(i => (i.ProductId, i.Quantity)),
+                known.Where(k => k.PrepYield != null).Select(k => k.Id).ToHashSet());
+        }
+        catch (DomainException ex)
+        {
+            throw new[] { new ValidationFailure(nameof(request.Ingredients), ex.Message) { ErrorCode = ex.Code } }.ToValidationException();
+        }
+
+        // Заготовка сама не может быть ингредиентом другой заготовки.
+        if (product.IsPrep && await db.PrepIngredients.AnyAsync(i => i.IngredientId == id, ct))
+            throw new ConflictException(PrepIngredient.Errors.Invalid, "Продукт уже входит в рецепт другой заготовки.");
+
+        await db.SaveChangesAsync(ct);
+        return await ToDtoAsync(product, ct);
     }
 
     private static void Apply(Product product, UpsertProductRequest request)
@@ -99,7 +134,7 @@ public sealed class ProductService(IMiseDbContext db, IClock clock, IValidator<U
 
     private async Task<ProductDto> ToDtoAsync(Product product, CancellationToken ct)
     {
-        var ids = product.Substitutes.Select(s => s.SubstituteId).ToList();
+        var ids = product.Substitutes.Select(s => s.SubstituteId).Concat(product.PrepIngredients.Select(i => i.IngredientId)).ToList();
         var names = await db.Products.AsNoTracking().Where(p => ids.Contains(p.Id)).ToDictionaryAsync(p => p.Id, p => (p.Name, p.Unit), ct);
         return ProductDto.From(product, names);
     }
@@ -113,6 +148,7 @@ public sealed class ProductService(IMiseDbContext db, IClock clock, IValidator<U
 
     private async Task<bool> IsReferencedAsync(Guid id, CancellationToken ct) =>
         await db.DishIngredients.AnyAsync(i => i.ProductId == id, ct)
+        || await db.PrepIngredients.AnyAsync(i => i.IngredientId == id, ct)
         || await db.SupplyItems.AnyAsync(i => i.ProductId == id, ct)
         || await db.Batches.AnyAsync(b => b.ProductId == id, ct);
 

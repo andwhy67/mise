@@ -20,7 +20,8 @@
     "source": {
       "ExplicitDate": "дата от поставщика",
       "SupplyItemShelfLife": "по сроку хранения из поставки",
-      "ProductDefault": "по норме продукта"
+      "ProductDefault": "по норме продукта",
+      "Prep": "заготовка: не дольше продуктов в ней"
     },
     "total": "Итого: {{sum}}"
   },

@@ -39,6 +39,13 @@ internal static class AnalyticsEndpoints
 
     public static RouteGroupBuilder MapAnalyticsEndpoints(this RouteGroupBuilder api)
     {
+        api.MapPost("/planning/event", (EventPlanRequest request, EventPlanningService service, CancellationToken ct) =>
+                service.PlanAsync(request, ct))
+            .WithTags("Прогноз")
+            .WithSummary("«Что если»: банкет к моменту at — хватит ли, что докупить, что спасётся от порчи, что уйдёт в стоп")
+            .WithDescription("Ничего не резервирует и не списывает: остаток к событию — прогноз (обычный спрос по FEFO + истечение партий).")
+            .RequireAuthorization(AuthPolicies.Orders);
+
         var analytics = api.MapGroup("/analytics").WithTags("Аналитика");
 
         analytics.MapGet("/writeoffs", async (AnalyticsService service, CancellationToken ct, DateTimeOffset? from = null, DateTimeOffset? to = null) =>

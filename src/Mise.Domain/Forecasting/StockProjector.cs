@@ -21,7 +21,8 @@ public sealed class StockProjection(
     decimal consumed,
     decimal wasted,
     decimal unmetDemand,
-    DateTimeOffset? runsOutAt)
+    DateTimeOffset? runsOutAt,
+    decimal eventServed = 0m)
 {
     /// <summary>Остаток во времени: между точками — линейно (расход), на истечении — две точки в один момент (скачок).</summary>
     public IReadOnlyList<ProjectionPoint> Points { get; } = points;
@@ -80,6 +81,9 @@ public sealed class StockProjection(
         return Points[^1].Usable;
     }
 
+    /// <summary>Сколько разового события (банкета) покрыто остатком в его момент.</summary>
+    public decimal EventServed { get; } = eventServed;
+
     internal static TimeSpan Scale(TimeSpan span, decimal fraction) => TimeSpan.FromTicks((long)decimal.Round(span.Ticks * fraction));
 }
 
@@ -89,8 +93,9 @@ public sealed class StockProjection(
 /// </summary>
 public static class StockProjector
 {
+    /// <param name="oneOff">Разовый расход (банкет) в момент At — сверх обычного спроса, тоже по FEFO.</param>
     public static StockProjection Project(IReadOnlyList<ForecastBatch> batches, ConsumptionRate rate, DateTimeOffset now,
-        TimeSpan horizon, TimeSpan step)
+        TimeSpan horizon, TimeSpan step, (DateTimeOffset At, decimal Qty)? oneOff = null)
     {
         if (step <= TimeSpan.Zero || horizon <= TimeSpan.Zero)
             throw new ArgumentException("Шаг и горизонт прогноза должны быть положительными.");
@@ -102,7 +107,7 @@ public static class StockProjector
             .ToList();
 
         var points = new List<ProjectionPoint> { new(now, alive.Sum(s => s.Qty), ProjectionCause.Consumption) };
-        decimal consumed = 0, wasted = 0, unmet = 0;
+        decimal consumed = 0, wasted = 0, unmet = 0, eventServed = 0;
         DateTimeOffset? runsOutAt = null;
         var end = now + horizon;
         var t = now;
@@ -112,6 +117,8 @@ public static class StockProjector
             var next = t + step < end ? t + step : end;
             if (alive.Count > 0 && alive[0].ExpiresAt < next)
                 next = alive.Min(s => s.ExpiresAt);
+            if (oneOff is { At: var eventAt } && eventAt > t && eventAt < next)
+                next = eventAt;
 
             var demand = rate.Expected(t, next);
             var taken = 0m;
@@ -133,6 +140,21 @@ public static class StockProjector
             }
             points.Add(new ProjectionPoint(next, alive.Sum(s => s.Qty), ProjectionCause.Consumption));
 
+            // Событие в момент next: обычный спрос до него уже съеден, событие берёт своё по FEFO.
+            if (oneOff is { } single && single.At > t && single.At <= next && single.Qty > 0)
+            {
+                foreach (var slot in alive)
+                {
+                    if (eventServed >= single.Qty)
+                        break;
+                    var take = Math.Min(slot.Qty, single.Qty - eventServed);
+                    slot.Qty -= take;
+                    eventServed += take;
+                }
+                alive.RemoveAll(s => s.Qty <= 0);
+                points.Add(new ProjectionPoint(next, alive.Sum(s => s.Qty), ProjectionCause.Consumption));
+            }
+
             var expiring = alive.Where(s => s.ExpiresAt <= next).ToList();
             if (expiring.Count > 0)
             {
@@ -144,7 +166,7 @@ public static class StockProjector
             t = next;
         }
 
-        return new StockProjection(points, consumed, wasted, unmet, runsOutAt);
+        return new StockProjection(points, consumed, wasted, unmet, runsOutAt, eventServed);
     }
 
     private sealed class Slot(DateTimeOffset expiresAt, decimal qty)

@@ -157,8 +157,8 @@ public sealed class AnalyticsService(IMiseDbContext db, IClock clock, IConsumpti
         var flows = await (
                 from m in db.StockMovements.AsNoTracking()
                 where m.CreatedAt >= period.From && m.CreatedAt < period.To
-                      && (m.Type == MovementType.Receipt || WriteOffTypes.Contains(m.Type))
-                group m by new { m.ProductId, IsReceipt = m.Type == MovementType.Receipt } into g
+                      && (m.Type == MovementType.Receipt || m.Type == MovementType.PrepOutput || WriteOffTypes.Contains(m.Type))
+                group m by new { m.ProductId, IsReceipt = m.Type == MovementType.Receipt || m.Type == MovementType.PrepOutput } into g
                 select new { g.Key.ProductId, g.Key.IsReceipt, Qty = g.Sum(m => m.QtyDelta) })
             .ToListAsync(ct);
         var productIds = flows.Select(f => f.ProductId).Distinct().ToList();

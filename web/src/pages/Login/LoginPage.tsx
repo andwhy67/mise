@@ -32,7 +32,8 @@ export function LoginPage({ mode = 'login' }: { mode?: AuthMode }) {
   const navigate = useNavigate()
   const location = useLocation()
   const { status, user } = useSession()
-  const demo = useAuthConfig().data
+  const config = useAuthConfig()
+  const demo = config.data
   const state = (location.state ?? {}) as LocationState
   const { code } = useParams()
   // Вернуть на прежнюю страницу — только после истёкшей сессии и только если новой роли туда можно.
@@ -124,6 +125,11 @@ export function LoginPage({ mode = 'login' }: { mode?: AuthMode }) {
           </form>
           )}
 
+          {mode === 'login' && !demo && (config.isFetching || config.isError) && (
+            <p className={styles.demo} role="status">
+              {config.isError ? t('serverUnavailable') : t('serverWaking')}
+            </p>
+          )}
           {mode === 'login' && demo?.demoEnabled && demo.demoRoles.length > 0 && (
             <p className={styles.demo}>
               <span>{t('demo')}</span>

@@ -23,7 +23,8 @@
     "collapse": "Свернуть меню",
     "expand": "Развернуть меню",
     "kitchen": "Кухня",
-    "qrMenu": "QR-меню"
+    "qrMenu": "QR-меню",
+    "planning": "Планирование"
   },
   "roles": {
     "Warehouse": "склад",

@@ -25,6 +25,7 @@ public interface IMiseDbContext
     DbSet<Product> Products { get; }
     DbSet<Dish> Dishes { get; }
     DbSet<DishIngredient> DishIngredients { get; }
+    DbSet<PrepIngredient> PrepIngredients { get; }
     DbSet<Supply> Supplies { get; }
     DbSet<SupplyItem> SupplyItems { get; }
     DbSet<Batch> Batches { get; }

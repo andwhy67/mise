@@ -86,13 +86,15 @@ public sealed class TenancyTests(MiseApiFactory factory)
         var demoProducts = (await _demo.GetFromJsonAsync<JsonElement>("/api/v1/products")).EnumerateArray()
             .Select(p => p.GetProperty("id").GetGuid()).ToHashSet();
 
-        Assert.Equal(26, products.Count);
-        Assert.Equal(17, dishes.Count);
+        Assert.Equal(28, products.Count);
+        Assert.Equal(20, dishes.Count);
         var own = products.Select(p => p.GetProperty("id").GetGuid()).ToHashSet();
         Assert.Empty(own.Intersect(demoProducts));
         Assert.All(dishes.SelectMany(d => d.GetProperty("ingredients").EnumerateArray()), i => Assert.Contains(i.GetProperty("productId").GetGuid(), own));
         var spinach = products.Single(p => p.GetProperty("name").GetString() == "Шпинат");
         Assert.Contains(spinach.GetProperty("substitutes")[0].GetProperty("productId").GetGuid(), own);
+        var sauce = products.Single(p => p.GetProperty("name").GetString() == "Соус сливочно-грибной");
+        Assert.All(sauce.GetProperty("prep").GetProperty("ingredients").EnumerateArray(), i => Assert.Contains(i.GetProperty("productId").GetGuid(), own));
     }
 
     [Fact]

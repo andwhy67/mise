@@ -1,0 +1,241 @@
+// Планирование: форма слева, расчёт справа; на узком экране — одна колонка.
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: var(--space-4);
+  align-items: start;
+
+  @media (max-width: 1100px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.search {
+  position: relative;
+
+  svg {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    width: 18px;
+    height: 18px;
+    color: var(--muted);
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+
+  input {
+    width: 100%;
+    height: var(--control-height);
+    padding: 0 14px 0 42px;
+    border: 1px solid var(--border-input);
+    border-radius: var(--radius-control);
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    font-size: 16px;
+
+    &:focus-visible {
+      outline: 2px solid var(--brand-strong);
+      outline-offset: 0;
+    }
+  }
+}
+
+.dishes {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dish {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.dishName {
+  display: flex;
+  flex-direction: column;
+  font-size: 15px;
+  color: var(--ink);
+}
+
+.dishMeta {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.portions {
+  flex: none;
+  width: 88px;
+
+  input {
+    text-align: center;
+  }
+}
+
+.error {
+  margin: 0;
+  font-size: 14px;
+  color: var(--crit-text);
+}
+
+.submit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.total {
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.verdict {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-left-width: 4px;
+  border-radius: var(--radius-control);
+  font-size: 17px;
+}
+
+.ok {
+  border-left-color: var(--fresh-bar);
+}
+
+.bad {
+  border-left-color: var(--crit-text);
+}
+
+.verdictNote {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.rescued {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--fresh-bar) 12%, var(--surface));
+  color: var(--fresh-text);
+}
+
+.rescuedTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-weight: 600;
+
+  svg {
+    flex: none;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.rescuedList {
+  margin: var(--space-1) 0 0;
+  font-size: 14px;
+}
+
+.sectionTitle {
+  margin: var(--space-2) 0 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+
+  th,
+  td {
+    padding: var(--space-2);
+    border-bottom: 1px solid var(--hairline);
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  thead th {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-2);
+  }
+
+  th:first-child {
+    text-align: left;
+    white-space: normal;
+  }
+
+  tbody th {
+    font-weight: 500;
+    color: var(--ink);
+  }
+}
+
+.shortRow th {
+  color: var(--crit-text);
+}
+
+.supplier {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ink-2);
+}
+
+.enough {
+  color: var(--ink-2);
+}
+
+.stops {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-2);
+  }
+}
+
+.note {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-2);
+}

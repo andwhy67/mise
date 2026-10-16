@@ -6,6 +6,7 @@ namespace Mise.Domain.Catalog;
 public sealed class Product
 {
     private readonly List<ProductSubstitute> _substitutes = [];
+    private readonly List<PrepIngredient> _prepIngredients = [];
 
     private Product() { }
 
@@ -45,5 +46,45 @@ public sealed class Product
             existing.ChangeRatio(target[existing.SubstituteId]);
         _substitutes.RemoveAll(s => !target.ContainsKey(s.SubstituteId));
         _substitutes.AddRange(created);
+    }
+
+    /// <summary>Выход рецепта заготовки (в базовой единице): на столько соуса рассчитан состав. null — продукт закупается, а не готовится.</summary>
+    public decimal? PrepYield { get; private set; }
+
+    /// <summary>Заготовка: готовится на кухне из других продуктов (соус, бульон), срок — <see cref="DefaultShelfLifeHours"/> от приготовления.</summary>
+    public bool IsPrep => PrepYield is not null;
+
+    public IReadOnlyCollection<PrepIngredient> PrepIngredients => _prepIngredients;
+
+    /// <summary>
+    /// Рецепт заготовки: <paramref name="ingredients"/> — сколько продукта (в его базовой единице) уходит на <paramref name="yield"/> заготовки.
+    /// Пустой список снимает рецепт. Заготовка не может состоять из заготовки и из самой себя; срок хранения обязателен.
+    /// </summary>
+    public void SetPrepRecipe(decimal yield, IEnumerable<(Guid IngredientId, decimal Quantity)> ingredients, IReadOnlySet<Guid>? prepIds = null)
+    {
+        var target = ingredients.ToList();
+        if (target.Count == 0)
+        {
+            PrepYield = null;
+            _prepIngredients.Clear();
+            return;
+        }
+
+        if (yield <= 0)
+            throw new DomainException(PrepIngredient.Errors.Invalid, "Выход заготовки должен быть больше нуля.");
+        if (DefaultShelfLifeHours is null)
+            throw new DomainException(PrepIngredient.Errors.Invalid, "У заготовки должен быть срок хранения.");
+        if (target.Select(i => i.IngredientId).Distinct().Count() != target.Count)
+            throw new DomainException(PrepIngredient.Errors.Invalid, "Ингредиент указан дважды.");
+        if (target.Any(i => i.IngredientId == Id || prepIds?.Contains(i.IngredientId) == true))
+            throw new DomainException(PrepIngredient.Errors.Invalid, "Заготовка готовится из продуктов, а не из заготовок.");
+
+        PrepYield = yield;
+        var map = target.ToDictionary(i => i.IngredientId, i => i.Quantity);
+        _prepIngredients.RemoveAll(i => !map.ContainsKey(i.IngredientId));
+        foreach (var existing in _prepIngredients)
+            existing.Change(map[existing.IngredientId]);
+        var present = _prepIngredients.Select(i => i.IngredientId).ToHashSet();
+        _prepIngredients.AddRange(map.Where(m => !present.Contains(m.Key)).Select(m => new PrepIngredient(Id, m.Key, m.Value)));
     }
 }

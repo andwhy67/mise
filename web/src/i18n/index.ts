@@ -13,7 +13,7 @@ export const LANGUAGES = [
 
 export type LanguageCode = (typeof LANGUAGES)[number]['code']
 export const DEFAULT_LANGUAGE: LanguageCode = 'ru'
-export const NAMESPACES = ['common', 'format', 'auth', 'dashboard', 'ui', 'stock', 'stoplist', 'offers', 'orders', 'alerts', 'supplies', 'reports', 'simulator', 'catalog', 'users', 'audit', 'kitchen', 'guest'] as const
+export const NAMESPACES = ['common', 'format', 'auth', 'dashboard', 'ui', 'stock', 'stoplist', 'offers', 'orders', 'alerts', 'supplies', 'reports', 'simulator', 'catalog', 'users', 'audit', 'kitchen', 'guest', 'planning'] as const
 export const LANGUAGE_STORAGE_KEY = 'mise.language'
 
 /** Каждый раздел каждого языка — отдельный чанк, подгружается при первом использовании. */

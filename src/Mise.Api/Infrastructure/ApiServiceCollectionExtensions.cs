@@ -180,6 +180,7 @@ internal static class ApiServiceCollectionExtensions
         v1.MapCatalogEndpoints();
         v1.MapSupplyEndpoints();
         v1.MapStockEndpoints();
+        v1.MapPrepEndpoints();
         v1.MapOrderEndpoints();
         v1.MapMenuEndpoints();
         v1.MapAlertEndpoints();

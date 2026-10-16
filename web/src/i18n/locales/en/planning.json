@@ -1,0 +1,41 @@
+{
+  "title": "Planning",
+  "subtitle": "A banquet or a large order: will products last until it starts, given regular guests and expiry dates, what to buy and what goes to the stop list. Stock is not changed.",
+  "form": {
+    "title": "What and when",
+    "subtitle": "Set the time and portions of each dish.",
+    "at": "Banquet starts",
+    "search": "Find a dish",
+    "dishes": "Dishes",
+    "portions": "Portions: {{dish}}",
+    "total": "Dishes: {{dishes}}, portions: {{portions}}",
+    "calculate": "Calculate",
+    "calculating": "Calculating…"
+  },
+  "result": {
+    "title": "Result",
+    "emptyTitle": "The calculation will appear here",
+    "emptyHint": "Pick dishes and the banquet time, then press “Calculate”.",
+    "feasible": "Enough products",
+    "short_one": "Short of {{count}} product",
+    "short_other": "Short of {{count}} products",
+    "summary": "Banquet {{when}}: {{portions}} portions, revenue {{revenue}}",
+    "rescued": "The banquet saves {{cost}} of products from spoiling",
+    "rescuedItem": "{{product}} {{qty}}",
+    "products": "Products at banquet start",
+    "stops": "Go to the stop list after the banquet",
+    "noStops": "No dish goes to the stop list because of the banquet.",
+    "stopBefore": "before the banquet {{portions}}"
+  },
+  "table": {
+    "product": "Product",
+    "need": "Needed",
+    "available": "Left by {{when}}",
+    "buy": "Buy",
+    "enough": "enough"
+  },
+  "errors": {
+    "empty": "Add at least one dish.",
+    "past": "The banquet must be in the future."
+  }
+}

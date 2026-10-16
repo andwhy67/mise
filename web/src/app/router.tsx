@@ -34,6 +34,7 @@ export const router = createBrowserRouter([
       { path: 'kitchen', ...page(() => import('@/pages/Kitchen/KitchenPage').then((m) => ({ default: m.KitchenPage }))) },
       { path: 'stoplist', ...page(() => import('@/pages/StopList/StopListPage').then((m) => ({ default: m.StopListPage }))) },
       { path: 'hot-offers', ...page(() => import('@/pages/HotOffers/HotOffersPage').then((m) => ({ default: m.HotOffersPage }))) },
+      { path: 'planning', ...page(() => import('@/pages/Planning/PlanningPage').then((m) => ({ default: m.PlanningPage }))) },
       { path: 'reports', ...page(() => import('@/pages/Reports/ReportsPage').then((m) => ({ default: m.ReportsPage }))) },
       { path: 'alerts', ...page(() => import('@/pages/Alerts/AlertsPage').then((m) => ({ default: m.AlertsPage }))) },
       { path: 'catalog', ...page(() => import('@/pages/Catalog/CatalogPage').then((m) => ({ default: m.CatalogPage }))) },

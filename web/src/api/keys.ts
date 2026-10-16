@@ -12,4 +12,5 @@ export const queryKeys = {
   supplySuggestions: ['supply-suggestions'] as const,
   kpi: ['analytics', 'kpi'] as const,
   simulator: ['simulator'] as const,
+  preps: ['preps'] as const,
 }

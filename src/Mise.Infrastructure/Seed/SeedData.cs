@@ -42,6 +42,8 @@ public static class SeedData
         public static readonly Guid Spaghetti = P(24);
         public static readonly Guid Arborio = P(25);
         public static readonly Guid Flour = P(26);
+        public static readonly Guid MushroomSauce = P(27);
+        public static readonly Guid ChickenBroth = P(28);
     }
 
     public static class Dishes
@@ -63,6 +65,9 @@ public static class SeedData
         public static readonly Guid Margherita = D(15);
         public static readonly Guid MashedPotatoes = D(16);
         public static readonly Guid ChickenSpinachPasta = D(17);
+        public static readonly Guid MushroomSauceSide = D(18);
+        public static readonly Guid MushroomSaucePasta = D(19);
+        public static readonly Guid BrothWithEgg = D(20);
     }
 
     private const string Dairy = "Молочные";
@@ -71,6 +76,17 @@ public static class SeedData
     private const string Grocery = "Бакалея";
     private const string Fridge = "Холодильник";
     private const string Dry = "Сухой склад";
+    private const string Preps = "Заготовки";
+
+    /// <summary>
+    /// Заготовки: готовятся на кухне из продуктов склада (выход рецепта, состав на выход в базовых единицах).
+    /// Соус «спасает» сливки и грибы, которые скоро испортятся, и продаётся добавкой к любому блюду.
+    /// </summary>
+    public static readonly IReadOnlyList<(Guid ProductId, decimal Yield, (Guid IngredientId, decimal Quantity)[] Ingredients)> PrepRecipes =
+    [
+        (Products.MushroomSauce, 1000m, [(Products.Cream, 600m), (Products.Mushrooms, 300m), (Products.Butter, 30m), (Products.Garlic, 10m)]),
+        (Products.ChickenBroth, 2000m, [(Products.Chicken, 500m), (Products.Onion, 150m), (Products.Garlic, 10m)]),
+    ];
 
     /// <summary>Замены при нехватке (base-единицы): зелень между собой, моцарелла → фета (её солонее — берём меньше), креветки → лосось.</summary>
     public static readonly IReadOnlyList<(Guid ProductId, Guid SubstituteId, decimal Ratio)> Substitutes =
@@ -84,7 +100,7 @@ public static class SeedData
         (Products.Basil, Products.Arugula, 1m),
     ];
 
-    public static IReadOnlyList<Product> CreateProducts() => WithSubstitutes(
+    public static IReadOnlyList<Product> CreateProducts() => WithPrepRecipes(WithSubstitutes(
 
     [
         Product(Products.Cream, "Сливки 33%", MeasureUnit.Milliliter, 168, 2000, 1000, Dairy, Fridge, 550m, "Молочный двор"),
@@ -113,7 +129,9 @@ public static class SeedData
         Product(Products.Spaghetti, "Спагетти", MeasureUnit.Gram, 8760, 2000, 1000, Grocery, Dry, 230m, "Сухой склад №1"),
         Product(Products.Arborio, "Рис арборио", MeasureUnit.Gram, 8760, 2000, 1000, Grocery, Dry, 420m, "Сухой склад №1"),
         Product(Products.Flour, "Мука пшеничная", MeasureUnit.Gram, 4320, 2000, 1000, Grocery, Dry, 60m, "Сухой склад №1"),
-    ]);
+        Prep(Products.MushroomSauce, "Соус сливочно-грибной", 24, 300),
+        Prep(Products.ChickenBroth, "Бульон куриный", 48, 1000),
+    ]));
 
     public static IReadOnlyList<Dish> CreateDishes() =>
     [
@@ -151,6 +169,12 @@ public static class SeedData
             (Products.Flour, 200), (Products.Tomatoes, 100), (Products.Mozzarella, 125), (Products.Basil, 5)),
         Dish(Dishes.MashedPotatoes, "Картофельное пюре", "Гарниры", 210m,
             (Products.Potatoes, 250), (Products.Milk, 80), (Products.Butter, 30)),
+        Dish(Dishes.MushroomSauceSide, "Соус сливочно-грибной", "Добавки", 90m,
+            (Products.MushroomSauce, 50)),
+        Dish(Dishes.MushroomSaucePasta, "Паста в сливочно-грибном соусе", "Паста", 590m,
+            (Products.Spaghetti, 120), (Products.MushroomSauce, 150), (Products.Parmesan, 20)),
+        Dish(Dishes.BrothWithEgg, "Куриный бульон с яйцом", "Супы", 290m,
+            (Products.ChickenBroth, 300), (Products.Eggs, 1)),
     ];
 
     private static Guid P(int n) => Guid.Parse($"10000000-0000-0000-0000-{n:D12}");
@@ -162,6 +186,23 @@ public static class SeedData
             product.SetSubstitutes(Substitutes.Where(s => s.ProductId == product.Id).Select(s => (s.SubstituteId, s.Ratio)));
         return products;
     }
+
+    private static IReadOnlyList<Product> WithPrepRecipes(IReadOnlyList<Product> products)
+    {
+        foreach (var (productId, yield, ingredients) in PrepRecipes)
+            products.First(p => p.Id == productId).SetPrepRecipe(yield, ingredients);
+        return products;
+    }
+
+    /// <summary>Заготовка: себестоимость считается из партий ингредиентов, а не из прайса поставщика.</summary>
+    private static Product Prep(Guid id, string name, int shelfLifeHours, decimal minStock) => new(id, name, MeasureUnit.Milliliter)
+    {
+        DefaultShelfLifeHours = shelfLifeHours,
+        MinStockQty = minStock,
+        PackSize = 1000,
+        Category = Preps,
+        StorageType = Fridge,
+    };
 
     /// <param name="price">Ориентировочная цена закупки за кг / л / шт, ₽.</param>
     private static Product Product(Guid id, string name, MeasureUnit unit, int shelfLifeHours, decimal minStock, decimal packSize,

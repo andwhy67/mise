@@ -6,6 +6,8 @@ public enum ExpirySource
     ExplicitDate,
     SupplyItemShelfLife,
     ProductDefault,
+    /// <summary>Заготовка: срок хранения от приготовления, но не дольше самого раннего срока взятых продуктов.</summary>
+    Prep,
 }
 
 public readonly record struct ExpiryResolution(DateTimeOffset ExpiresAt, ExpirySource Source);

@@ -8,6 +8,10 @@ public enum MovementType
     ManualWriteOff,
     OrderCancelReturn,
     Adjustment,
+    /// <summary>Продукт ушёл в заготовку (соус, бульон).</summary>
+    PrepConsumption,
+    /// <summary>Партия заготовки, приготовленная на кухне.</summary>
+    PrepOutput,
 }
 
 /// <summary>Неизменяемая запись журнала движений — единственный источник истины об изменении остатков.</summary>
@@ -68,6 +72,33 @@ public sealed class StockMovement
         Cost = batch.CostOf(quantity),
         OrderId = orderId,
         Reason = "Отмена заказа",
+        CreatedAt = now,
+    };
+
+    /// <summary>Расход в заготовку; продукт на грани срока, пущенный в дело, тоже «спасён».</summary>
+    public static StockMovement PrepConsumption(Guid id, Batch batch, decimal quantity, Guid prepSupplyId, string prepName, DateTimeOffset now, RescuePolicy rescue) => new()
+    {
+        Id = id,
+        BatchId = batch.Id,
+        ProductId = batch.ProductId,
+        Type = MovementType.PrepConsumption,
+        QtyDelta = -quantity,
+        Cost = -batch.CostOf(quantity),
+        Rescued = rescue.Applies(batch, now),
+        SupplyId = prepSupplyId,
+        Reason = prepName,
+        CreatedAt = now,
+    };
+
+    public static StockMovement PrepOutput(Guid id, Batch batch, Guid prepSupplyId, DateTimeOffset now) => new()
+    {
+        Id = id,
+        BatchId = batch.Id,
+        ProductId = batch.ProductId,
+        Type = MovementType.PrepOutput,
+        QtyDelta = batch.InitialQty,
+        Cost = batch.CostOf(batch.InitialQty),
+        SupplyId = prepSupplyId,
         CreatedAt = now,
     };
 

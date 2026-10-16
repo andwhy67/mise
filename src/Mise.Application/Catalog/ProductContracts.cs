@@ -16,7 +16,8 @@ public sealed record ProductDto(
     string? StorageType,
     decimal? ReferencePrice,
     string? Supplier,
-    IReadOnlyList<ProductSubstituteDto> Substitutes)
+    IReadOnlyList<ProductSubstituteDto> Substitutes,
+    PrepRecipeDto? Prep = null)
 {
     /// <param name="p">Цена отдаётся за кг, л или штуку — как её называют на кухне.</param>
     /// <param name="names">Названия и единицы продуктов-заменителей.</param>
@@ -27,7 +28,42 @@ public sealed record ProductDto(
                 .Where(s => names.ContainsKey(s.SubstituteId))
                 .Select(s => new ProductSubstituteDto(s.SubstituteId, names[s.SubstituteId].Name, names[s.SubstituteId].Unit, s.Ratio))
                 .OrderBy(s => s.ProductName)
-                .ToList());
+                .ToList(),
+            p.PrepYield is { } yield
+                ? new PrepRecipeDto(yield, p.PrepIngredients
+                    .Where(i => names.ContainsKey(i.IngredientId))
+                    .Select(i => new PrepIngredientDto(i.IngredientId, names[i.IngredientId].Name, names[i.IngredientId].Unit, i.Quantity))
+                    .OrderBy(i => i.ProductName)
+                    .ToList())
+                : null);
+}
+
+/// <param name="Yield">Выход рецепта в базовой единице заготовки: состав указан на это количество.</param>
+public sealed record PrepRecipeDto(decimal Yield, IReadOnlyList<PrepIngredientDto> Ingredients);
+
+public sealed record PrepIngredientDto(Guid ProductId, string ProductName, MeasureUnit Unit, decimal Quantity);
+
+public sealed record PrepIngredientRequest(Guid ProductId, decimal Quantity);
+
+/// <summary>Рецепт заготовки; пустой список ингредиентов — продукт снова закупается, а не готовится.</summary>
+public sealed record SetPrepRecipeRequest(decimal Yield, IReadOnlyList<PrepIngredientRequest> Ingredients);
+
+internal sealed class SetPrepRecipeRequestValidator : AbstractValidator<SetPrepRecipeRequest>
+{
+    public const int MaxIngredients = 20;
+
+    public SetPrepRecipeRequestValidator()
+    {
+        RuleFor(x => x.Yield).IsQuantity();
+        RuleFor(x => x.Ingredients).NotNull()
+            .Must(i => i.Count <= MaxIngredients).WithMessage($"Не больше {MaxIngredients} ингредиентов.")
+            .Must(i => i.Select(x => x.ProductId).Distinct().Count() == i.Count).WithMessage("Ингредиент указан дважды.");
+        RuleForEach(x => x.Ingredients).ChildRules(i =>
+        {
+            i.RuleFor(x => x.ProductId).NotEmpty();
+            i.RuleFor(x => x.Quantity).IsQuantity();
+        });
+    }
 }
 
 /// <param name="Ratio">Сколько заменителя (в его базовой единице) идёт вместо 1 единицы продукта.</param>
